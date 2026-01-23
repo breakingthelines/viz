@@ -13,7 +13,6 @@ Beautiful, accessible React components for football data visualisation. Build gr
 - **⚽ Shot Maps** — xG-sized markers with outcome colouring
 - **📋 Formation Boards** — Team formation displays with player markers
 - **📤 Export Utilities** — PNG, SVG, and clipboard export
-- **🎨 Dark Theme** — Designed for dark backgrounds (light theme coming soon)
 - **♿ Accessible** — Keyboard navigation and screen reader support
 - **📊 Data Agnostic** — Works with any provider via normalised schema
 
