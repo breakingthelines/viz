@@ -1,0 +1,117 @@
+{
+  "name": "@breakingthelines/viz",
+  "version": "0.0.1",
+  "description": "React components for football data visualisation",
+  "license": "AGPL-3.0",
+  "author": "Breaking The Lines",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/breakingthelines/viz.git"
+  },
+  "files": [
+    "dist",
+    "src/styles"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "imports": {
+    "#/lib/*": "./src/lib/*",
+    "#/components/*": "./src/components/*",
+    "#/football/*": "./src/football/*",
+    "#/utils/*": "./src/utils/*",
+    "#/styles/*": "./src/styles/*",
+    "#/test/*": "./src/test/*",
+    "#.storybook/*": "./.storybook/*",
+    "#*": [
+      "./*",
+      "./*.ts",
+      "./*.tsx",
+      "./*.js",
+      "./*.jsx"
+    ]
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./football": {
+      "types": "./dist/football/index.d.ts",
+      "import": "./dist/football/index.js"
+    },
+    "./football/primitives": {
+      "types": "./dist/football/primitives/index.d.ts",
+      "import": "./dist/football/primitives/index.js"
+    },
+    "./football/compositions": {
+      "types": "./dist/football/compositions/index.d.ts",
+      "import": "./dist/football/compositions/index.js"
+    },
+    "./football/types": {
+      "types": "./dist/football/types/index.d.ts",
+      "import": "./dist/football/types/index.js"
+    },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./styles.css": "./src/styles/globals.css"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "scripts": {
+    "dev": "storybook dev -p 6008",
+    "build": "bunchee",
+    "check": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "storybook": "storybook dev -p 6008",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "^4.1.3",
+    "@storybook/addon-a11y": "^10.1.11",
+    "@storybook/addon-docs": "^10.1.11",
+    "@storybook/addon-themes": "^10.1.11",
+    "@storybook/addon-vitest": "^10.1.11",
+    "@storybook/react-vite": "^10.1.11",
+    "@tailwindcss/vite": "^4.1.17",
+    "@types/d3-scale": "^4.0.9",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/browser-playwright": "4.0.16",
+    "@vitest/coverage-v8": "4.0.16",
+    "bunchee": "^6.9.3",
+    "clsx": "^2.1.1",
+    "d3-scale": "^4.0.2",
+    "html-to-image": "^1.11.11",
+    "oxfmt": "^0.21.0",
+    "oxlint": "^1.36.0",
+    "playwright": "^1.57.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "storybook": "^10.1.11",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.17",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  }
+}
