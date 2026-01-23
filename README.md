@@ -20,22 +20,8 @@ Beautiful, accessible React components for football data visualisation. Build gr
 ## Installation
 
 ```bash
-# npm
-npm install @breakingthelines/viz
-
 # bun
 bun add @breakingthelines/viz
-
-# pnpm
-pnpm add @breakingthelines/viz
-```
-
-### Peer Dependencies
-
-This package requires React 18 or 19:
-
-```bash
-npm install react react-dom
 ```
 
 ## Quick Start
