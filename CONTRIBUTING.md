@@ -42,24 +42,24 @@ bun run dev
 
 ### Useful Commands
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start Storybook on port 6008 |
-| `bun run build` | Build the package |
-| `bun run lint` | Run oxlint |
-| `bun run format` | Format code with oxfmt |
-| `bun run test` | Run tests |
+| Command          | Description                  |
+| ---------------- | ---------------------------- |
+| `bun run dev`    | Start Storybook on port 6008 |
+| `bun run build`  | Build the package            |
+| `bun run lint`   | Run oxlint                   |
+| `bun run format` | Format code with oxfmt       |
+| `bun run test`   | Run tests                    |
 
 ## Contribution Paths
 
 We welcome different types of contributions:
 
-| Contributor Type | Entry Points |
-|------------------|--------------|
-| **Non-developer** | Figma mockups, documentation improvements, bug reports |
-| **Junior developer** | Issues labeled `good-first-issue`, Storybook examples, tests |
-| **Experienced developer** | New components, primitives, performance improvements |
-| **Analytics/Data person** | Viz ideas with mockups, data validation, test fixtures |
+| Contributor Type          | Entry Points                                                 |
+| ------------------------- | ------------------------------------------------------------ |
+| **Non-developer**         | Figma mockups, documentation improvements, bug reports       |
+| **Junior developer**      | Issues labeled `good-first-issue`, Storybook examples, tests |
+| **Experienced developer** | New components, primitives, performance improvements         |
+| **Analytics/Data person** | Viz ideas with mockups, data validation, test fixtures       |
 
 ### Finding Issues
 
@@ -114,6 +114,7 @@ git commit -m "docs: update README with new examples"
 ```
 
 **Prefixes:**
+
 - `feat:` — New feature
 - `fix:` — Bug fix
 - `docs:` — Documentation only
@@ -355,4 +356,3 @@ By contributing to this project, you agree to the [Contributor License Agreement
 ---
 
 Thank you for contributing! 🎉
-

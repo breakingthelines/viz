@@ -74,7 +74,6 @@ By submitting a Contribution to this Project, you signify your acceptance of thi
 
 ---
 
-*This CLA is based on the Apache Individual Contributor License Agreement and adapted for dual-licensing.*
+_This CLA is based on the Apache Individual Contributor License Agreement and adapted for dual-licensing._
 
-*Last updated: January 2026*
-
+_Last updated: January 2026_
