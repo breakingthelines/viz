@@ -20,6 +20,7 @@ export default create({
   // Brand
   brandTitle: 'Breaking The Lines - Viz',
   brandUrl: 'https://breakingthelines.com',
+  brandImage: './storybook/btl-logo.svg',
   brandTarget: '_self',
 
   // Colors
