@@ -1,4 +1,5 @@
-import type { ShotEvent, Formation, Team, MatchInfo } from '#/football/types';
+import type { MatchEvent, Team, Player, Formation } from '#/football/types';
+import { EventType, ShotOutcome, BodyPart } from '#/football/types';
 import { fromStatsBomb } from '#/utils/coordinates';
 
 /**
@@ -13,142 +14,156 @@ export const argentinaTeam: Team = {
   id: 'arg',
   name: 'Argentina',
   shortName: 'ARG',
-  color: '#75AADB',
+  primaryColor: '#75AADB',
+  secondaryColor: '#FFFFFF',
+  meta: {},
 };
 
 export const franceTeam: Team = {
   id: 'fra',
   name: 'France',
   shortName: 'FRA',
-  color: '#002654',
+  primaryColor: '#002654',
+  secondaryColor: '#FFFFFF',
+  meta: {},
 };
 
-export const matchInfo: MatchInfo = {
-  id: 'wc-2022-final',
-  homeTeam: argentinaTeam,
-  awayTeam: franceTeam,
-  date: '2022-12-18',
-  competition: 'FIFA World Cup',
-  season: '2022',
-  venue: 'Lusail Stadium',
+// Helper to create a player
+const player = (id: string, name: string, shirtNumber: number): Player => ({
+  id,
+  name,
+  shirtNumber,
+  meta: {},
+});
+
+// Helper to create a shot event
+const shotEvent = (
+  id: string,
+  timestamp: number,
+  team: Team,
+  p: Player,
+  locationRaw: { x: number; y: number },
+  outcome: ShotOutcome,
+  xg: number,
+  bodyPart: BodyPart
+): MatchEvent => {
+  const location = fromStatsBomb(locationRaw.x, locationRaw.y);
+  return {
+    id,
+    type: EventType.SHOT,
+    timestamp,
+    player: p,
+    team,
+    location,
+    meta: {},
+    eventData: {
+      case: 'shot',
+      value: {
+        xg,
+        outcome,
+        bodyPart,
+      },
+    },
+  } as MatchEvent;
 };
 
 /**
  * Argentina shots (simplified from StatsBomb data)
  * Coordinates converted to BTL normalized format (0-100)
  */
-export const argentinaShots: ShotEvent[] = [
-  {
-    id: 'shot-1',
-    type: 'shot',
-    timestamp: 23,
-    period: 'first_half',
-    team: argentinaTeam,
-    player: { id: 'messi', name: 'Lionel Messi', number: 10 },
-    location: fromStatsBomb(102, 38),
-    outcome: 'goal',
-    xg: 0.76,
-    bodyPart: 'right_foot',
-    technique: 'penalty',
-  },
-  {
-    id: 'shot-2',
-    type: 'shot',
-    timestamp: 36,
-    period: 'first_half',
-    team: argentinaTeam,
-    player: { id: 'di-maria', name: 'Ángel Di María', number: 11 },
-    location: fromStatsBomb(108, 42),
-    outcome: 'goal',
-    xg: 0.38,
-    bodyPart: 'left_foot',
-  },
-  {
-    id: 'shot-3',
-    type: 'shot',
-    timestamp: 73,
-    period: 'second_half',
-    team: argentinaTeam,
-    player: { id: 'messi', name: 'Lionel Messi', number: 10 },
-    location: fromStatsBomb(100, 35),
-    outcome: 'saved',
-    xg: 0.12,
-    bodyPart: 'left_foot',
-  },
-  {
-    id: 'shot-4',
-    type: 'shot',
-    timestamp: 108,
-    period: 'extra_first',
-    team: argentinaTeam,
-    player: { id: 'messi', name: 'Lionel Messi', number: 10 },
-    location: fromStatsBomb(114, 40),
-    outcome: 'goal',
-    xg: 0.08,
-    bodyPart: 'left_foot',
-  },
+export const argentinaShots: MatchEvent[] = [
+  shotEvent(
+    'shot-1',
+    23,
+    argentinaTeam,
+    player('messi', 'Lionel Messi', 10),
+    { x: 102, y: 38 },
+    ShotOutcome.GOAL,
+    0.76,
+    BodyPart.RIGHT_FOOT
+  ),
+  shotEvent(
+    'shot-2',
+    36,
+    argentinaTeam,
+    player('di-maria', 'Ángel Di María', 11),
+    { x: 108, y: 42 },
+    ShotOutcome.GOAL,
+    0.38,
+    BodyPart.LEFT_FOOT
+  ),
+  shotEvent(
+    'shot-3',
+    73,
+    argentinaTeam,
+    player('messi', 'Lionel Messi', 10),
+    { x: 100, y: 35 },
+    ShotOutcome.SAVED,
+    0.12,
+    BodyPart.LEFT_FOOT
+  ),
+  shotEvent(
+    'shot-4',
+    108,
+    argentinaTeam,
+    player('messi', 'Lionel Messi', 10),
+    { x: 114, y: 40 },
+    ShotOutcome.GOAL,
+    0.08,
+    BodyPart.LEFT_FOOT
+  ),
 ];
 
 /**
  * France shots (simplified from StatsBomb data)
  */
-export const franceShots: ShotEvent[] = [
-  {
-    id: 'shot-5',
-    type: 'shot',
-    timestamp: 80,
-    period: 'second_half',
-    team: franceTeam,
-    player: { id: 'mbappe', name: 'Kylian Mbappé', number: 10 },
-    location: fromStatsBomb(108, 38),
-    outcome: 'goal',
-    xg: 0.41,
-    bodyPart: 'left_foot',
-  },
-  {
-    id: 'shot-6',
-    type: 'shot',
-    timestamp: 81,
-    period: 'second_half',
-    team: franceTeam,
-    player: { id: 'mbappe', name: 'Kylian Mbappé', number: 10 },
-    location: fromStatsBomb(102, 40),
-    outcome: 'goal',
-    xg: 0.78,
-    bodyPart: 'right_foot',
-    technique: 'penalty',
-  },
-  {
-    id: 'shot-7',
-    type: 'shot',
-    timestamp: 97,
-    period: 'extra_first',
-    team: franceTeam,
-    player: { id: 'mbappe', name: 'Kylian Mbappé', number: 10 },
-    location: fromStatsBomb(95, 30),
-    outcome: 'blocked',
-    xg: 0.05,
-    bodyPart: 'right_foot',
-  },
-  {
-    id: 'shot-8',
-    type: 'shot',
-    timestamp: 118,
-    period: 'extra_second',
-    team: franceTeam,
-    player: { id: 'mbappe', name: 'Kylian Mbappé', number: 10 },
-    location: fromStatsBomb(102, 38),
-    outcome: 'goal',
-    xg: 0.76,
-    bodyPart: 'right_foot',
-    technique: 'penalty',
-  },
+export const franceShots: MatchEvent[] = [
+  shotEvent(
+    'shot-5',
+    80,
+    franceTeam,
+    player('mbappe', 'Kylian Mbappé', 10),
+    { x: 108, y: 38 },
+    ShotOutcome.GOAL,
+    0.41,
+    BodyPart.LEFT_FOOT
+  ),
+  shotEvent(
+    'shot-6',
+    81,
+    franceTeam,
+    player('mbappe', 'Kylian Mbappé', 10),
+    { x: 102, y: 40 },
+    ShotOutcome.GOAL,
+    0.78,
+    BodyPart.RIGHT_FOOT
+  ),
+  shotEvent(
+    'shot-7',
+    97,
+    franceTeam,
+    player('mbappe', 'Kylian Mbappé', 10),
+    { x: 95, y: 30 },
+    ShotOutcome.BLOCKED,
+    0.05,
+    BodyPart.RIGHT_FOOT
+  ),
+  shotEvent(
+    'shot-8',
+    118,
+    franceTeam,
+    player('mbappe', 'Kylian Mbappé', 10),
+    { x: 102, y: 38 },
+    ShotOutcome.GOAL,
+    0.76,
+    BodyPart.RIGHT_FOOT
+  ),
 ];
 
 /**
  * All shots from the match
  */
-export const allShots: ShotEvent[] = [...argentinaShots, ...franceShots].sort(
+export const allShots: MatchEvent[] = [...argentinaShots, ...franceShots].sort(
   (a, b) => a.timestamp - b.timestamp
 );
 
@@ -159,20 +174,17 @@ export const argentinaFormation: Formation = {
   team: argentinaTeam,
   formation: '4-3-3',
   positions: [
-    { player: { id: 'martinez', name: 'E. Martínez', number: 23 }, position: { x: 5, y: 50 } },
-    { player: { id: 'molina', name: 'N. Molina', number: 26 }, position: { x: 25, y: 15 } },
-    { player: { id: 'romero', name: 'C. Romero', number: 13 }, position: { x: 20, y: 35 } },
-    { player: { id: 'otamendi', name: 'N. Otamendi', number: 19 }, position: { x: 20, y: 65 } },
-    { player: { id: 'acuna', name: 'M. Acuña', number: 8 }, position: { x: 25, y: 85 } },
-    { player: { id: 'de-paul', name: 'R. De Paul', number: 7 }, position: { x: 40, y: 30 } },
-    { player: { id: 'fernandez', name: 'E. Fernández', number: 24 }, position: { x: 40, y: 50 } },
-    {
-      player: { id: 'mac-allister', name: 'A. Mac Allister', number: 20 },
-      position: { x: 40, y: 70 },
-    },
-    { player: { id: 'di-maria', name: 'Á. Di María', number: 11 }, position: { x: 60, y: 20 } },
-    { player: { id: 'messi', name: 'L. Messi', number: 10 }, position: { x: 65, y: 50 } },
-    { player: { id: 'alvarez', name: 'J. Álvarez', number: 9 }, position: { x: 60, y: 80 } },
+    { player: player('martinez', 'E. Martínez', 23), position: { x: 5, y: 50 } },
+    { player: player('molina', 'N. Molina', 26), position: { x: 25, y: 15 } },
+    { player: player('romero', 'C. Romero', 13), position: { x: 20, y: 35 } },
+    { player: player('otamendi', 'N. Otamendi', 19), position: { x: 20, y: 65 } },
+    { player: player('acuna', 'M. Acuña', 8), position: { x: 25, y: 85 } },
+    { player: player('de-paul', 'R. De Paul', 7), position: { x: 40, y: 30 } },
+    { player: player('fernandez', 'E. Fernández', 24), position: { x: 40, y: 50 } },
+    { player: player('mac-allister', 'A. Mac Allister', 20), position: { x: 40, y: 70 } },
+    { player: player('di-maria', 'Á. Di María', 11), position: { x: 60, y: 20 } },
+    { player: player('messi', 'L. Messi', 10), position: { x: 65, y: 50 } },
+    { player: player('alvarez', 'J. Álvarez', 9), position: { x: 60, y: 80 } },
   ],
 };
 
@@ -183,16 +195,16 @@ export const franceFormation: Formation = {
   team: franceTeam,
   formation: '4-2-3-1',
   positions: [
-    { player: { id: 'lloris', name: 'H. Lloris', number: 1 }, position: { x: 5, y: 50 } },
-    { player: { id: 'kounde', name: 'J. Koundé', number: 5 }, position: { x: 25, y: 15 } },
-    { player: { id: 'varane', name: 'R. Varane', number: 4 }, position: { x: 20, y: 35 } },
-    { player: { id: 'upamecano', name: 'D. Upamecano', number: 4 }, position: { x: 20, y: 65 } },
-    { player: { id: 'hernandez', name: 'T. Hernández', number: 22 }, position: { x: 25, y: 85 } },
-    { player: { id: 'tchouameni', name: 'A. Tchouaméni', number: 8 }, position: { x: 35, y: 40 } },
-    { player: { id: 'rabiot', name: 'A. Rabiot', number: 14 }, position: { x: 35, y: 60 } },
-    { player: { id: 'dembele', name: 'O. Dembélé', number: 11 }, position: { x: 55, y: 20 } },
-    { player: { id: 'griezmann', name: 'A. Griezmann', number: 7 }, position: { x: 55, y: 50 } },
-    { player: { id: 'mbappe', name: 'K. Mbappé', number: 10 }, position: { x: 55, y: 80 } },
-    { player: { id: 'giroud', name: 'O. Giroud', number: 9 }, position: { x: 70, y: 50 } },
+    { player: player('lloris', 'H. Lloris', 1), position: { x: 5, y: 50 } },
+    { player: player('kounde', 'J. Koundé', 5), position: { x: 25, y: 15 } },
+    { player: player('varane', 'R. Varane', 4), position: { x: 20, y: 35 } },
+    { player: player('upamecano', 'D. Upamecano', 4), position: { x: 20, y: 65 } },
+    { player: player('hernandez', 'T. Hernández', 22), position: { x: 25, y: 85 } },
+    { player: player('tchouameni', 'A. Tchouaméni', 8), position: { x: 35, y: 40 } },
+    { player: player('rabiot', 'A. Rabiot', 14), position: { x: 35, y: 60 } },
+    { player: player('dembele', 'O. Dembélé', 11), position: { x: 55, y: 20 } },
+    { player: player('griezmann', 'A. Griezmann', 7), position: { x: 55, y: 50 } },
+    { player: player('mbappe', 'K. Mbappé', 10), position: { x: 55, y: 80 } },
+    { player: player('giroud', 'O. Giroud', 9), position: { x: 70, y: 50 } },
   ],
 };

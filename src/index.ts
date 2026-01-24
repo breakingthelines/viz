@@ -11,32 +11,45 @@ export type {
 export { ShotMap, FormationBoard } from './football/compositions/index';
 export type { ShotMapProps, FormationBoardProps } from './football/compositions/index';
 
-// Football - Types
+// Football - Types (proto)
 export type {
-  DataSource,
-  PitchCoordinates,
-  Player,
-  Team,
-  MatchInfo,
-  FormationPosition,
-  Formation,
   NormalizedMatchData,
-  ShotOutcome,
-  ShotEvent,
-  PassOutcome,
-  PassEvent,
-  TackleEvent,
-  CarryEvent,
-  InterceptionEvent,
+  DataSource,
+  Team,
+  Player,
+  PitchCoordinates,
   MatchEvent,
+  ShotEventData,
+  PassEventData,
+  TackleEventData,
+  CarryEventData,
+  InterceptionEventData,
+  Formation,
+  FormationPosition,
 } from './football/types/index';
 
 export {
-  isShotEvent,
-  isPassEvent,
-  isTackleEvent,
-  isCarryEvent,
-  isInterceptionEvent,
+  EventType,
+  ShotOutcome,
+  PassHeight,
+  PassOutcome,
+  TackleOutcome,
+  DuelType,
+  InterceptionOutcome,
+  BodyPart,
+} from './football/types/index';
+
+export { isShot, isPass, isTackle, isCarry, isInterception } from './football/types/index';
+
+export {
+  eventTypeName,
+  shotOutcomeName,
+  passHeightName,
+  passOutcomeName,
+  tackleOutcomeName,
+  duelTypeName,
+  interceptionOutcomeName,
+  bodyPartName,
 } from './football/types/index';
 
 // Shared components

@@ -37,7 +37,7 @@ export {
   TackleEventDataSchema,
   CarryEventDataSchema,
   InterceptionEventDataSchema,
-} from '#/generated/game/v1/types/football/football_pb.js';
+} from '#/generated/game/v1/types/football/football_pb.ts';
 
 // Re-export create from protobuf for convenience
 export { create } from '@bufbuild/protobuf';
@@ -53,7 +53,7 @@ import type {
   TackleEventData,
   CarryEventData,
   InterceptionEventData,
-} from '#/generated/game/v1/types/football/football_pb.js';
+} from '#/generated/game/v1/types/football/football_pb.ts';
 
 export function isShot(
   event: MatchEvent
@@ -98,7 +98,7 @@ import {
   DuelType,
   InterceptionOutcome,
   BodyPart,
-} from '#/generated/game/v1/types/football/football_pb.js';
+} from '#/generated/game/v1/types/football/football_pb.ts';
 
 export const eventTypeName: Record<EventType, string> = {
   [EventType.UNSPECIFIED]: 'unspecified',
@@ -156,3 +156,27 @@ export const bodyPartName: Record<BodyPart, string> = {
   [BodyPart.HEAD]: 'head',
   [BodyPart.OTHER]: 'other',
 };
+
+// =============================================================================
+// VIZ-SPECIFIC TYPES (not in proto - used for display components)
+// =============================================================================
+
+import type {
+  Team,
+  Player,
+  PitchCoordinates,
+} from '#/generated/game/v1/types/football/football_pb.ts';
+
+/** Formation position - player with their position on the pitch */
+export interface FormationPosition {
+  player: Player;
+  position: PitchCoordinates;
+  role?: string;
+}
+
+/** Team formation for display */
+export interface Formation {
+  team: Team;
+  formation: string; // e.g., "4-3-3", "4-4-2"
+  positions: FormationPosition[];
+}

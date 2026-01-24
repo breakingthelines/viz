@@ -2,7 +2,6 @@
 
 > Open-source football visualisation components for the web
 
-[![npm version](https://img.shields.io/npm/v/@breakingthelines/viz.svg)](https://www.npmjs.com/package/@breakingthelines/viz)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 Beautiful, accessible React components for football data visualisation. Build graphics for your articles, dashboards, or applications.
@@ -424,7 +423,7 @@ import { worldCupFinal2022 } from '@breakingthelines/viz/test/fixtures/statsbomb
 
 ## Links
 
-- [Storybook Documentation](https://viz.breakingthelines.com)
+- [Storybook Documentation](https://breakingthelines.github.io/viz/)
 - [GitHub Repository](https://github.com/breakingthelines/viz)
 - [Breaking The Lines](https://breakingthelines.com)
 

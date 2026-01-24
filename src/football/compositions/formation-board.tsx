@@ -38,7 +38,7 @@ export function FormationBoard({
   selectedPlayerId,
   flip = false,
 }: FormationBoardProps) {
-  const color = teamColor ?? formation.team.color ?? 'var(--color-team-home)';
+  const color = teamColor ?? formation.team.primaryColor ?? 'var(--color-team-home)';
 
   const getPosition = (pos: FormationPosition) => {
     if (!flip) return pos.position;
@@ -65,7 +65,7 @@ export function FormationBoard({
                 position={position}
                 size={markerSize}
                 color={color}
-                number={showNumbers ? pos.player.number : undefined}
+                number={showNumbers ? pos.player.shirtNumber : undefined}
                 name={pos.player.name}
                 selected={isSelected}
               />
