@@ -7,6 +7,19 @@
 
 Beautiful, accessible React components for football data visualisation. Build graphics for your articles, dashboards, or applications.
 
+## Why?
+
+Football analytics has exploded in popularity, but the tooling remains largely inaccessible. Advanced data is locked behind expensive paywalls, and free resources can disappear overnight when commercial interests take priority.
+
+We believe the community deserves open, provider-agnostic tools that:
+
+- **Work with any data source** — StatsBomb, Opta, Wyscout, or your own
+- **Can't be taken away** — Open source, AGPL-3.0 licensed
+- **Lower the barrier to entry** — For analysts, journalists, researchers, and fans
+- **Enable collaboration** — Build on each other's work
+
+This package is part of our effort to keep football analytics open and accessible to everyone.
+
 ## Features
 
 - **🏟️ Pitch Primitives** — SVG football pitch with variants (full, half, attacking-third)
