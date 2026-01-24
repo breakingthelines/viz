@@ -409,14 +409,6 @@ This package is data-agnostic. Use the coordinate utilities to normalise data fr
 - **Opta** — `fromOpta(x, y)`
 - **Wyscout** — `fromWyscout(x, y)`
 
-### Test Data
-
-The package includes sample data from [StatsBomb Open Data](https://github.com/statsbomb/open-data) for testing:
-
-```typescript
-import { worldCupFinal2022 } from '@breakingthelines/viz/test/fixtures/statsbomb-open';
-```
-
 ## License
 
 [AGPL-3.0](./LICENSE) — Free to use, modify, and distribute. If you modify and distribute, you must share your changes under the same license.
