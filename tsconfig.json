@@ -9,6 +9,7 @@
       "#/lib/*": ["./src/lib/*"],
       "#/components/*": ["./src/components/*"],
       "#/football/*": ["./src/football/*"],
+      "#/generated/*": ["./src/generated/*"],
       "#/utils/*": ["./src/utils/*"],
       "#/styles/*": ["./src/styles/*"],
       "#/test/*": ["./src/test/*"],
