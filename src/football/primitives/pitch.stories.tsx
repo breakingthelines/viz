@@ -26,6 +26,7 @@ export const Full: Story = {
   args: {
     variant: 'full',
     showPattern: true,
+    lineColor: "#ffffff"
   },
   decorators: [
     (Story) => (
