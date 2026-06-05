@@ -12,6 +12,10 @@ const meta = {
   },
   tags: ['autodocs'],
   argTypes: {
+    theme: {
+      control: 'select',
+      options: ['grass', 'dark'],
+    },
     markerSize: {
       control: { type: 'range', min: 2, max: 5, step: 0.5 },
     },
@@ -78,6 +82,26 @@ export const CustomColor: Story = {
     teamColor: '#ef4444',
     showNumbers: true,
   },
+};
+
+/**
+ * Dark theme — the Lineups tab look. Near-black pitch with white lines so the
+ * formation sits on the Match Centre photo-hero surface.
+ */
+export const Dark: Story = {
+  args: {
+    formation: argentinaFormation,
+    theme: 'dark',
+    showNumbers: true,
+    markerSize: 3,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '600px', background: '#0d0d0d', padding: '16px' }}>
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export const Interactive: Story = {

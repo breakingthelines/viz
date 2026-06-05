@@ -9,6 +9,11 @@
   --color-pitch-lines: oklch(0.95 0.01 90);
   --color-pitch-lines-muted: oklch(0.75 0.01 90);
 
+  /* Dark pitch (BTL Match Centre photo-hero theme — near-black grass, white
+     lines, no green stripe pattern). Matches the dark page token #0d0d0d. */
+  --color-pitch-grass-dark: oklch(0.14 0 0);
+  --color-pitch-lines-dark: oklch(1 0 0);
+
   /* Marker colors */
   --color-marker-goal: oklch(0.65 0.2 145);
   --color-marker-shot: oklch(0.7 0.15 30);
