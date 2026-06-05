@@ -13,6 +13,10 @@ const meta = {
       control: 'select',
       options: ['full', 'half', 'attacking-third'],
     },
+    theme: {
+      control: 'select',
+      options: ['grass', 'dark'],
+    },
     showPattern: {
       control: 'boolean',
     },
@@ -89,6 +93,24 @@ export const CustomColors: Story = {
   decorators: [
     (Story) => (
       <div style={{ width: '600px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/**
+ * Dark theme — near-black grass, white lines, no stripe pattern. The pitch
+ * surface used across the BTL Match Centre (shot map + lineups).
+ */
+export const Dark: Story = {
+  args: {
+    variant: 'full',
+    theme: 'dark',
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '600px', background: '#0d0d0d', padding: '16px' }}>
         <Story />
       </div>
     ),

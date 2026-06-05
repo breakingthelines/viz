@@ -1,5 +1,5 @@
 export { Pitch } from './pitch';
-export type { PitchProps, PitchVariant } from './pitch';
+export type { PitchProps, PitchVariant, PitchTheme } from './pitch';
 
 export { PlayerMarker } from './player-marker';
 export type { PlayerMarkerProps } from './player-marker';

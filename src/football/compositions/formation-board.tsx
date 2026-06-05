@@ -1,11 +1,14 @@
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import type { PitchTheme } from '#/football/primitives/pitch';
 import { PlayerMarker } from '#/football/primitives/player-marker';
 import type { Formation, FormationPosition } from '#/football/types';
 
 export interface FormationBoardProps {
   /** Formation data to display */
   formation: Formation;
+  /** Pitch visual theme. Defaults to `grass`. Pass `dark` for the Match Centre. */
+  theme?: PitchTheme;
   /** Additional CSS classes */
   className?: string;
   /** Marker size */
@@ -29,6 +32,7 @@ export interface FormationBoardProps {
  */
 export function FormationBoard({
   formation,
+  theme = 'grass',
   className,
   markerSize = 3,
   showNumbers = true,
@@ -50,7 +54,7 @@ export function FormationBoard({
 
   return (
     <div className={cn('relative', className)}>
-      <Pitch variant="full">
+      <Pitch variant="full" theme={theme}>
         {formation.positions.map((pos) => {
           const position = getPosition(pos);
           const isSelected = pos.player.id === selectedPlayerId;
