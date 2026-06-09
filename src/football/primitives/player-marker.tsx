@@ -22,6 +22,13 @@ export interface PlayerMarkerProps {
   selected?: boolean;
   /** Opacity (0-1) */
   opacity?: number;
+  /**
+   * Visual variant. 'confirmed' (default) renders solid stroke. 'predicted'
+   * renders dashed stroke + ~60% opacity, signalling the marker reflects a
+   * derived lineup (e.g. last-played XI for a SCHEDULED match) rather than
+   * a confirmed team sheet.
+   */
+  variant?: 'confirmed' | 'predicted';
 }
 
 /**
@@ -38,14 +45,19 @@ export function PlayerMarker({
   onClick,
   selected = false,
   opacity = 1,
+  variant = 'confirmed',
 }: PlayerMarkerProps) {
+  const effectiveOpacity = variant === 'predicted' ? opacity * 0.6 : opacity;
+  const strokeDashArray = variant === 'predicted' ? '0.6 0.4' : undefined;
+
   return (
     <g
       className={cn('cursor-pointer transition-transform', className)}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       aria-label={name}
-      style={{ opacity }}
+      data-variant={variant}
+      style={{ opacity: effectiveOpacity }}
     >
       {/* Selection ring */}
       {selected && (
@@ -68,6 +80,7 @@ export function PlayerMarker({
         fill={color}
         stroke={strokeColor}
         strokeWidth="0.3"
+        strokeDasharray={strokeDashArray}
       />
 
       {/* Player number */}

@@ -25,6 +25,12 @@ export interface FormationBoardProps {
   selectedPlayerId?: string;
   /** Whether to flip the formation (show defending) */
   flip?: boolean;
+  /**
+   * Marker variant. 'confirmed' (default) for actual team sheets;
+   * 'predicted' for derived lineups (e.g. last-played XI shown on a
+   * SCHEDULED match's Lineups tab).
+   */
+  markerVariant?: 'confirmed' | 'predicted';
 }
 
 /**
@@ -41,6 +47,7 @@ export function FormationBoard({
   onPlayerClick,
   selectedPlayerId,
   flip = false,
+  markerVariant = 'confirmed',
 }: FormationBoardProps) {
   const color = teamColor ?? formation.team.primaryColor ?? 'var(--color-team-home)';
 
@@ -72,6 +79,7 @@ export function FormationBoard({
                 number={showNumbers ? pos.player.shirtNumber : undefined}
                 name={pos.player.name}
                 selected={isSelected}
+                variant={markerVariant}
               />
 
               {showNames && (
