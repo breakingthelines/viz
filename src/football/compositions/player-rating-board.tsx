@@ -2,6 +2,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import type { Formation, FormationPosition } from '#/football/types';
+import { formatFormationLabel } from '#/football/compositions/formation-label';
 
 /**
  * Player grade — 1 (best) through 6 (worst). BTL appropriates the BILD
@@ -32,7 +33,11 @@ export interface PlayerRatingBoardProps {
   onPlayerClick?: (position: FormationPosition) => void;
   /** Currently-selected player id (for highlight ring). */
   selectedPlayerId?: string;
-  /** Marker square edge length, in viewBox units. */
+  /**
+   * Marker radius, in viewBox units. The marker is rendered as a circle (the
+   * jersey-badge convention shared with `PlayerMarker`); the grade is conveyed
+   * through the fill colour rather than the marker shape.
+   */
   markerSize?: number;
   /**
    * Top-graded emphasis. When `true` (default), the player with the best
@@ -114,13 +119,15 @@ export function PlayerRatingBoard({
   markerVariant = 'confirmed',
   onPlayerClick,
   selectedPlayerId,
-  markerSize = 4,
+  markerSize = 2.6,
   emphasiseTopGraded = true,
   className,
 }: PlayerRatingBoardProps) {
-  const half = markerSize / 2;
+  const radius = markerSize;
   const strokeDashArray = markerVariant === 'predicted' ? '0.6 0.4' : undefined;
   const effectiveOpacity = markerVariant === 'predicted' ? 0.6 : 1;
+  const teamLabel = formation.team.shortName ?? formation.team.name;
+  const formationLabel = formatFormationLabel(formation.formation);
 
   // Resolve the top-graded player (lowest value on the BTL 1-6 inverse scale
   // wins). Computed from the `grades` map; falls back to `undefined` when no
@@ -158,63 +165,89 @@ export function PlayerRatingBoard({
               style={{ opacity: effectiveOpacity }}
             >
               {isTopGraded && (
-                <rect
-                  x={pos.position.x - half - 0.9}
-                  y={pos.position.y - half - 0.9}
-                  width={markerSize + 1.8}
-                  height={markerSize + 1.8}
+                <circle
+                  cx={pos.position.x}
+                  cy={pos.position.y}
+                  r={radius + 0.9}
                   fill="none"
                   stroke="var(--color-red-100, #eb0000)"
                   strokeWidth={0.5}
-                  rx={0.6}
                 />
               )}
               {isSelected && (
-                <rect
-                  x={pos.position.x - half - 0.6}
-                  y={pos.position.y - half - 0.6}
-                  width={markerSize + 1.2}
-                  height={markerSize + 1.2}
+                <circle
+                  cx={pos.position.x}
+                  cy={pos.position.y}
+                  r={radius + 0.55}
                   fill="none"
                   stroke="white"
                   strokeWidth={0.4}
                   opacity={0.45}
-                  rx={0.4}
                 />
               )}
-              <rect
-                x={pos.position.x - half}
-                y={pos.position.y - half}
-                width={markerSize}
-                height={markerSize}
+              {/* Jersey-style circular badge. Fill conveys the grade (red
+                  intensity for graded, grey for empty state); shape is a
+                  circle to match the PlayerMarker convention. */}
+              <circle
+                cx={pos.position.x}
+                cy={pos.position.y}
+                r={radius}
                 fill={fill}
                 stroke={stroke}
                 strokeWidth={0.3}
                 strokeDasharray={strokeDashArray}
-                rx={0.4}
               />
-              {grade !== undefined ? (
+              {/* Primary glyph inside the badge is the shirt number. When the
+                  player has no shirt number on file we still render an empty
+                  circle so the layout doesn't shift. */}
+              {pos.player.shirtNumber ? (
                 <text
                   x={pos.position.x}
                   y={pos.position.y}
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill="white"
-                  fontSize={markerSize * 0.7}
+                  fontSize={radius * 0.9}
                   fontWeight="bold"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {grade}
+                  {pos.player.shirtNumber}
                 </text>
+              ) : null}
+              {/* Grade pip — top-right corner of the badge when graded. Keeps
+                  the BILD 1-6 number visible without crowding the jersey
+                  number that lives inside the badge. */}
+              {grade !== undefined ? (
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle
+                    cx={pos.position.x + radius * 0.85}
+                    cy={pos.position.y - radius * 0.85}
+                    r={radius * 0.55}
+                    fill="rgba(0,0,0,0.7)"
+                    stroke="white"
+                    strokeWidth={0.18}
+                  />
+                  <text
+                    x={pos.position.x + radius * 0.85}
+                    y={pos.position.y - radius * 0.85}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="white"
+                    fontSize={radius * 0.75}
+                    fontWeight="bold"
+                  >
+                    {grade}
+                  </text>
+                </g>
               ) : null}
               {/* Last-name caption below marker */}
               <text
                 x={pos.position.x}
-                y={pos.position.y + half + 2}
+                y={pos.position.y + radius + 2}
                 textAnchor="middle"
                 fill="white"
                 fontSize="1.8"
-                opacity="0.8"
+                opacity="0.85"
                 style={{ pointerEvents: 'none' }}
               >
                 {pos.player.name.split(' ').pop()}
@@ -223,8 +256,18 @@ export function PlayerRatingBoard({
           );
         })}
       </Pitch>
-      <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-white">
-        {formation.team.shortName ?? formation.team.name} ({formation.formation})
+      {/* Formation chip — tucked just inside the top-left of the pitch frame,
+          en-dash separated and Inter-styled. White/70 keeps it secondary to
+          the markers without disappearing on the dark pitch. */}
+      <div
+        data-slot="player-rating-board-formation-chip"
+        className="pointer-events-none absolute top-2 left-2 flex items-baseline gap-1.5 font-sans text-[11px] tracking-tight text-white/70"
+        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+      >
+        <span className="font-semibold text-white/80">{teamLabel}</span>
+        {formationLabel ? (
+          <span className="tabular-nums text-white/55">{formationLabel}</span>
+        ) : null}
       </div>
     </div>
   );
