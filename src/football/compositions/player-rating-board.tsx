@@ -256,13 +256,16 @@ export function PlayerRatingBoard({
                   </text>
                 </g>
               ) : null}
-              {/* Last-name caption below marker */}
+              {/* Last-name caption below marker. Bumped from 1.8 → 2.6
+                  in Wave 6.4.9 to match the proportional jersey-number bump
+                  from Wave 6.4.8 so names read cleanly at default viewport
+                  sizes. */}
               <text
                 x={pos.position.x}
                 y={pos.position.y + radius + 2}
                 textAnchor="middle"
                 fill="white"
-                fontSize="1.8"
+                fontSize="2.6"
                 opacity="0.85"
                 style={{ pointerEvents: 'none' }}
               >
