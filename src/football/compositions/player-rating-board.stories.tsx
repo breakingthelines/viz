@@ -40,6 +40,16 @@ export const Confirmed: Story = {
   },
 };
 
+export const WithoutTopGradedRing: Story = {
+  args: {
+    formation: argentinaFormation,
+    grades: sampleGrades,
+    markerVariant: 'confirmed',
+    markerSize: 4,
+    emphasiseTopGraded: false,
+  },
+};
+
 export const Predicted: Story = {
   args: {
     formation: argentinaFormation,
