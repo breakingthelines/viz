@@ -3,6 +3,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import { PlayerMarker } from '#/football/primitives/player-marker';
 import type { Formation, FormationPosition } from '#/football/types';
+import { formatFormationLabel } from '#/football/compositions/formation-label';
 
 export interface FormationBoardProps {
   /** Formation data to display */
@@ -99,9 +100,22 @@ export function FormationBoard({
         })}
       </Pitch>
 
-      {/* Formation label */}
-      <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-white">
-        {formation.team.shortName ?? formation.team.name} ({formation.formation})
+      {/* Formation chip — tucked just inside the top-left of the pitch
+          frame; en-dash separated, Inter-styled, white/70. Matches the
+          chip used by `PlayerRatingBoard`. */}
+      <div
+        data-slot="formation-board-chip"
+        className="pointer-events-none absolute top-2 left-2 flex items-baseline gap-1.5 font-sans text-[11px] tracking-tight text-white/70"
+        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+      >
+        <span className="font-semibold text-white/80">
+          {formation.team.shortName ?? formation.team.name}
+        </span>
+        {formatFormationLabel(formation.formation) ? (
+          <span className="tabular-nums text-white/55">
+            {formatFormationLabel(formation.formation)}
+          </span>
+        ) : null}
       </div>
     </div>
   );
