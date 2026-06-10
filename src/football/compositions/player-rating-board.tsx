@@ -36,7 +36,9 @@ export interface PlayerRatingBoardProps {
   /**
    * Marker radius, in viewBox units. The marker is rendered as a circle (the
    * jersey-badge convention shared with `PlayerMarker`); the grade is conveyed
-   * through the fill colour rather than the marker shape.
+   * through the fill colour rather than the marker shape. Default bumped to
+   * `3.9` in Wave 6.4.8 so the jersey number reads cleanly at default viewport
+   * sizes (the inner text scales with the radius).
    */
   markerSize?: number;
   /**
@@ -119,7 +121,7 @@ export function PlayerRatingBoard({
   markerVariant = 'confirmed',
   onPlayerClick,
   selectedPlayerId,
-  markerSize = 2.6,
+  markerSize = 3.9,
   emphasiseTopGraded = true,
   className,
 }: PlayerRatingBoardProps) {
@@ -135,7 +137,21 @@ export function PlayerRatingBoard({
   const topGradedPlayerId = emphasiseTopGraded ? resolveTopGradedPlayerId(grades) : undefined;
 
   return (
-    <div className={cn('relative', className)} data-slot="player-rating-board">
+    <div className={cn('flex flex-col', className)} data-slot="player-rating-board">
+      {/* Formation chip — Wave 6.4.8 moved out of the pitch corner and onto
+          its own row above the pitch frame so it reads as a heading, not a
+          floating overlay. Centred horizontally; en-dash separated between
+          team and formation. */}
+      <div
+        data-slot="player-rating-board-formation-chip"
+        className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 font-sans text-[12px] tracking-tight text-white/70"
+        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+      >
+        <span className="font-semibold text-white/85">{teamLabel}</span>
+        {formationLabel ? (
+          <span className="tabular-nums text-white/60">{formationLabel}</span>
+        ) : null}
+      </div>
       <Pitch variant="full" theme={theme}>
         {formation.positions.map((pos) => {
           const grade = grades?.get(pos.player.id);
@@ -256,19 +272,6 @@ export function PlayerRatingBoard({
           );
         })}
       </Pitch>
-      {/* Formation chip — tucked just inside the top-left of the pitch frame,
-          en-dash separated and Inter-styled. White/70 keeps it secondary to
-          the markers without disappearing on the dark pitch. */}
-      <div
-        data-slot="player-rating-board-formation-chip"
-        className="pointer-events-none absolute top-2 left-2 flex items-baseline gap-1.5 font-sans text-[11px] tracking-tight text-white/70"
-        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
-      >
-        <span className="font-semibold text-white/80">{teamLabel}</span>
-        {formationLabel ? (
-          <span className="tabular-nums text-white/55">{formationLabel}</span>
-        ) : null}
-      </div>
     </div>
   );
 }
