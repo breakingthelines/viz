@@ -34,6 +34,13 @@ export interface PlayerRatingBoardProps {
   selectedPlayerId?: string;
   /** Marker square edge length, in viewBox units. */
   markerSize?: number;
+  /**
+   * Top-graded emphasis. When `true` (default), the player with the best
+   * grade (lowest value on the 1-6 inverse scale) is surrounded by a BTL-red
+   * ring so the eye lands on them first. Set to `false` to suppress the
+   * emphasis (e.g. when emphasising a different player externally).
+   */
+  emphasiseTopGraded?: boolean;
   /** Additional CSS classes for the wrapper. */
   className?: string;
 }
@@ -62,12 +69,38 @@ function gradeFill(grade: PlayerGrade): string {
 }
 
 /**
+ * Pick the player id with the lowest (best) grade. Ties resolve to the first
+ * one encountered in map iteration order; callers usually build the grades
+ * map from a deterministic source (e.g. team-sheet order) so the same player
+ * wins on every render.
+ */
+function resolveTopGradedPlayerId(
+  grades: Map<string, PlayerGrade> | undefined,
+): string | undefined {
+  if (!grades || grades.size === 0) return undefined;
+  let bestId: string | undefined;
+  let bestGrade: PlayerGrade | undefined;
+  for (const [id, grade] of grades) {
+    if (bestGrade === undefined || grade < bestGrade) {
+      bestGrade = grade;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
+/**
  * PlayerRatingBoard renders a formation pitch with per-player **grade boxes**
  * laid out at each lineup slot. Grades follow BTL's 1-6 inverse scale
  * (1 = Excellent, 6 = Poor) and use the GradeBox red-intensity gradient.
  *
  * Tapping a marker invokes onPlayerClick — host wires this to the
  * @breakingthelines/design-system PlayerRatingCard sheet for view + write.
+ *
+ * Top-graded emphasis: the player with the lowest (best) grade is wrapped in
+ * a BTL-red ring so the eye lands on them first. Suppress via
+ * `emphasiseTopGraded={false}` when the host is emphasising a different
+ * player externally.
  *
  * Empty state: when no grades are passed (`grades` undefined or absent for a
  * given player), the marker renders in greyscale at the same slot. The board
@@ -82,11 +115,17 @@ export function PlayerRatingBoard({
   onPlayerClick,
   selectedPlayerId,
   markerSize = 4,
+  emphasiseTopGraded = true,
   className,
 }: PlayerRatingBoardProps) {
   const half = markerSize / 2;
   const strokeDashArray = markerVariant === 'predicted' ? '0.6 0.4' : undefined;
   const effectiveOpacity = markerVariant === 'predicted' ? 0.6 : 1;
+
+  // Resolve the top-graded player (lowest value on the BTL 1-6 inverse scale
+  // wins). Computed from the `grades` map; falls back to `undefined` when no
+  // grades have landed yet, in which case no ring is drawn.
+  const topGradedPlayerId = emphasiseTopGraded ? resolveTopGradedPlayerId(grades) : undefined;
 
   return (
     <div className={cn('relative', className)} data-slot="player-rating-board">
@@ -94,6 +133,7 @@ export function PlayerRatingBoard({
         {formation.positions.map((pos) => {
           const grade = grades?.get(pos.player.id);
           const isSelected = pos.player.id === selectedPlayerId;
+          const isTopGraded = pos.player.id === topGradedPlayerId;
           const fill =
             grade !== undefined
               ? gradeFill(grade)
@@ -108,14 +148,27 @@ export function PlayerRatingBoard({
               role={onPlayerClick ? 'button' : undefined}
               aria-label={
                 grade !== undefined
-                  ? `${pos.player.name}, grade ${grade}`
+                  ? `${pos.player.name}, grade ${grade}${isTopGraded ? ', top grade' : ''}`
                   : `${pos.player.name}, no grade yet`
               }
               data-player-id={pos.player.id}
               data-grade={grade ?? 'none'}
               data-variant={markerVariant}
+              data-top-graded={isTopGraded || undefined}
               style={{ opacity: effectiveOpacity }}
             >
+              {isTopGraded && (
+                <rect
+                  x={pos.position.x - half - 0.9}
+                  y={pos.position.y - half - 0.9}
+                  width={markerSize + 1.8}
+                  height={markerSize + 1.8}
+                  fill="none"
+                  stroke="var(--color-red-100, #eb0000)"
+                  strokeWidth={0.5}
+                  rx={0.6}
+                />
+              )}
               {isSelected && (
                 <rect
                   x={pos.position.x - half - 0.6}
