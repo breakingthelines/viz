@@ -61,7 +61,23 @@ export function FormationBoard({
   };
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('flex flex-col', className)}>
+      {/* Formation chip — Wave 6.4.8 moved out of the pitch corner and onto
+          its own row above the pitch frame; mirrors `PlayerRatingBoard`. */}
+      <div
+        data-slot="formation-board-chip"
+        className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 font-sans text-[12px] tracking-tight text-white/70"
+        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+      >
+        <span className="font-semibold text-white/85">
+          {formation.team.shortName ?? formation.team.name}
+        </span>
+        {formatFormationLabel(formation.formation) ? (
+          <span className="tabular-nums text-white/60">
+            {formatFormationLabel(formation.formation)}
+          </span>
+        ) : null}
+      </div>
       <Pitch variant="full" theme={theme}>
         {formation.positions.map((pos) => {
           const position = getPosition(pos);
@@ -99,24 +115,6 @@ export function FormationBoard({
           );
         })}
       </Pitch>
-
-      {/* Formation chip — tucked just inside the top-left of the pitch
-          frame; en-dash separated, Inter-styled, white/70. Matches the
-          chip used by `PlayerRatingBoard`. */}
-      <div
-        data-slot="formation-board-chip"
-        className="pointer-events-none absolute top-2 left-2 flex items-baseline gap-1.5 font-sans text-[11px] tracking-tight text-white/70"
-        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
-      >
-        <span className="font-semibold text-white/80">
-          {formation.team.shortName ?? formation.team.name}
-        </span>
-        {formatFormationLabel(formation.formation) ? (
-          <span className="tabular-nums text-white/55">
-            {formatFormationLabel(formation.formation)}
-          </span>
-        ) : null}
-      </div>
     </div>
   );
 }
