@@ -65,6 +65,19 @@ export const Empty: Story = {
   },
 };
 
+/**
+ * Ungraded board tinted with a team accent — the look the Match Centre
+ * Lineups tab uses to reuse this board purely to show who is on the pitch
+ * (no grades, but the team's identity colour). Graded markers are unaffected.
+ */
+export const EmptyTeamColored: Story = {
+  args: {
+    formation: argentinaFormation,
+    markerSize: 4,
+    teamColor: '#eb0000',
+  },
+};
+
 export const Interactive: Story = {
   render: (args) => {
     const [selectedId, setSelectedId] = useState<string>();

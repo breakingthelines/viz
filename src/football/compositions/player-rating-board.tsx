@@ -48,8 +48,39 @@ export interface PlayerRatingBoardProps {
    * emphasis (e.g. when emphasising a different player externally).
    */
   emphasiseTopGraded?: boolean;
+  /**
+   * Team accent for the **ungraded** (empty-state) marker fill. When set, a
+   * player who has no grade yet renders as a tinted jersey badge in this
+   * colour instead of the default neutral grey — so the board can carry a
+   * team identity on a surface where grades aren't the point (e.g. a Lineups
+   * tab that reuses this board purely to show who is on the pitch).
+   *
+   * Graded markers are unaffected: they always use the BILD 1-6 red-intensity
+   * gradient. When omitted, ungraded markers stay neutral grey (the Gradings
+   * sub-tab "rate this match" empty state).
+   */
+  teamColor?: string;
   /** Additional CSS classes for the wrapper. */
   className?: string;
+}
+
+/**
+ * Fill + stroke for an **ungraded** marker. Defaults to the neutral grey
+ * empty state; when a `teamColor` is supplied the badge is tinted with the
+ * team accent (a translucent fill so it reads as "not yet graded" rather than
+ * a solid kit shirt) and given a matching stroke.
+ */
+function ungradedMarkerColors(teamColor: string | undefined): { fill: string; stroke: string } {
+  if (!teamColor) {
+    return {
+      fill: 'color-mix(in srgb, var(--color-grey-400, #ccc4c4) 25%, transparent)',
+      stroke: 'rgba(255,255,255,0.25)',
+    };
+  }
+  return {
+    fill: `color-mix(in srgb, ${teamColor} 80%, transparent)`,
+    stroke: `color-mix(in srgb, ${teamColor} 55%, white)`,
+  };
 }
 
 /**
@@ -82,7 +113,7 @@ function gradeFill(grade: PlayerGrade): string {
  * wins on every render.
  */
 function resolveTopGradedPlayerId(
-  grades: Map<string, PlayerGrade> | undefined,
+  grades: Map<string, PlayerGrade> | undefined
 ): string | undefined {
   if (!grades || grades.size === 0) return undefined;
   let bestId: string | undefined;
@@ -123,6 +154,7 @@ export function PlayerRatingBoard({
   selectedPlayerId,
   markerSize = 3.9,
   emphasiseTopGraded = true,
+  teamColor,
   className,
 }: PlayerRatingBoardProps) {
   const radius = markerSize;
@@ -157,11 +189,9 @@ export function PlayerRatingBoard({
           const grade = grades?.get(pos.player.id);
           const isSelected = pos.player.id === selectedPlayerId;
           const isTopGraded = pos.player.id === topGradedPlayerId;
-          const fill =
-            grade !== undefined
-              ? gradeFill(grade)
-              : 'color-mix(in srgb, var(--color-grey-400, #ccc4c4) 25%, transparent)';
-          const stroke = grade !== undefined ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)';
+          const ungraded = ungradedMarkerColors(teamColor);
+          const fill = grade !== undefined ? gradeFill(grade) : ungraded.fill;
+          const stroke = grade !== undefined ? 'rgba(255,255,255,0.6)' : ungraded.stroke;
 
           return (
             <g
