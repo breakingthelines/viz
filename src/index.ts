@@ -8,14 +8,25 @@ export type {
 } from './football/primitives/index';
 
 // Football - Compositions
-export { ShotMap, FormationBoard, PlayerRatingBoard } from './football/compositions/index';
+export { ShotMap, FormationBoard, PlayerRatingBoard, LineupPitch } from './football/compositions/index';
 export type {
   ShotMapProps,
   FormationBoardProps,
   PlayerRatingBoardProps,
   PlayerRatingBoardEntry,
   PlayerGrade,
+  LineupPitchProps,
+  LineupSlot,
+  LineupSlotPlayer,
 } from './football/compositions/index';
+
+// Football - Data (formation templates for the lineup builder)
+export {
+  getFormationTemplate,
+  FORMATION_OPTIONS,
+  DEFAULT_FORMATION,
+} from './football/data/formations';
+export type { FormationSlotTemplate } from './football/data/formations';
 
 // Football - Types (proto)
 export type {
