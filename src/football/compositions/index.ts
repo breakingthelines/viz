@@ -10,3 +10,6 @@ export type {
   PlayerRatingBoardEntry,
   PlayerRatingBoardProps,
 } from './player-rating-board';
+
+export { LineupPitch } from './lineup-pitch';
+export type { LineupPitchProps, LineupSlot, LineupSlotPlayer } from './lineup-pitch';
