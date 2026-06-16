@@ -42,6 +42,8 @@ export interface LineupPitchProps {
   formation?: string;
   /** Marker fill / ring colour for filled slots. */
   teamColor?: string;
+  /** Kit-number / monogram text colour. Defaults to white. */
+  numberColor?: string;
   /** Pitch theme. Defaults to `dark` (the editor / reader surface). */
   theme?: PitchTheme;
   /** Additional CSS classes. */
@@ -77,6 +79,7 @@ export function LineupPitch({
   teamShortName,
   formation,
   teamColor,
+  numberColor = 'white',
   theme = 'dark',
   className,
   markerSize = 3.4,
@@ -93,7 +96,7 @@ export function LineupPitch({
 
   return (
     <div className={cn('flex flex-col', className)}>
-      {(chipLabel || formationLabel) && (
+      {!editable && (chipLabel || formationLabel) && (
         <div
           data-slot="lineup-pitch-chip"
           className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 text-[12px] tracking-tight"
@@ -177,7 +180,7 @@ export function LineupPitch({
                       y={position.y}
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fill="white"
+                      fill={numberColor}
                       fontSize={
                         markerContent === 'number' && player.shirtNumber !== undefined
                           ? markerSize
