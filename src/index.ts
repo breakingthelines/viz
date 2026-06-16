@@ -8,7 +8,12 @@ export type {
 } from './football/primitives/index';
 
 // Football - Compositions
-export { ShotMap, FormationBoard, PlayerRatingBoard, LineupPitch } from './football/compositions/index';
+export {
+  ShotMap,
+  FormationBoard,
+  PlayerRatingBoard,
+  LineupPitch,
+} from './football/compositions/index';
 export type {
   ShotMapProps,
   FormationBoardProps,
