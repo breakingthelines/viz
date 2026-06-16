@@ -12,7 +12,7 @@ const meta = {
   argTypes: {
     theme: { control: 'select', options: ['grass', 'dark'] },
     markerSize: { control: { type: 'range', min: 2, max: 5, step: 0.2 } },
-    showNumbers: { control: 'boolean' },
+    markerContent: { control: 'select', options: ['number', 'headshot'] },
     showNames: { control: 'boolean' },
     editable: { control: 'boolean' },
   },
@@ -134,6 +134,23 @@ export const Reader: Story = {
     teamColor: '#eb0000',
     editable: false,
     showNames: true,
+    slots: templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+};
+
+/** Headshot markers (monogram fallback shown here, as the sample has no photos). */
+export const Headshots: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-3-3',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    markerContent: 'headshot',
     slots: templateSlots('4-3-3').map((slot, i) => ({
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },

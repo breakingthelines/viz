@@ -1,7 +1,7 @@
+import { useId } from 'react';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
-import { PlayerMarker } from '#/football/primitives/player-marker';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 
 /** A player assigned to a lineup slot. */
@@ -10,8 +10,10 @@ export interface LineupSlotPlayer {
   id: string;
   /** Display name. */
   name: string;
-  /** Shirt number, shown inside the marker. */
+  /** Shirt number, shown inside the marker in `number` mode. */
   shirtNumber?: number;
+  /** Headshot URL, shown inside the marker in `headshot` mode (monogram fallback). */
+  imageUrl?: string;
 }
 
 /** A single position on the lineup board — filled or empty. */
@@ -26,6 +28,9 @@ export interface LineupSlot {
   player?: LineupSlotPlayer;
 }
 
+/** What fills a player marker: the shirt number, or the player's headshot. */
+export type LineupMarkerContent = 'number' | 'headshot';
+
 export interface LineupPitchProps {
   /** Slots to render (filled + empty). */
   slots: LineupSlot[];
@@ -35,7 +40,7 @@ export interface LineupPitchProps {
   teamShortName?: string;
   /** Formation label string, e.g. "4-3-3". */
   formation?: string;
-  /** Marker fill colour for filled slots. */
+  /** Marker fill / ring colour for filled slots. */
   teamColor?: string;
   /** Pitch theme. Defaults to `dark` (the editor / reader surface). */
   theme?: PitchTheme;
@@ -43,8 +48,8 @@ export interface LineupPitchProps {
   className?: string;
   /** Marker radius in viewBox units. */
   markerSize?: number;
-  /** Show shirt numbers inside filled markers. */
-  showNumbers?: boolean;
+  /** What a filled marker shows. Defaults to `number`. */
+  markerContent?: LineupMarkerContent;
   /** Show the surname under each filled marker. */
   showNames?: boolean;
   /**
@@ -63,7 +68,8 @@ export interface LineupPitchProps {
  * Interactive formation board for building a lineup. Unlike `FormationBoard`
  * (which renders a confirmed, fully-populated team sheet), every slot here can
  * be empty and clickable so a creator can assign players one at a time — the
- * pitch primitive of the editor's Lineup block.
+ * pitch primitive of the editor's Lineup block. Markers show either the shirt
+ * number or the player's headshot (with a monogram fallback).
  */
 export function LineupPitch({
   slots,
@@ -74,7 +80,7 @@ export function LineupPitch({
   theme = 'dark',
   className,
   markerSize = 3.4,
-  showNumbers = true,
+  markerContent = 'number',
   showNames = true,
   editable = false,
   onSlotClick,
@@ -83,6 +89,7 @@ export function LineupPitch({
   const color = teamColor ?? 'var(--color-team-home)';
   const chipLabel = teamShortName ?? teamName;
   const formationLabel = formatFormationLabel(formation);
+  const clipPrefix = useId();
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -90,10 +97,10 @@ export function LineupPitch({
         <div
           data-slot="lineup-pitch-chip"
           className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 text-[12px] tracking-tight"
-          style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+          style={{ fontFamily: 'inherit' }}
         >
-          {chipLabel && <span className="font-semibold text-white/85">{chipLabel}</span>}
-          {formationLabel && <span className="tabular-nums text-white/60">{formationLabel}</span>}
+          {chipLabel && <span className="font-semibold text-white/90">{chipLabel}</span>}
+          {formationLabel && <span className="tabular-nums text-white/55">{formationLabel}</span>}
         </div>
       )}
 
@@ -105,29 +112,99 @@ export function LineupPitch({
           const handleClick = interactive ? () => onSlotClick?.(index) : undefined;
 
           if (slot.player) {
+            const player = slot.player;
+            const showHeadshot = markerContent === 'headshot' && Boolean(player.imageUrl);
+            const clipId = `${clipPrefix}-${index}`;
             return (
-              <g key={`slot-${index}`}>
-                <PlayerMarker
-                  position={position}
-                  size={markerSize}
-                  color={color}
-                  number={showNumbers ? slot.player.shirtNumber : undefined}
-                  name={slot.player.name}
-                  selected={isSelected}
-                  onClick={handleClick}
-                />
+              <g
+                key={`slot-${index}`}
+                onClick={handleClick}
+                role={interactive ? 'button' : undefined}
+                aria-label={player.name}
+                className={cn('transition-transform', interactive && 'cursor-pointer')}
+              >
+                {isSelected && (
+                  <circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={markerSize + 1}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="0.3"
+                    opacity="0.6"
+                  />
+                )}
+
+                {showHeadshot ? (
+                  <>
+                    <defs>
+                      <clipPath id={clipId}>
+                        <circle cx={position.x} cy={position.y} r={markerSize} />
+                      </clipPath>
+                    </defs>
+                    <circle cx={position.x} cy={position.y} r={markerSize} fill={color} />
+                    <image
+                      href={player.imageUrl}
+                      x={position.x - markerSize}
+                      y={position.y - markerSize}
+                      width={markerSize * 2}
+                      height={markerSize * 2}
+                      clipPath={`url(#${clipId})`}
+                      preserveAspectRatio="xMidYMid slice"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    <circle
+                      cx={position.x}
+                      cy={position.y}
+                      r={markerSize}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="0.5"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <circle
+                      cx={position.x}
+                      cy={position.y}
+                      r={markerSize}
+                      fill={color}
+                      stroke="white"
+                      strokeWidth="0.3"
+                    />
+                    <text
+                      x={position.x}
+                      y={position.y}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="white"
+                      fontSize={
+                        markerContent === 'number' && player.shirtNumber !== undefined
+                          ? markerSize
+                          : markerSize * 0.8
+                      }
+                      fontWeight="bold"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {markerContent === 'number' && player.shirtNumber !== undefined
+                        ? player.shirtNumber
+                        : monogram(player.name)}
+                    </text>
+                  </>
+                )}
+
                 {showNames && (
                   <text
                     x={position.x}
-                    y={position.y + markerSize + 2.6}
+                    y={position.y + markerSize + 2.7}
                     textAnchor="middle"
                     fill="white"
                     fontSize="2.4"
                     fontWeight="600"
-                    opacity="0.85"
+                    opacity="0.9"
                     style={{ pointerEvents: 'none' }}
                   >
-                    {surname(slot.player.name)}
+                    {surname(player.name)}
                   </text>
                 )}
               </g>
@@ -185,7 +262,7 @@ export function LineupPitch({
               {slot.role && (
                 <text
                   x={position.x}
-                  y={position.y + markerSize + 2.6}
+                  y={position.y + markerSize + 2.7}
                   textAnchor="middle"
                   fill="white"
                   fontSize="2.2"
@@ -206,6 +283,14 @@ export function LineupPitch({
 
 /** Last token of a name, for the under-marker label ("Bukayo Saka" → "Saka"). */
 function surname(name: string): string {
-  const parts = name.trim().split(/\s+/);
+  const parts = name.trim().split(/\s+/).filter(Boolean);
   return parts[parts.length - 1] ?? name;
+}
+
+/** Up-to-two initials for the monogram fallback ("Bukayo Saka" → "BS"). */
+function monogram(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
