@@ -13,7 +13,6 @@ export {
   FormationBoard,
   PlayerRatingBoard,
   LineupPitch,
-  MatchStatsBoard,
 } from './football/compositions/index';
 export type {
   ShotMapProps,
@@ -24,10 +23,7 @@ export type {
   LineupPitchProps,
   LineupSlot,
   LineupSlotPlayer,
-  MatchStatsBoardProps,
-  MatchStatRow,
-  MatchStatKind,
-  MatchStatsTeam,
+  LineupMarkerContent,
 } from './football/compositions/index';
 
 // Football - Data (formation templates for the lineup builder)

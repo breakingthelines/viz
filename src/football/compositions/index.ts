@@ -12,12 +12,9 @@ export type {
 } from './player-rating-board';
 
 export { LineupPitch } from './lineup-pitch';
-export type { LineupPitchProps, LineupSlot, LineupSlotPlayer } from './lineup-pitch';
-
-export { MatchStatsBoard } from './match-stats-board';
 export type {
-  MatchStatsBoardProps,
-  MatchStatRow,
-  MatchStatKind,
-  MatchStatsTeam,
-} from './match-stats-board';
+  LineupPitchProps,
+  LineupSlot,
+  LineupSlotPlayer,
+  LineupMarkerContent,
+} from './lineup-pitch';
