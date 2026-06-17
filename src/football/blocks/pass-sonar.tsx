@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 
@@ -50,15 +50,16 @@ export interface PassSonarProps {
 const TEAM_COLOR = '#eb0000';
 
 // Sonar geometry, in pitch viewBox units (the Pitch primitive is 100 × 100).
-const BASE_RADIUS = 4.2; // resting outer reach of the longest wedge
+const BASE_RADIUS = 4.2; // resting outer reach of the longest small wedge
 const MIN_WEDGE = 0.6; // floor so a short-pass wedge stays visible
 // Pass length (m) that maps to a full-radius wedge; longer passes clamp here.
 const MAX_PASS_LENGTH = 45;
 
-// Take-over focus: the hovered sonar floats to the pitch centre and blows up.
+// Take-over focus: a freshly-drawn large sonar is rendered as a separate
+// overlay (not the small in-place sonar growing), centred in a clean slot.
 const FOCUS_CX = 50;
-const FOCUS_CY = 50;
-const FOCUS_RADIUS = 30; // outer reach of the longest wedge when focused
+const FOCUS_CY = 54;
+const FOCUS_RADIUS = 26; // outer reach of the longest wedge in the focus overlay
 
 /** Up-to-two initials for the monogram ("Lionel Messi" → "LM"). */
 function monogram(name: string): string {
@@ -123,6 +124,18 @@ function avgPassLength(p: PassSonarPlayer): number {
   return n > 0 ? lenSum / n : 0;
 }
 
+/** Per-player length scale: own longest reach, floored so short passers still read. */
+function lengthCeilingFor(p: PassSonarPlayer): number {
+  const longest = p.wedges.reduce((m, w) => Math.max(m, w.avgLength), 0) || 1;
+  return Math.max(longest, MAX_PASS_LENGTH * 0.5);
+}
+
+/** Volume → fill opacity, on a gentle curve so mid-volume directions register. */
+function fillOpacityFor(count: number, maxCount: number): number {
+  const volFrac = maxCount > 0 ? count / maxCount : 0;
+  return 0.16 + Math.sqrt(volFrac) * 0.72;
+}
+
 /**
  * Pass sonars — the iconic StatsBomb radial passing diagram on the BTL dark
  * surface, styled to sit quietly next to the Shot map and Lineup builder. Each
@@ -130,11 +143,13 @@ function avgPassLength(p: PassSonarPlayer): number {
  * split into directional wedges, each wedge's radius is the average pass length
  * in that direction and its colour intensity is the pass volume.
  *
- * Hovering or focusing a player takes over the viz: that sonar floats to the
- * centre of the pitch and blows up large while the pitch and every other sonar
- * dim back, so the reader can actually read one player's directional profile —
- * his name, total passes and average pass length. Move out and it settles back
- * into formation. Wedges grow out on mount, staggered by player.
+ * Hovering a player takes over the viz: the small sonars and pitch dim back
+ * (opacity only — the small sonars never move or morph) while a freshly-drawn
+ * LARGE copy of that player's sonar fades and scales in as a separate overlay,
+ * with his name, total passes, average pass length, headshot and crest. The
+ * dimming scrim and the overlay are both pointer-transparent and focus is
+ * driven solely off each small sonar's hit-area, so leaving a sonar (or the
+ * pitch) always clears the take-over — no element can trap the cursor.
  */
 export function PassSonar({
   team,
@@ -179,134 +194,134 @@ export function PassSonar({
         </span>
       </div>
 
-      {/* Pitch + sonars */}
+      {/* Pitch + sonars. Leaving the whole pitch clears focus as a backstop, so
+          the take-over can never persist once the cursor is off the field. */}
       <div className="relative">
         <Pitch variant="full" theme="dark">
-          {/* Whole-pitch scrim: dims pitch + resting sonars behind the focus. */}
-          <motion.rect
-            x={0}
-            y={0}
-            width={100}
-            height={100}
-            fill="#0a0a0a"
-            initial={false}
-            animate={{ opacity: active ? 0.66 : 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-            style={{ pointerEvents: 'none' }}
-          />
-
-          {players.map((player, playerIndex) => {
-            const isActive = player.id === activeId;
-            const dimmed = activeId !== null && !isActive;
-            const longest = player.wedges.reduce((m, w) => Math.max(m, w.avgLength), 0) || 1;
-            // Scale by the longer of the player's own longest pass and the
-            // full-length cap, so a player who only plays short still shows
-            // proportionate wedges but a long-spraying player isn't clipped.
-            const lengthCeiling = Math.max(longest, MAX_PASS_LENGTH * 0.5);
-            const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
-
-            // When active, the sonar takes over: re-anchored to the pitch centre
-            // and drawn at the large focus radius. Otherwise it rests in place.
-            const cx = isActive ? FOCUS_CX : player.x;
-            const cy = isActive ? FOCUS_CY : player.y;
-            const reach = isActive ? FOCUS_RADIUS : BASE_RADIUS;
-
-            return (
-              <motion.g
-                key={player.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${player.name}, ${totalPasses(player)} passes`}
-                className="cursor-pointer focus:outline-none"
-                onMouseEnter={() => setActiveId(player.id)}
-                onMouseLeave={() => setActiveId(null)}
-                onFocus={() => setActiveId(player.id)}
-                onBlur={() => setActiveId(null)}
-                initial={false}
-                animate={{ opacity: dimmed ? 0.12 : 1 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              >
-                {/* Faint hub disc so an empty direction still anchors the player. */}
-                <motion.circle
-                  initial={false}
-                  animate={{ cx, cy, r: reach }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  fill="white"
-                  fillOpacity={isActive ? 0.05 : 0.03}
-                  stroke="white"
-                  strokeOpacity={isActive ? 0.16 : 0.08}
-                  strokeWidth={isActive ? 0.12 : 0.25}
-                />
-
-                {player.wedges.map((wedge, wedgeIndex) => {
-                  const lengthFrac = clamp(wedge.avgLength / lengthCeiling, 0, 1);
-                  const r = MIN_WEDGE + lengthFrac * (reach - MIN_WEDGE);
-                  // Volume → fill opacity, on a gentle curve so mid-volume
-                  // directions still register against the dark pitch.
-                  const volFrac = maxCount > 0 ? wedge.count / maxCount : 0;
-                  const fillOpacity = 0.16 + Math.sqrt(volFrac) * 0.72;
-                  const d = wedgePath(cx, cy, r, wedge.angleDeg, span);
-
-                  return (
-                    <motion.path
-                      key={`${player.id}-w${wedgeIndex}`}
-                      fill={color}
-                      stroke={color}
-                      strokeWidth={isActive ? 0.08 : 0.18}
-                      strokeOpacity={0.6}
-                      initial={{ opacity: 0, d }}
-                      animate={{ opacity: fillOpacity, d }}
-                      transition={{
-                        opacity: {
-                          duration: 0.5,
-                          ease: 'easeOut',
-                          delay: activeId === null ? 0.04 * playerIndex + 0.012 * wedgeIndex : 0,
-                        },
-                        d: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-                      }}
-                    />
-                  );
-                })}
-
-                {/* Hub dot. */}
-                <motion.circle
-                  initial={false}
-                  animate={{ cx, cy, r: isActive ? 1.4 : 0.7 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  fill="white"
-                  fillOpacity={0.85}
-                />
-
-                {/* Quiet surname label beneath the resting sonar (hidden while
-                    this sonar is the focused take-over — the overlay names it). */}
-                <motion.text
-                  x={player.x}
-                  y={player.y + BASE_RADIUS + 2.6}
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="2.4"
-                  fontWeight="600"
-                  initial={false}
-                  animate={{ opacity: isActive ? 0 : 0.7 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {surname(player.name)}
-                </motion.text>
-              </motion.g>
-            );
-          })}
-
-          {/* Focus overlay for the taken-over player, drawn last (on top). */}
-          {active && (
-            <FocusOverlay
-              player={active}
-              total={totalPasses(active)}
-              avgLength={avgPassLength(active)}
-              color={color}
-              clipId={`${clipPrefix}-focus`}
+          <g onPointerLeave={() => setActiveId(null)}>
+            {/* Whole-pitch scrim: dims pitch + resting sonars behind the focus.
+                Pointer-transparent so it can never swallow a leave event. */}
+            <motion.rect
+              x={0}
+              y={0}
+              width={100}
+              height={100}
+              fill="#0a0a0a"
+              initial={false}
+              animate={{ opacity: active ? 0.66 : 0 }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+              style={{ pointerEvents: 'none' }}
             />
-          )}
+
+            {players.map((player, playerIndex) => {
+              const isActive = player.id === activeId;
+              const dimmed = activeId !== null && !isActive;
+              const lengthCeiling = lengthCeilingFor(player);
+              const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
+
+              return (
+                <g key={player.id}>
+                  {/* Resting sonar. FIXED size at the avg position — it never
+                      moves or morphs; on take-over it only dims (opacity). */}
+                  <motion.g
+                    initial={false}
+                    animate={{ opacity: dimmed ? 0.12 : isActive ? 0.32 : 1 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {/* Faint hub disc so an empty direction still anchors the player. */}
+                    <circle
+                      cx={player.x}
+                      cy={player.y}
+                      r={BASE_RADIUS}
+                      fill="white"
+                      fillOpacity={0.03}
+                      stroke="white"
+                      strokeOpacity={0.08}
+                      strokeWidth={0.25}
+                    />
+
+                    {player.wedges.map((wedge, wedgeIndex) => {
+                      const lengthFrac = clamp(wedge.avgLength / lengthCeiling, 0, 1);
+                      const r = MIN_WEDGE + lengthFrac * (BASE_RADIUS - MIN_WEDGE);
+                      const d = wedgePath(player.x, player.y, r, wedge.angleDeg, span);
+
+                      return (
+                        <motion.path
+                          key={`${player.id}-w${wedgeIndex}`}
+                          d={d}
+                          fill={color}
+                          stroke={color}
+                          strokeWidth={0.18}
+                          strokeOpacity={0.6}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: fillOpacityFor(wedge.count, maxCount) }}
+                          transition={{
+                            duration: 0.5,
+                            ease: 'easeOut',
+                            delay: 0.04 * playerIndex + 0.012 * wedgeIndex,
+                          }}
+                        />
+                      );
+                    })}
+
+                    {/* Hub dot. */}
+                    <circle cx={player.x} cy={player.y} r={0.7} fill="white" fillOpacity={0.85} />
+
+                    {/* Quiet surname label beneath the resting sonar. */}
+                    <text
+                      x={player.x}
+                      y={player.y + BASE_RADIUS + 2.6}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="2.4"
+                      fontWeight="600"
+                      opacity={0.7}
+                    >
+                      {surname(player.name)}
+                    </text>
+                  </motion.g>
+
+                  {/* Transparent hit-area, drawn over the resting sonar, that
+                      drives focus. This is the ONLY pointer-reactive element per
+                      player; enter sets focus, leave clears it. It stays put (no
+                      growth), so enter/leave fire cleanly every cycle. */}
+                  <circle
+                    cx={player.x}
+                    cy={player.y}
+                    r={BASE_RADIUS + 1.4}
+                    fill="transparent"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${player.name}, ${totalPasses(player)} passes`}
+                    className="cursor-pointer focus:outline-none"
+                    onPointerEnter={() => setActiveId(player.id)}
+                    onPointerLeave={() => setActiveId(null)}
+                    onFocus={() => setActiveId(player.id)}
+                    onBlur={() => setActiveId(null)}
+                  />
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Focus overlay: a freshly-drawn large sonar + read-out for the
+              taken-over player, drawn last (on top) and pointer-transparent.
+              Enters/exits with transform + opacity only — no `d` animation. */}
+          <AnimatePresence>
+            {active && (
+              <FocusOverlay
+                key={active.id}
+                player={active}
+                total={totalPasses(active)}
+                avgLength={avgPassLength(active)}
+                color={color}
+                maxCount={maxCount}
+                crestUrl={crestUrl}
+                clipId={`${clipPrefix}-focus`}
+              />
+            )}
+          </AnimatePresence>
         </Pitch>
       </div>
     </div>
@@ -314,22 +329,29 @@ export function PassSonar({
 }
 
 /**
- * The taken-over player's read-out, overlaid on the dimmed pitch beside the
- * centred sonar: a circular headshot (monogram fallback), name, and a clean
- * breakdown — total passes and average pass length. No metric legend; the big
- * centred sonar makes the radius/intensity encoding self-evident.
+ * The taken-over player's read-out, overlaid on the dimmed pitch: a large,
+ * freshly-drawn sonar centred in a clean focus slot, plus a circular headshot
+ * (monogram fallback), name, crest and a clean breakdown — total passes and
+ * average pass length. Drawn at the full focus radius from the start and
+ * animated in with transform + opacity only (GPU-smooth; the wedge `d` paths
+ * are static), so enter and exit are smooth and never stick mid-interpolation.
+ * No metric legend; the big centred sonar makes the encoding self-evident.
  */
 function FocusOverlay({
   player,
   total,
   avgLength,
   color,
+  maxCount,
+  crestUrl,
   clipId,
 }: {
   player: PassSonarPlayer;
   total: number;
   avgLength: number;
   color: string;
+  maxCount: number;
+  crestUrl?: string;
   clipId: string;
 }) {
   // Header sits along the top of the pitch, clear of the centred sonar.
@@ -337,19 +359,70 @@ function FocusOverlay({
   const avatarCx = 10 + avatarR;
   const avatarCy = 10;
   const textX = avatarCx + avatarR + 3;
+  const crestR = 2.6;
+
+  const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
+  const lengthCeiling = lengthCeilingFor(player);
+  const photoClip = `${clipId}-photo`;
 
   return (
     <motion.g
-      initial={{ opacity: 0, y: -1.5 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.26, ease: 'easeOut' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
       style={{ pointerEvents: 'none' }}
     >
+      {/* The large sonar itself. Scales up from its own centre via transform.
+          The hub disc (radius FOCUS_RADIUS, centred on the focus point) makes
+          the group's bbox centre the focus point, so `center` is the focus
+          centre — and `fill-box` keeps the origin local to this group, never
+          animating `d`. */}
+      <motion.g
+        initial={{ scale: 0.82, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+      >
+        {/* Faint hub disc + subtle range ring for the big sonar. */}
+        <circle
+          cx={FOCUS_CX}
+          cy={FOCUS_CY}
+          r={FOCUS_RADIUS}
+          fill="white"
+          fillOpacity={0.04}
+          stroke="white"
+          strokeOpacity={0.14}
+          strokeWidth={0.12}
+        />
+
+        {player.wedges.map((wedge, wedgeIndex) => {
+          const lengthFrac = clamp(wedge.avgLength / lengthCeiling, 0, 1);
+          const r = MIN_WEDGE + lengthFrac * (FOCUS_RADIUS - MIN_WEDGE);
+          const d = wedgePath(FOCUS_CX, FOCUS_CY, r, wedge.angleDeg, span);
+          return (
+            <path
+              key={`focus-w${wedgeIndex}`}
+              d={d}
+              fill={color}
+              stroke={color}
+              strokeWidth={0.08}
+              strokeOpacity={0.6}
+              fillOpacity={fillOpacityFor(wedge.count, maxCount)}
+            />
+          );
+        })}
+
+        {/* Hub dot. */}
+        <circle cx={FOCUS_CX} cy={FOCUS_CY} r={1.4} fill="white" fillOpacity={0.85} />
+      </motion.g>
+
       {/* Circular headshot, or a monogram chip when no photo is supplied. */}
       {player.imageUrl ? (
         <>
           <defs>
-            <clipPath id={clipId}>
+            <clipPath id={photoClip}>
               <circle cx={avatarCx} cy={avatarCy} r={avatarR} />
             </clipPath>
           </defs>
@@ -360,7 +433,7 @@ function FocusOverlay({
             y={avatarCy - avatarR}
             width={avatarR * 2}
             height={avatarR * 2}
-            clipPath={`url(#${clipId})`}
+            clipPath={`url(#${photoClip})`}
             preserveAspectRatio="xMidYMid slice"
           />
           <circle
@@ -390,20 +463,40 @@ function FocusOverlay({
         </>
       )}
 
-      {/* Name + breakdown. */}
+      {/* Name + crest + breakdown. */}
       <text x={textX} y={avatarCy - 0.8} fontSize={4} fontWeight="bold" fill="white">
         {player.name}
       </text>
-      <text
-        x={textX}
-        y={avatarCy + 4}
-        fontSize={2.6}
-        fill="white"
-        fillOpacity={0.6}
-        style={{ letterSpacing: '0.02em' }}
-      >
-        {total} passes · {avgLength.toFixed(1)} m avg
-      </text>
+      <g transform={`translate(${textX}, ${avatarCy + 4})`}>
+        {crestUrl ? (
+          <>
+            <defs>
+              <clipPath id={`${clipId}-crest`}>
+                <circle cx={crestR} cy={-0.9} r={crestR} />
+              </clipPath>
+            </defs>
+            <image
+              href={crestUrl}
+              x={0}
+              y={-0.9 - crestR}
+              width={crestR * 2}
+              height={crestR * 2}
+              clipPath={`url(#${clipId}-crest)`}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          </>
+        ) : null}
+        <text
+          x={crestUrl ? crestR * 2 + 1.4 : 0}
+          y={0}
+          fontSize={2.6}
+          fill="white"
+          fillOpacity={0.6}
+          style={{ letterSpacing: '0.02em' }}
+        >
+          {total} passes · {avgLength.toFixed(1)} m avg
+        </text>
+      </g>
     </motion.g>
   );
 }
