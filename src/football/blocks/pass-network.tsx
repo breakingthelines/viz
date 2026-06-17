@@ -27,6 +27,11 @@ export interface PassNetworkPlayer {
    * received + played). Scales the node radius across the XI.
    */
   involvement: number;
+  /**
+   * Player headshot URL. When set, the node renders the photo clipped to the
+   * disc (monogram is not used); when absent, the node shows initials.
+   */
+  imageUrl?: string;
 }
 
 /** A weighted, directed pass volume between two players. */
@@ -35,12 +40,12 @@ export interface PassNetworkLink {
   from: string;
   /** Destination player id. */
   to: string;
-  /** Number of passes along this edge. Scales edge width + opacity. */
+  /** Number of passes along this edge. Scales edge width. */
   count: number;
 }
 
 export interface PassNetworkProps {
-  /** Team display name, shown as the masthead title. */
+  /** Team display name, shown as the panel title's subject. */
   team: string;
   /** Accent colour for edges + nodes. Defaults to BTL home red. */
   color?: string;
@@ -48,7 +53,7 @@ export interface PassNetworkProps {
   players: PassNetworkPlayer[];
   /** Weighted pass volumes between players. */
   links: PassNetworkLink[];
-  /** Additional CSS classes on the editorial plate. */
+  /** Additional CSS classes on the outer panel. */
   className?: string;
 }
 
@@ -64,6 +69,14 @@ function normY(y: number): number {
 function surname(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return parts[parts.length - 1] ?? name;
+}
+
+/** Up-to-two initials for the monogram fallback ("Lionel Messi" → "LM"). */
+function monogram(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
+  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 /** Linear map of `value` from `[inMin, inMax]` onto `[outMin, outMax]`, clamped. */
@@ -93,21 +106,28 @@ interface ResolvedEdge {
   from: ResolvedNode;
   to: ResolvedNode;
   count: number;
-  /** Stroke width in viewBox units. */
+  /** Stroke width in viewBox units (tracks pass volume). */
   width: number;
-  /** Base opacity (un-hovered). */
-  opacity: number;
 }
 
+// At rest the whole network sits at one calm, uniform strength; only volume
+// drives edge *width*, never opacity, so no node or edge reads as dimmed until
+// the reader hovers. Hover then lifts the focused player's web and fades the rest.
+const EDGE_REST_OPACITY = 0.5;
+const EDGE_DIM_OPACITY = 0.08;
+const EDGE_LIFT_OPACITY = 0.85;
+const NODE_DIM_OPACITY = 0.24;
+
 /**
- * Pass network — a weighted graph of an XI's average positions on the dark
- * BTL pitch. Edges are drawn first (team-colour lines whose width + opacity
- * track pass volume), then nodes (radius tracks involvement, surname beneath
- * in the house style).
+ * Pass network — a weighted graph of an XI's average positions on the dark BTL
+ * pitch, styled to sit quietly next to the Shot map. Edges are drawn first
+ * (team-colour lines whose width tracks pass volume), then nodes (radius tracks
+ * involvement; a headshot fills the disc when available, else a monogram), with
+ * the surname beneath.
  *
- * Reveal: nodes fade/scale in on a stagger. Interaction: hovering a node
- * lifts that player's edges + connected nodes and dims the rest, surfacing
- * the player's name and involvement in the colophon row.
+ * Resting state is full and uniform. Hovering a node lifts that player's edges
+ * and connected nodes and fades everything else, surfacing the player's name
+ * and involvement in the legend row.
  */
 export function PassNetwork({
   team,
@@ -116,13 +136,13 @@ export function PassNetwork({
   links,
   className,
 }: PassNetworkProps) {
-  const titleId = useId();
+  const clipPrefix = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const nodes = useMemo<ResolvedNode[]>(() => {
     const involvements = players.map((p) => p.involvement);
-    const minInv = Math.min(...involvements);
-    const maxInv = Math.max(...involvements);
+    const minInv = involvements.length ? Math.min(...involvements) : 0;
+    const maxInv = involvements.length ? Math.max(...involvements) : 1;
     return players.map((p) => ({
       ...p,
       cx: normX(p.x),
@@ -151,8 +171,7 @@ export function PassNetwork({
           from,
           to,
           count: link.count,
-          width: scale(link.count, minC, maxC, 0.35, 2.2),
-          opacity: scale(link.count, minC, maxC, 0.16, 0.6),
+          width: scale(link.count, minC, maxC, 0.4, 2.2),
         },
       ];
     });
@@ -172,51 +191,37 @@ export function PassNetwork({
   const hoveredNode = hoveredId ? (nodeById.get(hoveredId) ?? null) : null;
 
   return (
-    <figure
+    <div
       className={cn(
-        'relative isolate overflow-hidden rounded-[14px] border border-white/[0.08]',
-        'bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5',
-        'shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
-      aria-labelledby={titleId}
-      style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
     >
-      {/* Faint red top hairline */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{
-          background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-          opacity: 0.5,
-        }}
-      />
-
-      {/* Masthead: red kicker over Le Monde serif title */}
-      <header className="mb-4 flex items-baseline justify-between gap-4">
-        <div>
-          <div className="text-[10px] font-sans uppercase tracking-[0.2em]" style={{ color }}>
-            Pass Network
-          </div>
-          <h3 id={titleId} className="mt-1 text-[26px] leading-none tracking-tight text-white">
-            {team}
-          </h3>
-        </div>
-        <div className="text-right text-[10px] font-sans uppercase tracking-[0.2em] text-white/40">
-          Avg. Positions
-        </div>
-      </header>
+      {/* Header: one plain title + small legend read-out. */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-[13px] font-semibold tracking-tight text-white">Pass network</span>
+        <span className="text-[11px] tabular-nums text-white/55">
+          {hoveredNode ? (
+            <>
+              <span style={{ color }}>{hoveredNode.name}</span>
+              <span className="text-white/30"> · </span>
+              <span className="text-white/70">{hoveredNode.involvement} involvements</span>
+            </>
+          ) : (
+            <span className="text-white/40">{team}</span>
+          )}
+        </span>
+      </div>
 
       <div className="relative">
         <Pitch variant="full" theme="dark">
           {/* Edges first, beneath the nodes. */}
           <g>
             {edges.map((edge) => {
-              const dimmed =
-                connectedIds !== null &&
-                !(connectedIds.has(edge.from.id) && connectedIds.has(edge.to.id));
               const lifted =
                 hoveredId !== null && (edge.from.id === hoveredId || edge.to.id === hoveredId);
+              const dimmed = hoveredId !== null && !lifted;
               return (
                 <motion.line
                   key={edge.key}
@@ -227,43 +232,36 @@ export function PassNetwork({
                   stroke={color}
                   strokeWidth={lifted ? edge.width * 1.3 : edge.width}
                   strokeLinecap="round"
-                  initial={{ opacity: 0 }}
+                  initial={false}
                   animate={{
                     opacity: dimmed
-                      ? edge.opacity * 0.12
+                      ? EDGE_DIM_OPACITY
                       : lifted
-                        ? Math.min(1, edge.opacity + 0.35)
-                        : edge.opacity,
+                        ? EDGE_LIFT_OPACITY
+                        : EDGE_REST_OPACITY,
                   }}
-                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
                   style={{ pointerEvents: 'none' }}
                 />
               );
             })}
           </g>
 
-          {/* Nodes, staggered in. */}
-          {nodes.map((node, index) => {
+          {/* Nodes. */}
+          {nodes.map((node) => {
             const isHovered = node.id === hoveredId;
             const dimmed = connectedIds !== null && !connectedIds.has(node.id);
-            const labelDimmed = dimmed;
+            const showHeadshot = Boolean(node.imageUrl);
+            const clipId = `${clipPrefix}-node-${node.id}`;
             return (
               <motion.g
                 key={node.id}
-                initial={{ opacity: 0, scale: 0.4 }}
-                animate={{ opacity: dimmed ? 0.28 : 1, scale: 1 }}
-                transition={{
-                  opacity: { duration: 0.35, delay: hoveredId ? 0 : 0.15 + index * 0.05 },
-                  scale: {
-                    type: 'spring',
-                    stiffness: 320,
-                    damping: 22,
-                    delay: hoveredId ? 0 : 0.15 + index * 0.05,
-                  },
-                }}
+                initial={false}
+                animate={{ opacity: dimmed ? NODE_DIM_OPACITY : 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 onMouseEnter={() => setHoveredId(node.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                style={{ cursor: 'pointer', transformOrigin: `${node.cx}px ${node.cy}px` }}
+                style={{ cursor: 'pointer' }}
                 aria-label={`${node.name}, involvement ${node.involvement}`}
               >
                 {/* Hover halo */}
@@ -282,18 +280,64 @@ export function PassNetwork({
                   />
                 )}
 
-                {/* Node disc */}
-                <circle
-                  cx={node.cx}
-                  cy={node.cy}
-                  r={node.r}
-                  fill={color}
-                  stroke="white"
-                  strokeWidth={0.3}
-                  fillOpacity={isHovered ? 1 : 0.92}
-                />
+                {showHeadshot ? (
+                  <>
+                    {/* Headshot clipped to the node disc; coloured backing +
+                        ring so a transparent / loading photo still reads. */}
+                    <defs>
+                      <clipPath id={clipId}>
+                        <circle cx={node.cx} cy={node.cy} r={node.r} />
+                      </clipPath>
+                    </defs>
+                    <circle cx={node.cx} cy={node.cy} r={node.r} fill={color} fillOpacity={0.92} />
+                    <image
+                      href={node.imageUrl}
+                      x={node.cx - node.r}
+                      y={node.cy - node.r}
+                      width={node.r * 2}
+                      height={node.r * 2}
+                      clipPath={`url(#${clipId})`}
+                      preserveAspectRatio="xMidYMid slice"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    <circle
+                      cx={node.cx}
+                      cy={node.cy}
+                      r={node.r}
+                      fill="none"
+                      stroke="white"
+                      strokeWidth={0.4}
+                      strokeOpacity={isHovered ? 0.9 : 0.6}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Solid disc + monogram fallback. */}
+                    <circle
+                      cx={node.cx}
+                      cy={node.cy}
+                      r={node.r}
+                      fill={color}
+                      stroke="white"
+                      strokeWidth={0.3}
+                      fillOpacity={isHovered ? 1 : 0.92}
+                    />
+                    <text
+                      x={node.cx}
+                      y={node.cy}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="white"
+                      fontSize={node.r * 0.82}
+                      fontWeight="bold"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {monogram(node.name)}
+                    </text>
+                  </>
+                )}
 
-                {/* Surname label, house style */}
+                {/* Surname label */}
                 <text
                   x={node.cx}
                   y={node.cy + node.r + 2.7}
@@ -301,8 +345,8 @@ export function PassNetwork({
                   fill="white"
                   fontSize="2.4"
                   fontWeight="600"
-                  opacity={labelDimmed ? 0.3 : isHovered ? 1 : 0.9}
-                  style={{ pointerEvents: 'none', fontFamily: 'inherit' }}
+                  opacity={isHovered ? 1 : 0.9}
+                  style={{ pointerEvents: 'none' }}
                 >
                   {surname(node.name)}
                 </text>
@@ -312,23 +356,16 @@ export function PassNetwork({
         </Pitch>
       </div>
 
-      {/* Footer colophon — doubles as the hover read-out. */}
-      <footer className="mt-4 flex items-center justify-between text-[10px] font-sans uppercase tracking-[0.2em]">
-        <span className="text-white/40">Data · StatsBomb</span>
-        <span className="tabular-nums text-white/55">
-          {hoveredNode ? (
-            <>
-              <span style={{ color }}>{hoveredNode.name}</span>
-              <span className="text-white/30"> · </span>
-              <span className="text-white/70">{hoveredNode.involvement} involvements</span>
-            </>
-          ) : (
-            <>
-              {players.length} players · {links.length} links
-            </>
-          )}
+      {/* Legend — small data dot + counts. */}
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          <span className="truncate">{team}</span>
         </span>
-      </footer>
-    </figure>
+        <span className="tabular-nums text-white/40">
+          {players.length} players · {links.length} links
+        </span>
+      </div>
+    </div>
   );
 }

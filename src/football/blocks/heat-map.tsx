@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -13,24 +13,24 @@ export interface HeatMapTouch {
   player?: string;
 }
 
-/** A named player available in the segmented filter. */
+/** A named player available in the filter. */
 export interface HeatMapPlayer {
   /** Stable id, referenced by {@link HeatMapTouch.player}. */
   id: string;
-  /** Display name shown in the filter chip. */
+  /** Display name shown in the filter. */
   name: string;
 }
 
 export interface HeatMapProps {
-  /** Team display name — the masthead title. */
+  /** Team display name. */
   team: string;
   /** Bloom accent colour. Defaults to the BTL home red. */
   color?: string;
   /** Every touch to plot, in StatsBomb 120 × 80 coordinates. */
   touches: HeatMapTouch[];
-  /** Named players for the segmented filter. Omit for an unfiltered cloud. */
+  /** Named players for the filter dropdown. Omit for an unfiltered cloud. */
   players?: HeatMapPlayer[];
-  /** Additional CSS classes on the outer plate. */
+  /** Additional CSS classes on the outer panel. */
   className?: string;
 }
 
@@ -43,22 +43,23 @@ const BLOB_RADIUS_RATIO = 0.085;
 
 /**
  * Territory heat map — a restrained density "bloom" of a team's touches on the
- * dark BTL pitch. Touches are accumulated as additive soft radial gradients on
- * a `<canvas>` layered over the {@link Pitch} primitive, colour-mapped from
- * transparent to the team colour. A segmented filter (All + each named player)
- * re-blooms the cloud with a calm cross-fade.
+ * dark BTL pitch, styled to sit quietly next to the Shot map. Touches are
+ * accumulated as additive soft radial gradients on a `<canvas>` layered over
+ * the {@link Pitch} primitive, colour-mapped from transparent to the team
+ * colour. A clean player filter (All + each named player) re-blooms the cloud
+ * with a calm cross-fade.
  *
  * Editorial, not meteorological: a single accent colour, low ceiling opacity,
  * and a soft additive build — premium infographic, not a weather map.
  */
 export function HeatMap({ team, color = '#eb0000', touches, players, className }: HeatMapProps) {
-  // `null` = the "All" segment; otherwise a player id.
+  // `null` = the "All" option; otherwise a player id.
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const titleId = useId();
 
-  const segments = useMemo<{ id: string | null; label: string }[]>(
+  const options = useMemo<{ id: string | null; label: string }[]>(
     () => [
-      { id: null, label: 'All' },
+      { id: null, label: 'All players' },
       ...(players ?? []).map((p) => ({ id: p.id, label: p.name })),
     ],
     [players]
@@ -69,43 +70,41 @@ export function HeatMap({ team, color = '#eb0000', touches, players, className }
     return touches.filter((t) => t.player === activePlayer);
   }, [touches, activePlayer]);
 
+  const activeLabel = options.find((o) => o.id === activePlayer)?.label ?? 'All players';
+
   return (
     <figure
       aria-labelledby={titleId}
       className={cn(
-        'relative isolate w-full max-w-[560px] overflow-hidden rounded-[14px] border border-white/[0.08]',
-        'bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5',
-        'shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
-      style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
     >
-      {/* Faint red top hairline. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{
-          background: `linear-gradient(90deg, transparent, ${color}99 18%, ${color}99 82%, transparent)`,
-        }}
-      />
-
-      {/* Masthead. */}
-      <header className="mb-4 flex items-end justify-between gap-4">
-        <div>
-          <div
-            className="text-[10px] uppercase tracking-[0.2em]"
-            style={{ color, fontFamily: 'inherit' }}
-          >
-            Territory
-          </div>
-          <h3 id={titleId} className="mt-1 text-[22px] leading-none text-white">
-            {team}
-          </h3>
-        </div>
-        <div className="text-right text-[10px] uppercase tracking-[0.2em] text-white/40">
-          <span className="tabular-nums text-white/60">{visibleTouches.length}</span> touches
-        </div>
-      </header>
+      {/* Header: one plain title + clean player-filter dropdown. */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span id={titleId} className="text-[13px] font-semibold tracking-tight text-white">
+          Territory
+        </span>
+        {options.length > 1 && (
+          <ControlDropdown label="Player" valueLabel={activeLabel}>
+            {(close) =>
+              options.map((o) => (
+                <DropdownItem
+                  key={o.id ?? '__all__'}
+                  selected={o.id === activePlayer}
+                  onSelect={() => {
+                    setActivePlayer(o.id);
+                    close();
+                  }}
+                >
+                  {o.label}
+                </DropdownItem>
+              ))
+            }
+          </ControlDropdown>
+        )}
+      </div>
 
       {/* Pitch + density canvas overlay (square box). */}
       <div className="relative aspect-square w-full">
@@ -117,61 +116,121 @@ export function HeatMap({ team, color = '#eb0000', touches, players, className }
         <DensityCanvas
           touches={visibleTouches}
           color={color}
-          // Key on the active segment so the canvas cross-fades on filter change.
+          // Key on the active filter so the canvas cross-fades on change.
           key={activePlayer ?? '__all__'}
         />
-        {/* Attack-direction cue. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center">
-          <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-white/30">
-            Attacking <span aria-hidden>→</span>
-          </span>
-        </div>
       </div>
 
-      {/* Segmented player filter. */}
-      {segments.length > 1 && (
-        <div
-          role="tablist"
-          aria-label={`Filter ${team} touches by player`}
-          className="mt-4 flex flex-wrap gap-1.5"
-        >
-          {segments.map((seg) => {
-            const isActive = seg.id === activePlayer;
-            return (
-              <button
-                key={seg.id ?? '__all__'}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActivePlayer(seg.id)}
-                className={cn(
-                  'relative rounded-full px-3 py-1 text-[11px] tracking-tight transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
-                  isActive ? 'text-white' : 'text-white/45 hover:text-white/70'
-                )}
-                style={{ fontFamily: 'inherit' }}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId={`${titleId}-seg`}
-                    aria-hidden
-                    className="absolute inset-0 rounded-full border"
-                    style={{ borderColor: `${color}66`, backgroundColor: `${color}1f` }}
-                    transition={{ type: 'spring', stiffness: 480, damping: 38 }}
-                  />
-                )}
-                <span className="relative">{seg.label}</span>
-              </button>
-            );
-          })}
+      {/* Footer: team + a small plain touch count. */}
+      <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/60">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          <span className="truncate text-white/70">{team}</span>
+        </span>
+        <span>
+          <span className="tabular-nums text-white/80">{visibleTouches.length}</span> touches
+        </span>
+      </div>
+    </figure>
+  );
+}
+
+// ── Share-menu-style dropdown ────────────────────────────────────────────────
+// Mirrors the editor's game-block ControlDropdown look (the anchored share-menu
+// trigger + glass content). Self-contained here because viz is a standalone
+// AGPL package with no design-system dependency; the classes match the kit.
+const TRIGGER_CLS =
+  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
+const CONTENT_CLS =
+  'absolute right-0 top-[calc(100%+6px)] z-50 flex min-w-[150px] flex-col gap-0.5 rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
+
+function ControlDropdown({
+  label,
+  valueLabel,
+  children,
+}: {
+  label: string;
+  valueLabel: ReactNode;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className={TRIGGER_CLS}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={(e) => {
+          // Close when focus leaves the dropdown entirely.
+          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
+        }}
+      >
+        <span className="text-white/50">{label}</span>
+        <span className="font-semibold">{valueLabel}</span>
+        <Caret />
+      </button>
+      {open && (
+        <div role="listbox" className={CONTENT_CLS}>
+          {children(() => setOpen(false))}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Colophon. */}
-      <footer className="mt-4 border-t border-white/[0.06] pt-3 text-[9px] uppercase tracking-[0.2em] text-white/30">
-        Data · StatsBomb
-      </footer>
-    </figure>
+function DropdownItem({
+  selected,
+  onSelect,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
+      onClick={onSelect}
+      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
+    >
+      <span className="truncate">{children}</span>
+      {selected && <Check />}
+    </button>
+  );
+}
+
+/** Tiny caret glyph (no icon dependency in this package). */
+function Caret() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Tiny check glyph for the selected dropdown row. */
+function Check() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
+      <path
+        d="M3.5 8.5l3 3 6-7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

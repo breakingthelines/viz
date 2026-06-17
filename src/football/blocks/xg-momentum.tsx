@@ -14,12 +14,14 @@ export interface XgMomentumShot {
   player: string;
   /** What happened to the shot. `goal` is marked on the line. */
   outcome: 'goal' | 'saved' | 'off-target' | 'blocked';
+  /** Optional scorer headshot, shown on the goal marker (falls back to a dot). */
+  imageUrl?: string;
 }
 
 export interface XgMomentumProps {
-  /** Home team display name (shown in the masthead, coloured red). */
+  /** Home team display name (shown in the team key, coloured red). */
   homeTeam: string;
-  /** Away team display name (shown in the masthead, coloured blue). */
+  /** Away team display name (shown in the team key, coloured blue). */
   awayTeam: string;
   /** Every shot in the match, in any order — sorted internally by minute. */
   shots: XgMomentumShot[];
@@ -27,7 +29,7 @@ export interface XgMomentumProps {
   homeColor?: string;
   /** Away accent. Defaults to the BTL away blue. */
   awayColor?: string;
-  /** Additional classes on the outer plate. */
+  /** Additional classes on the outer panel. */
   className?: string;
 }
 
@@ -84,7 +86,8 @@ function surname(name: string): string {
  * the nearest minute and reads out both running totals plus a callout for the
  * shot at that moment.
  *
- * A timeline chart — deliberately *not* drawn on a pitch.
+ * A timeline chart — deliberately *not* drawn on a pitch — styled to sit quietly
+ * on the BTL dark surface next to the Shot map.
  */
 export function XgMomentum({
   homeTeam,
@@ -173,37 +176,22 @@ export function XgMomentum({
     <figure
       data-slot="xg-momentum"
       className={cn(
-        'relative isolate overflow-hidden rounded-[14px] border border-white/[0.08]',
-        'bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5',
-        'shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
     >
-      {/* Faint red top hairline — the BTL plate signature. */}
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#eb0000]/70 to-transparent"
-      />
-
-      {/* Masthead: red kicker over a Le Monde serif title. */}
-      <header className="mb-4 flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#eb0000]">Expected Goals</p>
-          <h3
-            className="mt-1 truncate text-[22px] leading-tight text-white"
-            style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
-          >
-            {homeTeam} <span className="text-white/35">v</span> {awayTeam}
-          </h3>
+      {/* Header: one plain title + a small inline cumulative-xG readout. */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-[13px] font-semibold tracking-tight text-white">Expected goals</span>
+        <div className="flex shrink-0 items-center gap-2.5 text-[11px] text-white/60">
+          <TeamReadout name={homeTeam} value={readout.home} color={homeColor} />
+          <span aria-hidden className="text-white/20">
+            ·
+          </span>
+          <TeamReadout name={awayTeam} value={readout.away} color={awayColor} />
         </div>
-
-        {/* Live cumulative-xG scoreline — reads out the scrubbed minute. */}
-        <dl className="flex shrink-0 items-stretch gap-3 text-right">
-          <TeamTotal label={homeTeam} value={readout.home} color={homeColor} align="right" />
-          <div aria-hidden className="w-px self-stretch bg-white/10" />
-          <TeamTotal label={awayTeam} value={readout.away} color={awayColor} align="left" />
-        </dl>
-      </header>
+      </div>
 
       <div className="relative">
         <svg
@@ -237,7 +225,7 @@ export function XgMomentum({
             ))}
           </defs>
 
-          {/* Horizontal gridlines at each 0.5 xG, wide-tracked value labels. */}
+          {/* Horizontal gridlines at each 0.5 xG, with quiet value labels. */}
           {gridValues(yMax).map((v) => {
             const y = PAD_T + PLOT_H - (v / yMax) * PLOT_H;
             return (
@@ -258,7 +246,6 @@ export function XgMomentum({
                   fillOpacity={0.28}
                   fontSize={10}
                   className="tabular-nums"
-                  style={{ letterSpacing: '0.04em' }}
                 >
                   {v.toFixed(1)}
                 </text>
@@ -289,7 +276,6 @@ export function XgMomentum({
               fillOpacity={0.4}
               fontSize={10}
               className="tabular-nums"
-              style={{ letterSpacing: '0.08em' }}
             >
               {m}
               {m === 0 ? '' : "'"}
@@ -307,7 +293,7 @@ export function XgMomentum({
             />
           ))}
 
-          {/* Goal nodes — filled discs + scorer surname, sitting on the line. */}
+          {/* Goal nodes — filled discs (or scorer headshot) + scorer surname. */}
           {seriesByDepth.flatMap((s) =>
             s.steps
               .filter((step) => step.shot.outcome === 'goal')
@@ -317,6 +303,7 @@ export function XgMomentum({
                   step={step}
                   color={s.color}
                   label={surname(step.shot.player)}
+                  clipId={`${uid}-head-${s.team}-${i}`}
                 />
               ))
           )}
@@ -363,48 +350,36 @@ export function XgMomentum({
         )}
       </div>
 
-      {/* Footer colophon. */}
-      <footer className="mt-3 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">Cumulative xG</span>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-          Data · StatsBomb
-        </span>
-      </footer>
+      {/* Team key — small data dots + names. */}
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+        <TeamKey color={homeColor} name={homeTeam} />
+        <TeamKey color={awayColor} name={awayTeam} />
+      </div>
     </figure>
   );
 }
 
-/** One side's masthead total — coloured dot, name, big tabular xG figure. */
-function TeamTotal({
-  label,
-  value,
-  color,
-  align,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  align: 'left' | 'right';
-}) {
+/** Small data key: a colour dot + the team name. */
+function TeamKey({ color, name }: { color: string; name: string }) {
   return (
-    <div className={cn('flex flex-col', align === 'right' ? 'items-end' : 'items-start')}>
-      <div className="flex items-center gap-1.5">
-        <span
-          aria-hidden
-          className="inline-block size-1.5 rounded-full"
-          style={{ backgroundColor: color }}
-        />
-        <dt className="max-w-[10ch] truncate text-[10px] uppercase tracking-[0.18em] text-white/45">
-          {label}
-        </dt>
-      </div>
-      <dd
-        className="mt-0.5 text-[20px] leading-none tabular-nums text-white"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        {value.toFixed(2)}
-      </dd>
-    </div>
+    <span className="flex items-center gap-1.5">
+      <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
+
+/** Inline header readout: a colour dot + tabular cumulative xG figure. */
+function TeamReadout({ name, value, color }: { name: string; value: number; color: string }) {
+  return (
+    <span className="flex items-center gap-1.5" title={name}>
+      <span
+        aria-hidden
+        className="inline-block size-1.5 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+      <span className="tabular-nums text-white/80">{value.toFixed(2)}</span>
+    </span>
   );
 }
 
@@ -452,8 +427,24 @@ function TeamPath({
   );
 }
 
-/** A goal: filled node on the line with the scorer's surname above it. */
-function GoalNode({ step, color, label }: { step: Step; color: string; label: string }) {
+/**
+ * A goal: a node on the line with the scorer's surname above it. When the shot
+ * carries an `imageUrl`, the node becomes a small circular headshot ringed in
+ * the team colour; otherwise it falls back to a clean filled dot.
+ */
+function GoalNode({
+  step,
+  color,
+  label,
+  clipId,
+}: {
+  step: Step;
+  color: string;
+  label: string;
+  clipId: string;
+}) {
+  const hasImage = typeof step.shot.imageUrl === 'string' && step.shot.imageUrl.length > 0;
+  const headR = 7;
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0.4 }}
@@ -461,16 +452,40 @@ function GoalNode({ step, color, label }: { step: Step; color: string; label: st
       transition={{ duration: 0.4, delay: 1.0, ease: 'backOut' }}
       style={{ transformOrigin: `${step.x}px ${step.y}px` }}
     >
-      <circle cx={step.x} cy={step.y} r={6.5} fill={color} fillOpacity={0.18} />
-      <circle cx={step.x} cy={step.y} r={3.5} fill={color} stroke="#0a0a0a" strokeWidth={1.5} />
+      {hasImage ? (
+        <>
+          <defs>
+            <clipPath id={clipId}>
+              <circle cx={step.x} cy={step.y} r={headR} />
+            </clipPath>
+          </defs>
+          {/* Soft team-colour bloom behind the headshot. */}
+          <circle cx={step.x} cy={step.y} r={headR + 2} fill={color} fillOpacity={0.18} />
+          <image
+            href={step.shot.imageUrl}
+            x={step.x - headR}
+            y={step.y - headR}
+            width={headR * 2}
+            height={headR * 2}
+            clipPath={`url(#${clipId})`}
+            preserveAspectRatio="xMidYMid slice"
+          />
+          {/* Team-colour ring + dark seam so it reads on either line. */}
+          <circle cx={step.x} cy={step.y} r={headR} fill="none" stroke={color} strokeWidth={1.5} />
+        </>
+      ) : (
+        <>
+          <circle cx={step.x} cy={step.y} r={6.5} fill={color} fillOpacity={0.18} />
+          <circle cx={step.x} cy={step.y} r={3.5} fill={color} stroke="#0a0a0a" strokeWidth={1.5} />
+        </>
+      )}
       <text
         x={step.x}
-        y={step.y - 11}
+        y={step.y - (hasImage ? headR + 5 : 11)}
         textAnchor="middle"
         fill="white"
         fontSize={11}
         fontWeight={600}
-        style={{ letterSpacing: '0.02em' }}
       >
         {label}
       </text>
@@ -504,14 +519,14 @@ function ShotCallout({
         marginLeft: flip ? -10 : 10,
       }}
     >
-      <div className="rounded-[10px] border border-white/10 bg-[#0a0a0a]/92 px-3 py-2 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)] backdrop-blur-sm">
+      <div className="rounded-[10px] border border-white/10 bg-[#161616]/95 px-3 py-2 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl">
         <div className="flex items-center gap-1.5">
           <span
             aria-hidden
             className="inline-block size-1.5 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="text-[10px] uppercase tracking-[0.16em] text-white/45">
+          <span className="text-[11px] text-white/50">
             {shot.minute}
             &apos; · {teamName}
           </span>
@@ -523,7 +538,7 @@ function ShotCallout({
             ·
           </span>
           <span
-            className={cn('uppercase tracking-[0.1em]', shot.outcome === 'goal' && 'text-white')}
+            className={cn(shot.outcome === 'goal' && 'text-white')}
             style={shot.outcome === 'goal' ? { color } : undefined}
           >
             {outcomeLabel(shot.outcome)}
@@ -560,7 +575,7 @@ function lineYAtMinute(series: TeamSeries, minute: number): number {
   return y;
 }
 
-/** Cumulative xG a team has reached by a given minute (the masthead readout). */
+/** Cumulative xG a team has reached by a given minute (the header readout). */
 function totalAtMinute(series: TeamSeries, minute: number): number {
   let total = 0;
   for (const step of series.steps) {

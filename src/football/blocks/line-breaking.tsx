@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -22,18 +22,20 @@ export interface LineBreakingPass {
   lineBreaking: boolean;
   /** Passer's display name, shown in the hover callout. */
   player: string;
+  /** Passer headshot URL. When set, the hover callout shows the photo (monogram fallback). */
+  imageUrl?: string;
   /** Defenders the pass cut through, in StatsBomb units. Flash as the line draws. */
   brokenDefenders: { x: number; y: number }[];
 }
 
 export interface LineBreakingProps {
-  /** Team display name — the masthead title. */
+  /** Team display name. */
   team: string;
   /** Team accent colour for line-breaking passes. Defaults to the home red. */
   color?: string;
   /** Completed passes to plot. */
   passes: LineBreakingPass[];
-  /** Additional CSS classes for the outer plate. */
+  /** Additional CSS classes for the outer panel. */
   className?: string;
 }
 
@@ -45,13 +47,27 @@ const normY = (y: number) => (y * 100) / SB_WIDTH;
 
 type ViewMode = 'all' | 'breaks';
 
+/** Up-to-two initials for the passer monogram ("Enzo Fernández" → "EF"). */
+function monogram(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
+  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
+}
+
+const MODE_OPTIONS: { value: ViewMode; label: string }[] = [
+  { value: 'all', label: 'All passes' },
+  { value: 'breaks', label: 'Only line breaks' },
+];
+
 /**
- * Line-breaking passes — the brand-defining BTL viz. Completed passes are drawn
- * on a dark editorial pitch: ordinary passes sit faint and quiet, while
- * line-breaking passes ignite in the team colour, drawing through the defensive
- * line with an arrowhead while the defenders they split flash hot red. A
- * segmented toggle isolates the line-breakers; hovering any pass focuses it and
- * its broken defenders and names the passer.
+ * Line-breaking passes — the brand-defining BTL viz, on the quiet BTL dark
+ * surface so it sits next to the Shot map. Completed passes are drawn on a dark
+ * editorial pitch: ordinary passes sit faint and quiet, while line-breaking
+ * passes ignite in the team colour, drawing through the defensive line with an
+ * arrowhead while the defenders they split flash hot red. A clean dropdown
+ * isolates the line-breakers; hovering any pass focuses it and its broken
+ * defenders and names the passer.
  */
 export function LineBreaking({ team, color = '#eb0000', passes, className }: LineBreakingProps) {
   const uid = useId();
@@ -70,48 +86,35 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
 
   const hovered = hoveredId ? (passes.find((p) => p.id === hoveredId) ?? null) : null;
 
+  const modeValueLabel = MODE_OPTIONS.find((o) => o.value === mode)?.label ?? 'All passes';
+
   return (
     <div
       className={cn(
-        'relative isolate w-full max-w-[640px] overflow-hidden rounded-[14px] border border-white/[0.08] bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5 shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'my-6 w-full max-w-[640px] rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
     >
-      {/* Faint red top hairline */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#eb0000]/70 to-transparent" />
-
-      {/* Masthead */}
-      <div className="mb-4 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.2em]" style={{ color }}>
-            Line Breaks
-          </div>
-          <h3
-            className="mt-1 text-[26px] leading-none text-white"
-            style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
-          >
-            {team}
-          </h3>
-        </div>
-
-        {/* Count read-out */}
-        <div className="text-right">
-          <div className="text-[34px] leading-none text-white tabular-nums">{breakCount}</div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/40">
-            Line {breakCount === 1 ? 'Break' : 'Breaks'}
-          </div>
-        </div>
-      </div>
-
-      {/* Segmented toggle — house style */}
-      <div className="mb-4 inline-flex rounded-full border border-white/[0.08] bg-white/[0.02] p-0.5 text-[10px] uppercase tracking-[0.18em]">
-        <SegmentButton active={mode === 'all'} onClick={() => setMode('all')} label="All passes" />
-        <SegmentButton
-          active={mode === 'breaks'}
-          onClick={() => setMode('breaks')}
-          label="Only line breaks"
-          activeColor={color}
-        />
+      {/* Header: one plain title + clean view dropdown. */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-[13px] font-semibold tracking-tight text-white">Line breaks</span>
+        <ControlDropdown label="Showing" valueLabel={modeValueLabel}>
+          {(close) =>
+            MODE_OPTIONS.map((o) => (
+              <DropdownItem
+                key={o.value}
+                selected={o.value === mode}
+                onSelect={() => {
+                  setMode(o.value);
+                  close();
+                }}
+              >
+                {o.label}
+              </DropdownItem>
+            ))
+          }
+        </ControlDropdown>
       </div>
 
       {/* Pitch */}
@@ -180,7 +183,7 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
           })}
         </Pitch>
 
-        {/* Hover callout — the passer's name */}
+        {/* Hover callout — the passer's name, with an optional headshot. */}
         <AnimatePresence>
           {hovered && (
             <motion.div
@@ -189,53 +192,153 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-white/[0.1] bg-black/70 px-3 py-1 backdrop-blur-sm"
+              className="pointer-events-none absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-[#161616]/95 py-1 pl-1 pr-3 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md"
             >
-              <span className="text-[10px] uppercase tracking-[0.18em] text-white/45">
-                {hovered.lineBreaking ? 'Line break · ' : 'Pass · '}
+              <PasserAvatar
+                name={hovered.player}
+                imageUrl={hovered.imageUrl}
+                color={hovered.lineBreaking ? color : 'rgba(255,255,255,0.25)'}
+              />
+              <span className="text-[12px] font-semibold leading-none text-white">
+                {hovered.player}
               </span>
-              <span className="text-[12px] font-semibold text-white">{hovered.player}</span>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Colophon */}
-      <div className="mt-4 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-white/40">
-        <span>Completed passes</span>
-        <span>Data · StatsBomb</span>
+      {/* Count read-out — small + plain, mirrors the shot-map team key row. */}
+      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-white/60">
+        <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+        <span className="tabular-nums text-white/80">{breakCount}</span>
+        <span>line {breakCount === 1 ? 'break' : 'breaks'}</span>
       </div>
     </div>
   );
 }
 
-interface SegmentButtonProps {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  activeColor?: string;
+/** Small circular passer headshot for the hover callout; monogram fallback. */
+function PasserAvatar({
+  name,
+  imageUrl,
+  color,
+}: {
+  name: string;
+  imageUrl?: string;
+  color: string;
+}) {
+  return (
+    <span
+      className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
+      style={{ boxShadow: `inset 0 0 0 1px ${color}` }}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="text-[9px] font-semibold leading-none text-white/70">
+          {monogram(name)}
+        </span>
+      )}
+    </span>
+  );
 }
 
-function SegmentButton({ active, onClick, label, activeColor }: SegmentButtonProps) {
+// ── Share-menu-style dropdown ────────────────────────────────────────────────
+// Mirrors the Shot-map block's ControlDropdown (the anchored share-menu trigger
+// + glass content). Self-contained here because viz is a standalone AGPL
+// package with no design-system dependency; the classes match the kit.
+const TRIGGER_CLS =
+  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
+const CONTENT_CLS =
+  'absolute right-0 top-[calc(100%+6px)] z-50 flex min-w-[170px] flex-col gap-0.5 rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
+
+function ControlDropdown({
+  label,
+  valueLabel,
+  children,
+}: {
+  label: string;
+  valueLabel: ReactNode;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className={TRIGGER_CLS}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={(e) => {
+          // Close when focus leaves the dropdown entirely.
+          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
+        }}
+      >
+        <span className="text-white/50">{label}</span>
+        <span className="font-semibold">{valueLabel}</span>
+        <Caret />
+      </button>
+      {open && (
+        <div role="listbox" className={CONTENT_CLS}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({
+  selected,
+  onSelect,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={cn(
-        'relative rounded-full px-3 py-1.5 transition-colors',
-        active ? 'text-white' : 'text-white/45 hover:text-white/70'
-      )}
+      role="option"
+      aria-selected={selected}
+      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
+      onClick={onSelect}
+      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
     >
-      {active && (
-        <motion.span
-          layoutId="line-breaking-segment"
-          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-          className="absolute inset-0 rounded-full bg-white/[0.07]"
-          style={activeColor ? { boxShadow: `inset 0 0 0 1px ${activeColor}55` } : undefined}
-        />
-      )}
-      <span className="relative">{label}</span>
+      <span className="truncate">{children}</span>
+      {selected && <Check />}
     </button>
+  );
+}
+
+/** Tiny caret glyph (no icon dependency in this package). */
+function Caret() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Tiny check glyph for the selected dropdown row. */
+function Check() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
+      <path
+        d="M3.5 8.5l3 3 6-7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

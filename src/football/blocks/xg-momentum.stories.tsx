@@ -53,6 +53,28 @@ export const Final2022: Story = {
 };
 
 /**
+ * The same race, with circular scorer headshots on the goal markers (the
+ * optional `imageUrl` per shot). Non-goal shots and goals without an image fall
+ * back to the plain filled dot.
+ */
+const headshotShots: XgMomentumShot[] = finalShots.map((shot) =>
+  shot.outcome === 'goal'
+    ? {
+        ...shot,
+        imageUrl: `https://i.pravatar.cc/96?u=${encodeURIComponent(shot.player + shot.minute)}`,
+      }
+    : shot
+);
+
+export const WithScorerHeadshots: Story = {
+  args: {
+    homeTeam: 'Argentina',
+    awayTeam: 'France',
+    shots: headshotShots,
+  },
+};
+
+/**
  * A tighter, lower-event 1–0 knockout: one chance-light side nicks it from a
  * single high-quality opening, the other never quite finds the killer ball.
  * Exercises the auto-scaled y-axis at a smaller xG ceiling.

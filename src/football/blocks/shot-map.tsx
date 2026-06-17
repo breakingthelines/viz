@@ -41,6 +41,8 @@ export interface Shot {
   outcome: ShotOutcome;
   /** Shooter display name. */
   player: string;
+  /** Shooter headshot URL. When set, the marker shows the photo (monogram fallback). */
+  imageUrl?: string;
   /** Match minute. */
   minute: number;
   /** Positions of the other players at the moment of the shot. */
@@ -237,38 +239,66 @@ export function ShotMap({
                   />
                 )}
 
-                {/* Marker body. Goals are filled rings; others are hollow with
-                    a faint fill so overlapping shots stay readable. */}
-                <defs>
-                  <clipPath id={clipId}>
-                    <circle cx={p.x} cy={p.y} r={r} />
-                  </clipPath>
-                </defs>
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={r}
-                  fill={color}
-                  fillOpacity={isGoal ? 0.9 : 0.16}
-                  stroke={color}
-                  strokeWidth={isGoal ? 0.6 : 0.5}
-                  strokeOpacity={0.95}
-                />
+                {/* Marker body. With a headshot, the marker is the shooter's
+                    photo clipped to the circle; otherwise goals are filled rings
+                    and others hollow with a faint fill so overlaps stay readable. */}
+                {shot.imageUrl ? (
+                  <>
+                    <defs>
+                      <clipPath id={clipId}>
+                        <circle cx={p.x} cy={p.y} r={r} />
+                      </clipPath>
+                    </defs>
+                    <circle cx={p.x} cy={p.y} r={r} fill={color} />
+                    <image
+                      href={shot.imageUrl}
+                      x={p.x - r}
+                      y={p.y - r}
+                      width={r * 2}
+                      height={r * 2}
+                      clipPath={`url(#${clipId})`}
+                      preserveAspectRatio="xMidYMid slice"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={r}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={isGoal ? 0.8 : 0.6}
+                      strokeOpacity={0.95}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={r}
+                      fill={color}
+                      fillOpacity={isGoal ? 0.9 : 0.16}
+                      stroke={color}
+                      strokeWidth={isGoal ? 0.6 : 0.5}
+                      strokeOpacity={0.95}
+                    />
 
-                {/* Goals carry the shooter monogram. */}
-                {isGoal && (
-                  <text
-                    x={p.x}
-                    y={p.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize={r * 0.9}
-                    fontWeight="bold"
-                    fill="#0a0a0a"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {monogram(shot.player)}
-                  </text>
+                    {/* Goals carry the shooter monogram. */}
+                    {isGoal && (
+                      <text
+                        x={p.x}
+                        y={p.y}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={r * 0.9}
+                        fontWeight="bold"
+                        fill="#0a0a0a"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        {monogram(shot.player)}
+                      </text>
+                    )}
+                  </>
                 )}
               </motion.g>
             );
@@ -286,7 +316,11 @@ export function ShotMap({
       </div>
 
       {/* Timeline strip — shots in minute order; click to step through. */}
-      <div role="listbox" aria-label="Shots in minute order" className="mt-3 flex items-stretch gap-1">
+      <div
+        role="listbox"
+        aria-label="Shots in minute order"
+        className="mt-3 flex items-stretch gap-1"
+      >
         {ordered.map((shot) => {
           const color = colorFor(shot.team);
           const isGoal = shot.outcome === 'goal';
@@ -541,7 +575,15 @@ function XgRing({
   return (
     <g style={{ pointerEvents: 'none' }}>
       {/* Faint full track. */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeOpacity={0.12} strokeWidth={0.5} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke="white"
+        strokeOpacity={0.12}
+        strokeWidth={0.5}
+      />
       {/* Accent arc, rotated to start at 12 o'clock. */}
       <motion.circle
         cx={cx}

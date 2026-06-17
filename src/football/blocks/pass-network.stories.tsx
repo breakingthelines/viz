@@ -7,18 +7,57 @@ import type { PassNetworkLink, PassNetworkPlayer } from '#/football/blocks/pass-
  * (3-/4-band build-up). StatsBomb coords: x 0–120 (low = own goal),
  * y 0–80 (0 = left touchline). The defence sits deep-left, the front three
  * high-right, with Mac Allister / De Paul / Fernández as the midfield pivot.
+ *
+ * A few nodes carry an `imageUrl` (rendered as a circular headshot); the rest
+ * are left photo-less to show the monogram fallback.
  */
 const ARGENTINA_PLAYERS: PassNetworkPlayer[] = [
   { id: 'gk', name: 'Emiliano Martínez', x: 10, y: 40, involvement: 38 },
   { id: 'rb', name: 'Nahuel Molina', x: 42, y: 70, involvement: 52 },
   { id: 'rcb', name: 'Cristian Romero', x: 30, y: 52, involvement: 61 },
-  { id: 'lcb', name: 'Nicolás Otamendi', x: 30, y: 28, involvement: 64 },
+  {
+    id: 'lcb',
+    name: 'Nicolás Otamendi',
+    x: 30,
+    y: 28,
+    involvement: 64,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Nicol%C3%A1s_Otamendi_2018.jpg',
+  },
   { id: 'lb', name: 'Nicolás Tagliafico', x: 44, y: 12, involvement: 49 },
-  { id: 'rcm', name: 'Rodrigo De Paul', x: 62, y: 56, involvement: 78 },
-  { id: 'cm', name: 'Enzo Fernández', x: 58, y: 38, involvement: 71 },
+  {
+    id: 'rcm',
+    name: 'Rodrigo De Paul',
+    x: 62,
+    y: 56,
+    involvement: 78,
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/6/6d/Rodrigo_De_Paul_2018_%28cropped%29.jpg',
+  },
+  {
+    id: 'cm',
+    name: 'Enzo Fernández',
+    x: 58,
+    y: 38,
+    involvement: 71,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/8a/Enzo_Fern%C3%A1ndez_2022.jpg',
+  },
   { id: 'lcm', name: 'Alexis Mac Allister', x: 66, y: 22, involvement: 67 },
-  { id: 'rw', name: 'Ángel Di María', x: 88, y: 18, involvement: 58 },
-  { id: 'st', name: 'Lionel Messi', x: 92, y: 48, involvement: 84 },
+  {
+    id: 'rw',
+    name: 'Ángel Di María',
+    x: 88,
+    y: 18,
+    involvement: 58,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/2e/Angel_Di_Maria_2018.jpg',
+  },
+  {
+    id: 'st',
+    name: 'Lionel Messi',
+    x: 92,
+    y: 48,
+    involvement: 84,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg',
+  },
   { id: 'lw', name: 'Julián Álvarez', x: 96, y: 66, involvement: 46 },
 ];
 

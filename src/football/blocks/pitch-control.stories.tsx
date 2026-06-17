@@ -8,7 +8,7 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
-  // Dark editorial surface, ~720px — the BTL reader page.
+  // Dark reader surface, ~720px — the panel sits quietly inline like the Shot map.
   decorators: [
     (Story) => (
       <div style={{ width: '720px', background: '#0a0a0a', padding: '28px' }}>

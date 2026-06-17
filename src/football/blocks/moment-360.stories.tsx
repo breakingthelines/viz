@@ -87,6 +87,10 @@ const PASSING_OPTIONS: MomentPassingOption[] = [
 ];
 
 const MESSI_ACTOR: MomentPoint = { x: 55, y: 40 };
+const MESSI_HEADSHOT =
+  'https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg';
+const MBAPPE_HEADSHOT =
+  'https://upload.wikimedia.org/wikipedia/commons/e/e5/Kylian_Mbapp%C3%A9_2018.jpg';
 
 /** Argentina build-up, 62': Messi between the lines with two runners free. */
 export const Default: Story = {
@@ -96,6 +100,7 @@ export const Default: Story = {
       player: 'L. Messi',
       team: 'home',
       minute: 62,
+      imageUrl: MESSI_HEADSHOT,
     },
     actor: MESSI_ACTOR,
     players: ALL_PLAYERS,
@@ -104,13 +109,26 @@ export const Default: Story = {
   },
 };
 
-/** Same instant, framed editorially as "What They Saw". */
-export const WhatTheySaw: Story = {
+/** Same instant, a through ball threaded between the lines. */
+export const ThroughBall: Story = {
   args: {
     ...Default.args,
-    kicker: 'What They Saw',
     event: {
       type: 'Through Ball',
+      player: 'L. Messi',
+      team: 'home',
+      minute: 62,
+      imageUrl: MESSI_HEADSHOT,
+    },
+  },
+};
+
+/** Actor with no headshot supplied — falls back to the accent dot. */
+export const NoHeadshot: Story = {
+  args: {
+    ...Default.args,
+    event: {
+      type: 'Carry',
       player: 'L. Messi',
       team: 'home',
       minute: 62,
@@ -154,6 +172,7 @@ export const AwayCounter: Story = {
       player: 'K. Mbappé',
       team: 'away',
       minute: 71,
+      imageUrl: MBAPPE_HEADSHOT,
     },
     actor: { x: 58, y: 42 },
     players: [...ARG_LOW_BLOCK, ...FRANCE_BREAK],

@@ -16,6 +16,8 @@ export interface MomentEvent {
   team: MomentTeam;
   /** Match minute. */
   minute: number;
+  /** Actor headshot URL. When set, the ball-carrier shows the photo (dot fallback). */
+  imageUrl?: string;
 }
 
 /** A point in StatsBomb 120×80 pitch coordinates. */
@@ -59,13 +61,11 @@ export interface Moment360Props {
   visibleArea: MomentPoint[];
   /** Passes the actor could play from this position. */
   passingOptions?: MomentPassingOption[];
-  /** Kicker over the title. Defaults to "The Moment". */
-  kicker?: string;
   /** Home accent. Defaults to BTL home red. */
   homeColor?: string;
   /** Away accent. Defaults to BTL away blue. */
   awayColor?: string;
-  /** Additional CSS classes on the outer plate. */
+  /** Additional CSS classes on the outer panel. */
   className?: string;
 }
 
@@ -105,13 +105,15 @@ const T_PLAYER_STEP = 0.045;
 const T_LANES = 1.7;
 
 /**
- * The Moment — a cinematic 360 freeze-frame on the BTL dark surface: the still
- * the broadcast camera held, reframed as "what the player saw". The tracked
- * camera polygon is the lit zone; everything outside it is dimmed and
- * desaturated. Team-mates wear the team colour, opponents cool grey, the keeper
- * is ringed, and the ball-carrier pulses with the ball at their feet. Dashed
- * passing lanes fan out to the options the actor had — the runs in behind glow
- * and halo, the covered balls stay faint. Hovering a lane emphasises it.
+ * The Moment — a cinematic 360 freeze-frame on the BTL dark surface, in the
+ * same quiet panel as the Shot map. The still the broadcast camera held is
+ * reframed as "what the player saw": the tracked camera polygon is the lit
+ * zone, everything outside it dimmed and desaturated. Team-mates wear the team
+ * colour, opponents cool grey, the keeper is ringed, and the ball-carrier (a
+ * circular headshot when a photo is supplied, otherwise a pulsing dot) holds
+ * the ball at their feet. Dashed passing lanes fan out to the actor's options —
+ * the runs in behind glow and halo, the covered balls stay faint. Hovering a
+ * lane emphasises it.
  */
 export function Moment360({
   event,
@@ -119,7 +121,6 @@ export function Moment360({
   players,
   visibleArea,
   passingOptions = [],
-  kicker = 'The Moment',
   homeColor = HOME_COLOR,
   awayColor = AWAY_COLOR,
   className,
@@ -127,6 +128,7 @@ export function Moment360({
   const maskId = useId();
   const desatId = useId();
   const glowId = useId();
+  const actorClipId = useId();
   const [hoverLane, setHoverLane] = useState<number | null>(null);
 
   const accent = event.team === 'home' ? homeColor : awayColor;
@@ -152,35 +154,22 @@ export function Moment360({
     [passingOptions]
   );
 
+  // Quiet caption under the title: who, when, what they were doing.
+  const caption = `${event.player} · ${event.minute}' · ${event.type}`;
+
   return (
     <figure
       className={cn(
-        'relative isolate w-full rounded-[14px] border border-white/[0.08]',
-        'bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5',
-        'shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
-      style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
     >
-      {/* Red top hairline */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#eb0000]/70 to-transparent" />
-
-      {/* Masthead */}
-      <header className="mb-4 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-[#eb0000]/90">{kicker}</div>
-          <h3 className="mt-1.5 text-[22px] leading-none text-white/95">
-            {event.player}{' '}
-            <span className="tabular-nums text-white/35">· {event.minute}&apos;</span>
-          </h3>
-        </div>
-        <div className="shrink-0 text-right text-[10px] uppercase leading-relaxed tracking-[0.2em] text-white/40">
-          <div style={{ color: `${accent}dd` }}>{event.type}</div>
-          <div className="mt-0.5 tabular-nums text-white/35">
-            {spaceCount > 0 ? `${spaceCount} in space` : 'Pressed'}
-          </div>
-        </div>
-      </header>
+      {/* Header: one plain title + a quiet caption. */}
+      <figcaption className="mb-3">
+        <span className="text-[13px] font-semibold tracking-tight text-white">The Moment</span>
+        <span className="ml-2 text-[11px] tabular-nums text-white/45">{caption}</span>
+      </figcaption>
 
       {/* The freeze-frame still */}
       <div className="relative">
@@ -189,6 +178,10 @@ export function Moment360({
             {/* Clip: the lit zone the camera tracked. */}
             <clipPath id={maskId}>
               <polygon points={litPolygon} />
+            </clipPath>
+            {/* Clip: the actor's circular headshot. */}
+            <clipPath id={actorClipId}>
+              <circle cx={origin.x} cy={origin.y} r={2.4} />
             </clipPath>
             {/* Desaturate filter for the out-of-shot world. */}
             <filter id={desatId}>
@@ -393,7 +386,8 @@ export function Moment360({
           </g>
 
           {/* (5) The actor — ball-carrier, highlighted with a subtle pulse and
-              the ball at their feet. Sits above everything. */}
+              the ball at their feet. A circular headshot when a photo is
+              supplied, otherwise the accent dot. Sits above everything. */}
           <motion.g
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -417,16 +411,42 @@ export function Moment360({
                 delay: T_PLAYER_BASE + 0.3,
               }}
             />
-            {/* Actor marker. */}
-            <circle
-              cx={origin.x}
-              cy={origin.y}
-              r={2}
-              fill={accent}
-              stroke="white"
-              strokeWidth={0.5}
-              filter={`url(#${glowId})`}
-            />
+            {/* Actor marker — headshot photo clipped to the circle, or the
+                accent dot when no photo is supplied. */}
+            {event.imageUrl ? (
+              <>
+                <circle cx={origin.x} cy={origin.y} r={2.4} fill={accent} />
+                <image
+                  href={event.imageUrl}
+                  x={origin.x - 2.4}
+                  y={origin.y - 2.4}
+                  width={4.8}
+                  height={4.8}
+                  clipPath={`url(#${actorClipId})`}
+                  preserveAspectRatio="xMidYMid slice"
+                  style={{ pointerEvents: 'none' }}
+                />
+                <circle
+                  cx={origin.x}
+                  cy={origin.y}
+                  r={2.4}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={0.5}
+                  strokeOpacity={0.95}
+                />
+              </>
+            ) : (
+              <circle
+                cx={origin.x}
+                cy={origin.y}
+                r={2}
+                fill={accent}
+                stroke="white"
+                strokeWidth={0.5}
+                filter={`url(#${glowId})`}
+              />
+            )}
             {/* The ball, just off the carrying foot. */}
             <circle
               cx={origin.x + 1.7}
@@ -438,18 +458,10 @@ export function Moment360({
             />
           </motion.g>
         </Pitch>
-
-        {/* Direction + read line under the pitch. */}
-        <div className="pointer-events-none mt-1 flex items-center justify-between text-[9px] uppercase tracking-[0.2em] text-white/30">
-          <span style={{ color: `${accent}cc` }}>
-            {event.team === 'home' ? `Attack →` : `← Attack`}
-          </span>
-          <span>360 freeze-frame</span>
-        </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] uppercase tracking-[0.2em] text-white/40">
+      {/* Legend — small data dots + plain words. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/60">
         <LegendDot color={accent} label="Team-mate" />
         <LegendDot color="#c9d4de" label="Opponent" ring />
         <LegendDot color="transparent" label="Keeper" hollow />
@@ -460,19 +472,14 @@ export function Moment360({
               backgroundImage: `repeating-linear-gradient(to right, ${accent} 0 3px, transparent 3px 5px)`,
             }}
           />
-          <span className="text-white/55">In-space pass</span>
+          <span>{spaceCount > 0 ? `In-space pass (${spaceCount})` : 'In-space pass'}</span>
         </span>
-      </div>
-
-      {/* Footer hairline + colophon */}
-      <div className="mt-4 border-t border-white/[0.08] pt-3">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/40">Data · StatsBomb</div>
       </div>
     </figure>
   );
 }
 
-/** A swatch + label chip for the legend. */
+/** Small data key: a colour dot + a plain label. */
 function LegendDot({
   color,
   label,
@@ -497,7 +504,7 @@ function LegendDot({
               : 'none',
         }}
       />
-      <span className="text-white/55">{label}</span>
+      <span>{label}</span>
     </span>
   );
 }
@@ -546,24 +553,10 @@ function LaneCallout({
       />
       {/* Accent tick. */}
       <rect x={boxX} y={boxY} width={0.9} height={h} rx={0.4} fill={color} />
-      <text
-        x={boxX + 2.2}
-        y={boxY + 3.7}
-        fontSize={2.6}
-        fontWeight="bold"
-        fill="white"
-        style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
-      >
+      <text x={boxX + 2.2} y={boxY + 3.7} fontSize={2.6} fontWeight="bold" fill="white">
         {label}
       </text>
-      <text
-        x={boxX + 2.2}
-        y={boxY + 7}
-        fontSize={2}
-        fill="white"
-        fillOpacity={0.55}
-        style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}
-      >
+      <text x={boxX + 2.2} y={boxY + 7} fontSize={2} fill="white" fillOpacity={0.55}>
         {sub}
       </text>
     </motion.g>

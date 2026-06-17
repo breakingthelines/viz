@@ -22,13 +22,13 @@ export interface PitchControlPlayer {
 }
 
 export interface PitchControlProps {
-  /** Home team display name (controls the red side + masthead). */
+  /** Home team display name (controls the red side). */
   homeTeam: string;
   /** Away team display name (controls the blue side). */
   awayTeam: string;
   /** Every player on the pitch — both teams, fixed positions. */
   players: PitchControlPlayer[];
-  /** Additional CSS classes on the editorial plate. */
+  /** Additional CSS classes on the outer panel. */
   className?: string;
 }
 
@@ -59,16 +59,17 @@ interface ResolvedPlayer extends PitchControlPlayer {
 }
 
 /**
- * Space / pitch control — a calm territory wash over the dark BTL pitch. Each
- * cell of a coarse grid is assigned a soft, distance-weighted (1/d²) influence
- * from every player; the cell is shaded toward the home (red) or away (blue)
- * side by whichever team dominates, with opacity scaled by the *margin* of
- * control so contested midfield stays near-transparent and owned zones read as
- * a low wash. The low-res grid is drawn up-scaled with smoothing, giving a soft
- * gradient falloff rather than hard Voronoi edges. Player dots sit on top.
+ * Space / pitch control — a calm territory wash over the dark BTL pitch, styled
+ * to sit quietly next to the Shot map. Each cell of a coarse grid is assigned a
+ * soft, distance-weighted (1/d²) influence from every player; the cell is shaded
+ * toward the home (red) or away (blue) side by whichever team dominates, with
+ * opacity scaled by the *margin* of control so contested midfield stays
+ * near-transparent and owned zones read as a low wash. The low-res grid is drawn
+ * up-scaled with smoothing, giving a soft gradient falloff rather than hard
+ * Voronoi edges. Player dots sit on top.
  *
- * The split bar + tabular readout in the masthead report each side's share of
- * pitch area. Hovering a player blooms their own region and rings their dot.
+ * A small split bar + plain tabular readout report each side's share of pitch
+ * area. Hovering a player blooms their own region and rings their dot.
  */
 export function PitchControl({ homeTeam, awayTeam, players, className }: PitchControlProps) {
   const titleId = useId();
@@ -99,68 +100,44 @@ export function PitchControl({ homeTeam, awayTeam, players, className }: PitchCo
     <figure
       aria-labelledby={titleId}
       className={cn(
-        'relative isolate w-full max-w-[560px] overflow-hidden rounded-[14px] border border-white/[0.08]',
-        'bg-gradient-to-b from-white/[0.045] to-white/[0.012] p-5',
-        'shadow-[0_30px_70px_-32px_rgba(0,0,0,0.75)]',
+        'relative isolate my-6 w-full max-w-[560px] overflow-hidden rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
         className
       )}
-      style={{ fontFamily: '"le-monde-journal-std", Georgia, serif' }}
     >
-      {/* Faint red top hairline. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{
-          background: `linear-gradient(90deg, transparent, ${HOME_COLOR}99 18%, ${HOME_COLOR}99 82%, transparent)`,
-        }}
-      />
-
-      {/* Masthead: red kicker over a Le Monde serif "home v away" title. */}
-      <header className="mb-4 flex items-end justify-between gap-4">
-        <div className="min-w-0">
+      {/* Header: one plain title + a small split bar with a tabular readout. */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span id={titleId} className="shrink-0 text-[13px] font-semibold tracking-tight text-white">
+          Pitch control
+        </span>
+        {/* Share of pitch area: split bar + plain tabular figures. */}
+        <div className="flex min-w-0 items-center gap-2.5">
           <div
-            className="font-sans text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: HOME_COLOR }}
+            className="flex h-1 w-24 overflow-hidden rounded-full bg-white/[0.06]"
+            role="img"
+            aria-label={`${homeTeam} ${homePct}% of pitch, ${awayTeam} ${awayPct}%`}
           >
-            Pitch Control
+            <motion.span
+              className="h-full"
+              style={{ backgroundColor: HOME_COLOR }}
+              initial={{ width: '50%' }}
+              animate={{ width: `${homePct}%` }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+            <motion.span
+              className="h-full flex-1"
+              style={{ backgroundColor: AWAY_COLOR }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.85 }}
+              transition={{ duration: 0.7 }}
+            />
           </div>
-          <h3 id={titleId} className="mt-1 truncate text-[22px] leading-none text-white">
-            {homeTeam} <span className="text-white/40">v</span> {awayTeam}
-          </h3>
-        </div>
-        {/* Tabular share read-out, team-coloured. */}
-        <div className="shrink-0 text-right font-sans text-[10px] uppercase tracking-[0.2em] text-white/40">
-          <span className="tabular-nums" style={{ color: HOME_COLOR }}>
-            {homePct}
+          <span className="shrink-0 text-[11px] tabular-nums text-white/60">
+            <span style={{ color: HOME_COLOR }}>{homePct}</span>
+            <span className="text-white/30"> / </span>
+            <span style={{ color: AWAY_COLOR }}>{awayPct}</span>
           </span>
-          <span className="text-white/30"> · </span>
-          <span className="tabular-nums" style={{ color: AWAY_COLOR }}>
-            {awayPct}
-          </span>
-          <div className="mt-0.5">Territory</div>
         </div>
-      </header>
-
-      {/* Thin split bar — share of pitch area per side. */}
-      <div
-        className="mb-3 flex h-1 w-full overflow-hidden rounded-full bg-white/[0.06]"
-        role="img"
-        aria-label={`${homeTeam} ${homePct}% of pitch, ${awayTeam} ${awayPct}%`}
-      >
-        <motion.span
-          className="h-full"
-          style={{ backgroundColor: HOME_COLOR }}
-          initial={{ width: '50%' }}
-          animate={{ width: `${homePct}%` }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        />
-        <motion.span
-          className="h-full flex-1"
-          style={{ backgroundColor: AWAY_COLOR }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.85 }}
-          transition={{ duration: 0.7 }}
-        />
       </div>
 
       {/* Pitch + control-surface canvas overlay (square box). */}
@@ -237,29 +214,59 @@ export function PitchControl({ homeTeam, awayTeam, players, className }: PitchCo
           })}
         </svg>
 
-        {/* Attack-direction cue (home attacks right). */}
+        {/* Attack-direction cue (home attacks right) — quiet, no eyebrow. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center">
-          <span className="flex items-center gap-1.5 font-sans text-[9px] uppercase tracking-[0.18em] text-white/30">
+          <span className="flex items-center gap-1.5 text-[10px] text-white/30">
             {homeTeam} attacking <span aria-hidden>→</span>
           </span>
         </div>
       </div>
 
-      {/* Colophon — doubles as the hover read-out. */}
-      <footer className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3 font-sans text-[9px] uppercase tracking-[0.2em]">
-        <span className="text-white/30">Data · StatsBomb</span>
-        <span className="tabular-nums text-white/55">
-          {hovered ? (
-            <span style={{ color: hovered.team === 'home' ? HOME_COLOR : AWAY_COLOR }}>
-              {hovered.team === 'home' ? homeTeam : awayTeam}
-              {hovered.isGoalkeeper ? ' · GK' : ''}
-            </span>
-          ) : (
-            <>{players.length} players</>
-          )}
-        </span>
-      </footer>
+      {/* Team key — small data dots + names; the hovered side reads brighter. */}
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+        <TeamKey
+          color={HOME_COLOR}
+          name={homeTeam}
+          active={hovered?.team === 'home'}
+          dim={hovered != null && hovered.team !== 'home'}
+        />
+        <TeamKey
+          color={AWAY_COLOR}
+          name={awayTeam}
+          active={hovered?.team === 'away'}
+          dim={hovered != null && hovered.team !== 'away'}
+        />
+        {hovered?.isGoalkeeper && <span className="tabular-nums text-white/40">GK</span>}
+      </div>
     </figure>
+  );
+}
+
+/** Small data key: a colour dot + the team name; brightens for the hovered side. */
+function TeamKey({
+  color,
+  name,
+  active,
+  dim,
+}: {
+  color: string;
+  name: string;
+  active: boolean;
+  dim: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-1.5 transition-colors',
+        active ? 'text-white/90' : dim ? 'text-white/35' : 'text-white/60'
+      )}
+    >
+      <span
+        className="inline-block size-2 rounded-full transition-opacity"
+        style={{ backgroundColor: color, opacity: dim ? 0.45 : 1 }}
+      />
+      <span className="truncate">{name}</span>
+    </span>
   );
 }
 

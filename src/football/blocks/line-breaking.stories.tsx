@@ -67,6 +67,7 @@ const ARGENTINA_PASSES: LineBreakingPass[] = [
   {
     id: 'lb-3',
     player: 'Lionel Messi',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg',
     startX: 78,
     startY: 30,
     endX: 108,

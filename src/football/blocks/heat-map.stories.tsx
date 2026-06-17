@@ -12,17 +12,10 @@ const meta = {
   // Dark editorial page wrapper, mirroring the BTL reader surface.
   decorators: [
     (Story) => (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#0a0a0a',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '48px',
-        }}
-      >
-        <Story />
+      <div style={{ background: '#0a0a0a', padding: 48 }}>
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <Story />
+        </div>
       </div>
     ),
   ],
