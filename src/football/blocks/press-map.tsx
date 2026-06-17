@@ -29,6 +29,8 @@ export interface PressThirds {
 export interface PressMapProps {
   /** Team display name. */
   team: string;
+  /** Optional team crest URL — a small badge shown next to the team name. */
+  crestUrl?: string;
   /** Bloom + accent colour. Defaults to the BTL home red. */
   color?: string;
   /**
@@ -106,9 +108,8 @@ function countThirds(events: PressEvent[]): PressThirds {
  *
  * Over the bloom sits a clean thirds breakdown (defensive / middle / attacking
  * share of pressing actions) — hovering a third highlights it and surfaces its
- * count — and a prominent, plain PPDA readout (passes allowed per defensive
- * action; lower = more intense). A clean dropdown switches the plotted metric
- * between all actions, pressures only, and ball recoveries only.
+ * count — and a prominent, plain PPDA readout. A clean dropdown switches the
+ * plotted metric between all actions, pressures only, and ball recoveries only.
  *
  * The team always presses left→right (its own goal at x = 0), so the deepest
  * third sits on the left and the attacking third — where a high press bites —
@@ -116,6 +117,7 @@ function countThirds(events: PressEvent[]): PressThirds {
  */
 export function PressMap({
   team,
+  crestUrl,
   color = HOME_COLOR,
   ppda,
   events,
@@ -190,9 +192,6 @@ export function PressMap({
         <div className="text-right">
           <span className="text-[12px] font-semibold" style={{ color }}>
             {intensity}
-          </span>
-          <span className="block text-[10px] text-white/35">
-            passes per defensive action · lower = more intense
           </span>
         </div>
       </div>
@@ -270,6 +269,14 @@ export function PressMap({
       <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/60">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          {crestUrl && (
+            <img
+              src={crestUrl}
+              alt=""
+              aria-hidden
+              className="size-4 shrink-0 rounded object-contain"
+            />
+          )}
           <span className="truncate text-white/70">{team}</span>
         </span>
         <span>

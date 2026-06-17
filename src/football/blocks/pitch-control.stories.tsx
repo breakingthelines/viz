@@ -59,6 +59,8 @@ export const MidBlock: Story = {
   args: {
     homeTeam: 'Arsenal',
     awayTeam: 'Everton',
+    homeCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
+    awayCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg',
     players: midBlock,
   },
 };
@@ -100,6 +102,8 @@ export const EvenContest: Story = {
   args: {
     homeTeam: 'Liverpool',
     awayTeam: 'Manchester City',
+    homeCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
+    awayCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
     players: evenGame,
   },
 };

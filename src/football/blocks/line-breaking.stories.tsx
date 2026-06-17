@@ -350,6 +350,7 @@ const ARGENTINA_PASSES: LineBreakingPass[] = [
 export const Default: Story = {
   args: {
     team: 'Argentina',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
     color: '#eb0000',
     passes: ARGENTINA_PASSES,
   },
@@ -362,6 +363,7 @@ export const Default: Story = {
 export const FewBreaks: Story = {
   args: {
     team: 'England',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/be/Flag_of_England.svg',
     color: '#1d4ed8',
     passes: ARGENTINA_PASSES.filter(
       (p) => !p.lineBreaking || ['lb-1', 'lb-3', 'lb-6', 'lb-11'].includes(p.id)

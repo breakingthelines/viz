@@ -31,6 +31,8 @@ export interface LineBreakingPass {
 export interface LineBreakingProps {
   /** Team display name. */
   team: string;
+  /** Team crest URL. When set, a small crest sits before the team name. */
+  crestUrl?: string;
   /** Team accent colour for line-breaking passes. Defaults to the home red. */
   color?: string;
   /** Completed passes to plot. */
@@ -69,7 +71,13 @@ const MODE_OPTIONS: { value: ViewMode; label: string }[] = [
  * isolates the line-breakers; hovering any pass focuses it and its broken
  * defenders and names the passer.
  */
-export function LineBreaking({ team, color = '#eb0000', passes, className }: LineBreakingProps) {
+export function LineBreaking({
+  team,
+  crestUrl,
+  color = '#eb0000',
+  passes,
+  className,
+}: LineBreakingProps) {
   const uid = useId();
   const arrowId = `${uid}-arrow`;
   const [mode, setMode] = useState<ViewMode>('all');
@@ -134,7 +142,7 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
             </marker>
           </defs>
 
-          {/* Attack-direction hint, low-key */}
+          {/* Attack-direction cue, low-key. */}
           <text
             x="50"
             y="97"
@@ -143,9 +151,8 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
             fillOpacity="0.22"
             fontSize="2.4"
             letterSpacing="0.6"
-            style={{ textTransform: 'uppercase' }}
           >
-            Attacking direction →
+            Attacking →
           </text>
 
           {ordered.map((pass, index) => {
@@ -207,11 +214,26 @@ export function LineBreaking({ team, color = '#eb0000', passes, className }: Lin
         </AnimatePresence>
       </div>
 
-      {/* Count read-out — small + plain, mirrors the shot-map team key row. */}
-      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-white/60">
-        <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="tabular-nums text-white/80">{breakCount}</span>
-        <span>line {breakCount === 1 ? 'break' : 'breaks'}</span>
+      {/* Team key + count read-out — small + plain, mirrors the shot-map team key row. */}
+      <div className="mt-3 flex items-center gap-3 text-[11px] text-white/60">
+        <span className="flex items-center gap-1.5">
+          {crestUrl && (
+            <img
+              src={crestUrl}
+              alt=""
+              aria-hidden
+              width={16}
+              height={16}
+              className="inline-block size-4 shrink-0 rounded object-contain align-middle"
+            />
+          )}
+          <span className="truncate text-white/80">{team}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          <span className="tabular-nums text-white/80">{breakCount}</span>
+          <span>line {breakCount === 1 ? 'break' : 'breaks'}</span>
+        </span>
       </div>
     </div>
   );

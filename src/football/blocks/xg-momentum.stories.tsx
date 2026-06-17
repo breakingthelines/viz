@@ -44,10 +44,18 @@ const finalShots: XgMomentumShot[] = [
   { minute: 94, team: 'home', xg: 0.55, player: 'Lionel Messi', outcome: 'goal' },
 ];
 
+// Wikimedia national flags, used as team crests.
+const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const FLAG_FRANCE = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+const FLAG_ENGLAND = 'https://upload.wikimedia.org/wikipedia/commons/b/be/Flag_of_England.svg';
+const FLAG_PORTUGAL = 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Portugal.svg';
+
 export const Final2022: Story = {
   args: {
     homeTeam: 'Argentina',
     awayTeam: 'France',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
     shots: finalShots,
   },
 };
@@ -70,6 +78,8 @@ export const WithScorerHeadshots: Story = {
   args: {
     homeTeam: 'Argentina',
     awayTeam: 'France',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
     shots: headshotShots,
   },
 };
@@ -94,6 +104,8 @@ export const LowEventOneNil: Story = {
   args: {
     homeTeam: 'England',
     awayTeam: 'Portugal',
+    homeCrestUrl: FLAG_ENGLAND,
+    awayCrestUrl: FLAG_PORTUGAL,
     shots: lowEventShots,
   },
 };

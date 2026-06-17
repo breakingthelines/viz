@@ -47,6 +47,8 @@ export interface PassNetworkLink {
 export interface PassNetworkProps {
   /** Team display name, shown as the panel title's subject. */
   team: string;
+  /** Team crest URL. Rendered as a small badge before the team name. */
+  crestUrl?: string;
   /** Accent colour for edges + nodes. Defaults to BTL home red. */
   color?: string;
   /** The XI as network nodes at their average locations. */
@@ -131,6 +133,7 @@ const NODE_DIM_OPACITY = 0.24;
  */
 export function PassNetwork({
   team,
+  crestUrl,
   color = DEFAULT_TEAM_COLOR,
   players,
   links,
@@ -209,7 +212,10 @@ export function PassNetwork({
               <span className="text-white/70">{hoveredNode.involvement} involvements</span>
             </>
           ) : (
-            <span className="text-white/40">{team}</span>
+            <span className="inline-flex items-center gap-1.5 text-white/40">
+              <Crest url={crestUrl} name={team} />
+              {team}
+            </span>
           )}
         </span>
       </div>
@@ -360,6 +366,7 @@ export function PassNetwork({
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          <Crest url={crestUrl} name={team} />
           <span className="truncate">{team}</span>
         </span>
         <span className="tabular-nums text-white/40">
@@ -367,5 +374,21 @@ export function PassNetwork({
         </span>
       </div>
     </div>
+  );
+}
+
+/** Small ~16px team crest rendered before a team name. Nothing when absent. */
+function Crest({ url, name }: { url?: string; name: string }) {
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      width={16}
+      height={16}
+      className="inline-block size-4 rounded object-contain align-middle"
+      title={name}
+    />
   );
 }

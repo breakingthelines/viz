@@ -220,11 +220,18 @@ const ARG_FRA_SHOTS: Shot[] = [
   },
 ];
 
+// Wikimedia national flags, used as team crests.
+const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const FLAG_FRANCE = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+const FLAG_CROATIA = 'https://upload.wikimedia.org/wikipedia/commons/1/1b/Flag_of_Croatia.svg';
+
 /** The headline match: Argentina v France over 120 minutes. */
 export const Default: Story = {
   args: {
     homeTeam: 'Argentina',
     awayTeam: 'France',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
     shots: ARG_FRA_SHOTS,
   },
 };
@@ -350,6 +357,8 @@ export const SemiFinal: Story = {
   args: {
     homeTeam: 'Argentina',
     awayTeam: 'Croatia',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_CROATIA,
     shots: ARG_CRO_SHOTS,
   },
 };

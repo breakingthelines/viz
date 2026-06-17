@@ -121,5 +121,9 @@ const ARGENTINA: PassSonarPlayer[] = [
 ];
 
 export const Argentina: Story = {
-  args: { team: 'Argentina', players: ARGENTINA },
+  args: {
+    team: 'Argentina',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    players: ARGENTINA,
+  },
 };

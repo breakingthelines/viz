@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -37,6 +37,8 @@ export interface PassSonarPlayer {
 export interface PassSonarProps {
   /** Team display name. */
   team: string;
+  /** Optional team crest/flag URL, rendered small beside the team name. */
+  crestUrl?: string;
   /** Team accent. Defaults to BTL home red. */
   color?: string;
   /** Players to plot, each with an average position and directional wedges. */
@@ -49,10 +51,14 @@ const TEAM_COLOR = '#eb0000';
 
 // Sonar geometry, in pitch viewBox units (the Pitch primitive is 100 × 100).
 const BASE_RADIUS = 4.2; // resting outer reach of the longest wedge
-const HOVER_RADIUS = 6.6; // outer reach when a player's sonar is lifted
 const MIN_WEDGE = 0.6; // floor so a short-pass wedge stays visible
 // Pass length (m) that maps to a full-radius wedge; longer passes clamp here.
 const MAX_PASS_LENGTH = 45;
+
+// Take-over focus: the hovered sonar floats to the pitch centre and blows up.
+const FOCUS_CX = 50;
+const FOCUS_CY = 50;
+const FOCUS_RADIUS = 30; // outer reach of the longest wedge when focused
 
 /** Up-to-two initials for the monogram ("Lionel Messi" → "LM"). */
 function monogram(name: string): string {
@@ -101,17 +107,42 @@ function wedgePath(cx: number, cy: number, r: number, angleDeg: number, spanDeg:
   ].join(' ');
 }
 
+/** Total passes summed across a player's wedges. */
+function totalPasses(p: PassSonarPlayer): number {
+  return p.wedges.reduce((sum, w) => sum + w.count, 0);
+}
+
+/** Count-weighted average pass length across a player's wedges, in metres. */
+function avgPassLength(p: PassSonarPlayer): number {
+  let lenSum = 0;
+  let n = 0;
+  for (const w of p.wedges) {
+    lenSum += w.avgLength * w.count;
+    n += w.count;
+  }
+  return n > 0 ? lenSum / n : 0;
+}
+
 /**
  * Pass sonars — the iconic StatsBomb radial passing diagram on the BTL dark
  * surface, styled to sit quietly next to the Shot map and Lineup builder. Each
  * player gets a small polar diagram at their average position: the circle is
  * split into directional wedges, each wedge's radius is the average pass length
- * in that direction and its colour intensity is the pass volume. Hovering or
- * focusing a player lifts and enlarges their sonar, dims the rest, and surfaces
- * a callout with the player's headshot, name and total passes. Wedges grow out
- * on mount, staggered by player.
+ * in that direction and its colour intensity is the pass volume.
+ *
+ * Hovering or focusing a player takes over the viz: that sonar floats to the
+ * centre of the pitch and blows up large while the pitch and every other sonar
+ * dim back, so the reader can actually read one player's directional profile —
+ * his name, total passes and average pass length. Move out and it settles back
+ * into formation. Wedges grow out on mount, staggered by player.
  */
-export function PassSonar({ team, color = TEAM_COLOR, players, className }: PassSonarProps) {
+export function PassSonar({
+  team,
+  crestUrl,
+  color = TEAM_COLOR,
+  players,
+  className,
+}: PassSonarProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -125,8 +156,6 @@ export function PassSonar({ team, color = TEAM_COLOR, players, className }: Pass
     return m;
   }, [players]);
 
-  const total = (p: PassSonarPlayer) => p.wedges.reduce((sum, w) => sum + w.count, 0);
-
   const active = useMemo(() => players.find((p) => p.id === activeId) ?? null, [players, activeId]);
 
   return (
@@ -137,11 +166,15 @@ export function PassSonar({ team, color = TEAM_COLOR, players, className }: Pass
         className
       )}
     >
-      {/* Header: one plain title + small team key. */}
+      {/* Header: one plain title + small team key (crest + name). */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Pass sonars</span>
         <span className="flex items-center gap-1.5 text-[11px] text-white/60">
-          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          {crestUrl ? (
+            <img src={crestUrl} alt="" aria-hidden className="size-4 rounded-full object-contain" />
+          ) : (
+            <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          )}
           <span className="truncate">{team}</span>
         </span>
       </div>
@@ -149,10 +182,22 @@ export function PassSonar({ team, color = TEAM_COLOR, players, className }: Pass
       {/* Pitch + sonars */}
       <div className="relative">
         <Pitch variant="full" theme="dark">
+          {/* Whole-pitch scrim: dims pitch + resting sonars behind the focus. */}
+          <motion.rect
+            x={0}
+            y={0}
+            width={100}
+            height={100}
+            fill="#0a0a0a"
+            initial={false}
+            animate={{ opacity: active ? 0.66 : 0 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            style={{ pointerEvents: 'none' }}
+          />
+
           {players.map((player, playerIndex) => {
             const isActive = player.id === activeId;
             const dimmed = activeId !== null && !isActive;
-            const reach = isActive ? HOVER_RADIUS : BASE_RADIUS;
             const longest = player.wedges.reduce((m, w) => Math.max(m, w.avgLength), 0) || 1;
             // Scale by the longer of the player's own longest pass and the
             // full-length cap, so a player who only plays short still shows
@@ -160,32 +205,37 @@ export function PassSonar({ team, color = TEAM_COLOR, players, className }: Pass
             const lengthCeiling = Math.max(longest, MAX_PASS_LENGTH * 0.5);
             const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
 
+            // When active, the sonar takes over: re-anchored to the pitch centre
+            // and drawn at the large focus radius. Otherwise it rests in place.
+            const cx = isActive ? FOCUS_CX : player.x;
+            const cy = isActive ? FOCUS_CY : player.y;
+            const reach = isActive ? FOCUS_RADIUS : BASE_RADIUS;
+
             return (
               <motion.g
                 key={player.id}
                 role="button"
                 tabIndex={0}
-                aria-label={`${player.name}, ${total(player)} passes`}
+                aria-label={`${player.name}, ${totalPasses(player)} passes`}
                 className="cursor-pointer focus:outline-none"
                 onMouseEnter={() => setActiveId(player.id)}
                 onMouseLeave={() => setActiveId(null)}
                 onFocus={() => setActiveId(player.id)}
                 onBlur={() => setActiveId(null)}
                 initial={false}
-                animate={{ opacity: dimmed ? 0.26 : 1 }}
+                animate={{ opacity: dimmed ? 0.12 : 1 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
               >
                 {/* Faint hub disc so an empty direction still anchors the player. */}
-                <circle
-                  cx={player.x}
-                  cy={player.y}
-                  r={reach}
+                <motion.circle
+                  initial={false}
+                  animate={{ cx, cy, r: reach }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   fill="white"
                   fillOpacity={isActive ? 0.05 : 0.03}
                   stroke="white"
-                  strokeOpacity={isActive ? 0.18 : 0.08}
-                  strokeWidth={0.25}
+                  strokeOpacity={isActive ? 0.16 : 0.08}
+                  strokeWidth={isActive ? 0.12 : 0.25}
                 />
 
                 {player.wedges.map((wedge, wedgeIndex) => {
@@ -195,154 +245,106 @@ export function PassSonar({ team, color = TEAM_COLOR, players, className }: Pass
                   // directions still register against the dark pitch.
                   const volFrac = maxCount > 0 ? wedge.count / maxCount : 0;
                   const fillOpacity = 0.16 + Math.sqrt(volFrac) * 0.72;
-                  const d = wedgePath(player.x, player.y, r, wedge.angleDeg, span);
+                  const d = wedgePath(cx, cy, r, wedge.angleDeg, span);
 
                   return (
                     <motion.path
                       key={`${player.id}-w${wedgeIndex}`}
-                      d={d}
                       fill={color}
                       stroke={color}
-                      strokeWidth={0.18}
+                      strokeWidth={isActive ? 0.08 : 0.18}
                       strokeOpacity={0.6}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{
-                        opacity: fillOpacity,
-                        scale: 1,
-                      }}
+                      initial={{ opacity: 0, d }}
+                      animate={{ opacity: fillOpacity, d }}
                       transition={{
-                        duration: 0.5,
-                        ease: 'easeOut',
-                        delay: 0.04 * playerIndex + 0.012 * wedgeIndex,
-                      }}
-                      style={{
-                        transformBox: 'fill-box',
-                        transformOrigin: `${player.x}px ${player.y}px`,
+                        opacity: {
+                          duration: 0.5,
+                          ease: 'easeOut',
+                          delay: activeId === null ? 0.04 * playerIndex + 0.012 * wedgeIndex : 0,
+                        },
+                        d: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
                       }}
                     />
                   );
                 })}
 
                 {/* Hub dot. */}
-                <circle cx={player.x} cy={player.y} r={0.7} fill="white" fillOpacity={0.85} />
+                <motion.circle
+                  initial={false}
+                  animate={{ cx, cy, r: isActive ? 1.4 : 0.7 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  fill="white"
+                  fillOpacity={0.85}
+                />
 
-                {/* Quiet surname label beneath the sonar (data, not decoration). */}
-                <text
+                {/* Quiet surname label beneath the resting sonar (hidden while
+                    this sonar is the focused take-over — the overlay names it). */}
+                <motion.text
                   x={player.x}
-                  y={player.y + reach + 2.6}
+                  y={player.y + BASE_RADIUS + 2.6}
                   textAnchor="middle"
                   fill="white"
                   fontSize="2.4"
                   fontWeight="600"
-                  fillOpacity={isActive ? 0.95 : 0.7}
+                  initial={false}
+                  animate={{ opacity: isActive ? 0 : 0.7 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
                   style={{ pointerEvents: 'none' }}
                 >
                   {surname(player.name)}
-                </text>
+                </motion.text>
               </motion.g>
             );
           })}
 
-          {/* Callout for the active player, drawn last so it sits on top. */}
+          {/* Focus overlay for the taken-over player, drawn last (on top). */}
           {active && (
-            <Callout
+            <FocusOverlay
               player={active}
-              total={total(active)}
+              total={totalPasses(active)}
+              avgLength={avgPassLength(active)}
               color={color}
-              clipId={`${clipPrefix}-callout`}
+              clipId={`${clipPrefix}-focus`}
             />
           )}
         </Pitch>
-      </div>
-
-      {/* Reading key — what radius and intensity mean. */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/60">
-        <span className="flex items-center gap-1.5">
-          <RadiusGlyph color={color} />
-          <span>Reach = avg pass length</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <IntensityGlyph color={color} />
-          <span>Intensity = pass volume</span>
-        </span>
       </div>
     </div>
   );
 }
 
-/** Tiny glyph: a small then large wedge, keying radius → pass length. */
-function RadiusGlyph({ color }: { color: string }) {
-  return (
-    <svg width="16" height="12" viewBox="0 0 16 12" aria-hidden>
-      <path d="M3 6 L3 6 A4 4 0 0 1 9 3 Z" fill={color} fillOpacity={0.85} />
-      <path d="M3 6 L3 6 A2 2 0 0 1 6 4.6 Z" fill={color} fillOpacity={0.85} />
-    </svg>
-  );
-}
-
-/** Tiny glyph: faint → solid swatch, keying colour intensity → volume. */
-function IntensityGlyph({ color }: { color: string }) {
-  return (
-    <svg width="22" height="10" viewBox="0 0 22 10" aria-hidden>
-      <rect x="0" y="2" width="6" height="6" rx="1" fill={color} fillOpacity={0.22} />
-      <rect x="8" y="2" width="6" height="6" rx="1" fill={color} fillOpacity={0.5} />
-      <rect x="16" y="2" width="6" height="6" rx="1" fill={color} fillOpacity={0.9} />
-    </svg>
-  );
-}
-
 /**
- * Floating callout for the active player: a circular headshot (monogram
- * fallback) + name + total passes. Mirrors the shot-map callout geometry so the
- * card never spills off the pitch.
+ * The taken-over player's read-out, overlaid on the dimmed pitch beside the
+ * centred sonar: a circular headshot (monogram fallback), name, and a clean
+ * breakdown — total passes and average pass length. No metric legend; the big
+ * centred sonar makes the radius/intensity encoding self-evident.
  */
-function Callout({
+function FocusOverlay({
   player,
   total,
+  avgLength,
   color,
   clipId,
 }: {
   player: PassSonarPlayer;
   total: number;
+  avgLength: number;
   color: string;
   clipId: string;
 }) {
-  // Keep the card inside the pitch: flip side/vertical near the edges.
-  const flipX = player.x > 62;
-  const flipY = player.y < 22;
-  const w = 36;
-  const h = 13;
-  const gap = HOVER_RADIUS + 1.5;
-  const boxX = flipX ? player.x - w - gap : player.x + gap;
-  const boxY = flipY ? player.y + gap : player.y - h - gap;
-
-  const avatarR = 4;
-  const avatarCx = boxX + 2.4 + avatarR;
-  const avatarCy = boxY + h / 2;
-  const textX = avatarCx + avatarR + 2;
+  // Header sits along the top of the pitch, clear of the centred sonar.
+  const avatarR = 4.2;
+  const avatarCx = 10 + avatarR;
+  const avatarCy = 10;
+  const textX = avatarCx + avatarR + 3;
 
   return (
     <motion.g
-      initial={{ opacity: 0, y: 1.5 }}
+      initial={{ opacity: 0, y: -1.5 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
+      transition={{ duration: 0.26, ease: 'easeOut' }}
       style={{ pointerEvents: 'none' }}
     >
-      <rect
-        x={boxX}
-        y={boxY}
-        width={w}
-        height={h}
-        rx={1.4}
-        fill="#0a0a0a"
-        fillOpacity={0.92}
-        stroke={color}
-        strokeOpacity={0.55}
-        strokeWidth={0.3}
-      />
-      {/* Accent tick. */}
-      <rect x={boxX} y={boxY} width={1} height={h} rx={0.4} fill={color} />
-
       {/* Circular headshot, or a monogram chip when no photo is supplied. */}
       {player.imageUrl ? (
         <>
@@ -388,18 +390,19 @@ function Callout({
         </>
       )}
 
-      <text x={textX} y={boxY + 5.2} fontSize={2.7} fontWeight="bold" fill="white">
+      {/* Name + breakdown. */}
+      <text x={textX} y={avatarCy - 0.8} fontSize={4} fontWeight="bold" fill="white">
         {player.name}
       </text>
       <text
         x={textX}
-        y={boxY + 9}
-        fontSize={2.2}
+        y={avatarCy + 4}
+        fontSize={2.6}
         fill="white"
-        fillOpacity={0.55}
-        style={{ letterSpacing: '0.04em' }}
+        fillOpacity={0.6}
+        style={{ letterSpacing: '0.02em' }}
       >
-        {total} passes
+        {total} passes · {avgLength.toFixed(1)} m avg
       </text>
     </motion.g>
   );

@@ -24,6 +24,8 @@ export interface HeatMapPlayer {
 export interface HeatMapProps {
   /** Team display name. */
   team: string;
+  /** Team crest URL. Rendered as a small badge before the team name. */
+  crestUrl?: string;
   /** Bloom accent colour. Defaults to the BTL home red. */
   color?: string;
   /** Every touch to plot, in StatsBomb 120 × 80 coordinates. */
@@ -52,7 +54,14 @@ const BLOB_RADIUS_RATIO = 0.085;
  * Editorial, not meteorological: a single accent colour, low ceiling opacity,
  * and a soft additive build — premium infographic, not a weather map.
  */
-export function HeatMap({ team, color = '#eb0000', touches, players, className }: HeatMapProps) {
+export function HeatMap({
+  team,
+  crestUrl,
+  color = '#eb0000',
+  touches,
+  players,
+  className,
+}: HeatMapProps) {
   // `null` = the "All" option; otherwise a player id.
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const titleId = useId();
@@ -125,6 +134,7 @@ export function HeatMap({ team, color = '#eb0000', touches, players, className }
       <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/60">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+          <Crest url={crestUrl} name={team} />
           <span className="truncate text-white/70">{team}</span>
         </span>
         <span>
@@ -231,6 +241,22 @@ function Check() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+/** Small ~16px team crest rendered before a team name. Nothing when absent. */
+function Crest({ url, name }: { url?: string; name: string }) {
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      width={16}
+      height={16}
+      className="inline-block size-4 rounded object-contain align-middle"
+      title={name}
+    />
   );
 }
 

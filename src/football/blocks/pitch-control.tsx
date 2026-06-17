@@ -26,6 +26,10 @@ export interface PitchControlProps {
   homeTeam: string;
   /** Away team display name (controls the blue side). */
   awayTeam: string;
+  /** Home team crest URL. When set, a small crest sits before the home name. */
+  homeCrestUrl?: string;
+  /** Away team crest URL. When set, a small crest sits before the away name. */
+  awayCrestUrl?: string;
   /** Every player on the pitch — both teams, fixed positions. */
   players: PitchControlPlayer[];
   /** Additional CSS classes on the outer panel. */
@@ -71,7 +75,14 @@ interface ResolvedPlayer extends PitchControlPlayer {
  * A small split bar + plain tabular readout report each side's share of pitch
  * area. Hovering a player blooms their own region and rings their dot.
  */
-export function PitchControl({ homeTeam, awayTeam, players, className }: PitchControlProps) {
+export function PitchControl({
+  homeTeam,
+  awayTeam,
+  homeCrestUrl,
+  awayCrestUrl,
+  players,
+  className,
+}: PitchControlProps) {
   const titleId = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -217,6 +228,16 @@ export function PitchControl({ homeTeam, awayTeam, players, className }: PitchCo
         {/* Attack-direction cue (home attacks right) — quiet, no eyebrow. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center">
           <span className="flex items-center gap-1.5 text-[10px] text-white/30">
+            {homeCrestUrl && (
+              <img
+                src={homeCrestUrl}
+                alt=""
+                aria-hidden
+                width={16}
+                height={16}
+                className="inline-block size-4 shrink-0 rounded object-contain align-middle"
+              />
+            )}
             {homeTeam} attacking <span aria-hidden>→</span>
           </span>
         </div>
@@ -227,12 +248,14 @@ export function PitchControl({ homeTeam, awayTeam, players, className }: PitchCo
         <TeamKey
           color={HOME_COLOR}
           name={homeTeam}
+          crestUrl={homeCrestUrl}
           active={hovered?.team === 'home'}
           dim={hovered != null && hovered.team !== 'home'}
         />
         <TeamKey
           color={AWAY_COLOR}
           name={awayTeam}
+          crestUrl={awayCrestUrl}
           active={hovered?.team === 'away'}
           dim={hovered != null && hovered.team !== 'away'}
         />
@@ -246,11 +269,13 @@ export function PitchControl({ homeTeam, awayTeam, players, className }: PitchCo
 function TeamKey({
   color,
   name,
+  crestUrl,
   active,
   dim,
 }: {
   color: string;
   name: string;
+  crestUrl?: string;
   active: boolean;
   dim: boolean;
 }) {
@@ -265,6 +290,17 @@ function TeamKey({
         className="inline-block size-2 rounded-full transition-opacity"
         style={{ backgroundColor: color, opacity: dim ? 0.45 : 1 }}
       />
+      {crestUrl && (
+        <img
+          src={crestUrl}
+          alt=""
+          aria-hidden
+          width={16}
+          height={16}
+          className="inline-block size-4 shrink-0 rounded object-contain align-middle transition-opacity"
+          style={{ opacity: dim ? 0.45 : 1 }}
+        />
+      )}
       <span className="truncate">{name}</span>
     </span>
   );

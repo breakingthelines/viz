@@ -119,9 +119,13 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// Wikimedia national flag, used as the team crest.
+const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+
 export const Argentina: Story = {
   args: {
     team: 'Argentina',
+    crestUrl: FLAG_ARGENTINA,
     players: ARGENTINA_PLAYERS,
     links: ARGENTINA_LINKS,
   },
@@ -130,6 +134,7 @@ export const Argentina: Story = {
 export const CustomAccent: Story = {
   args: {
     team: 'Argentina',
+    crestUrl: FLAG_ARGENTINA,
     color: '#75aadb',
     players: ARGENTINA_PLAYERS,
     links: ARGENTINA_LINKS,

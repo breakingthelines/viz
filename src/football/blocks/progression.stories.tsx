@@ -242,6 +242,8 @@ const ARG_PROGRESSION: ProgressionAction[] = [
 export const Default: Story = {
   args: {
     team: 'Argentina',
+    crestUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/2/24/Argentina_national_football_team_logo.svg',
     actions: ARG_PROGRESSION,
   },
 };
@@ -415,6 +417,8 @@ export const FranceLeftSide: Story = {
   args: {
     team: 'France',
     color: '#0091eb',
+    crestUrl:
+      'https://upload.wikimedia.org/wikipedia/en/thumb/0/01/France_national_football_team_seal.svg/180px-France_national_football_team_seal.svg.png',
     actions: FRA_PROGRESSION,
   },
 };

@@ -87,9 +87,14 @@ const TOUCHES: HeatMapTouch[] = [
   ...blob(54, 74, 12, 18, 8, 'azpi'),
 ];
 
+// Wikimedia national flags, used as team crests.
+const FLAG_SPAIN = 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Spain.svg';
+const FLAG_ITALY = 'https://upload.wikimedia.org/wikipedia/commons/0/03/Flag_of_Italy.svg';
+
 export const Default: Story = {
   args: {
     team: 'Spain',
+    crestUrl: FLAG_SPAIN,
     color: '#eb0000',
     touches: TOUCHES,
     players: PLAYERS,
@@ -100,6 +105,7 @@ export const Default: Story = {
 export const NoFilter: Story = {
   args: {
     team: 'Spain',
+    crestUrl: FLAG_SPAIN,
     color: '#eb0000',
     touches: TOUCHES,
   },
@@ -109,6 +115,7 @@ export const NoFilter: Story = {
 export const BlueAccent: Story = {
   args: {
     team: 'Italy',
+    crestUrl: FLAG_ITALY,
     color: '#3b6fe0',
     touches: TOUCHES,
     players: PLAYERS,

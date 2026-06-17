@@ -57,6 +57,10 @@ export interface ShotMapProps {
   homeTeam: string;
   /** Away team display name. */
   awayTeam: string;
+  /** Home team crest URL. Rendered as a small badge before the home name. */
+  homeCrestUrl?: string;
+  /** Away team crest URL. Rendered as a small badge before the away name. */
+  awayCrestUrl?: string;
   /** Shots to plot. */
   shots: Shot[];
   /** Home accent. Defaults to BTL home red. */
@@ -125,6 +129,8 @@ const OUTCOME_LABEL: Record<ShotOutcome, string> = {
 export function ShotMap({
   homeTeam,
   awayTeam,
+  homeCrestUrl,
+  awayCrestUrl,
   shots,
   homeColor = HOME_COLOR,
   awayColor = AWAY_COLOR,
@@ -155,12 +161,21 @@ export function ShotMap({
 
   const active = useMemo(() => shown.find((s) => s.id === activeId) ?? null, [shown, activeId]);
 
-  const filterOptions: { value: ShotMapFilter; label: string }[] = [
+  const filterOptions: { value: ShotMapFilter; label: string; crestUrl?: string }[] = [
     { value: 'both', label: 'Both teams' },
-    { value: 'home', label: homeTeam },
-    { value: 'away', label: awayTeam },
+    { value: 'home', label: homeTeam, crestUrl: homeCrestUrl },
+    { value: 'away', label: awayTeam, crestUrl: awayCrestUrl },
   ];
-  const filterValueLabel = filterOptions.find((o) => o.value === filter)?.label ?? 'Both teams';
+  const activeOption = filterOptions.find((o) => o.value === filter);
+  const filterValueLabel = activeOption?.label ?? 'Both teams';
+  const filterValueNode = activeOption ? (
+    <span className="flex items-center gap-1.5">
+      <Crest url={activeOption.crestUrl} name={activeOption.label} />
+      {activeOption.label}
+    </span>
+  ) : (
+    'Both teams'
+  );
 
   return (
     <div
@@ -173,7 +188,7 @@ export function ShotMap({
       {/* Header: one plain title + clean team-filter dropdown. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Shot map</span>
-        <ControlDropdown label="Showing" valueLabel={filterValueLabel}>
+        <ControlDropdown label="Showing" valueLabel={filterValueNode}>
           {(close) =>
             filterOptions.map((o) => (
               <DropdownItem
@@ -184,7 +199,10 @@ export function ShotMap({
                   close();
                 }}
               >
-                {o.label}
+                <span className="flex items-center gap-1.5">
+                  <Crest url={o.crestUrl} name={o.label} />
+                  {o.label}
+                </span>
               </DropdownItem>
             ))
           }
@@ -311,8 +329,8 @@ export function ShotMap({
 
       {/* Team key — small data dots + names (no decorative tracking). */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
-        <TeamKey color={homeColor} name={homeTeam} />
-        <TeamKey color={awayColor} name={awayTeam} />
+        <TeamKey color={homeColor} name={homeTeam} crestUrl={homeCrestUrl} />
+        <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
       </div>
 
       {/* Timeline strip — shots in minute order; click to step through. */}
@@ -371,13 +389,30 @@ export function ShotMap({
   );
 }
 
-/** Small data key: a colour dot + the team name. */
-function TeamKey({ color, name }: { color: string; name: string }) {
+/** Small data key: a colour dot + optional crest + the team name. */
+function TeamKey({ color, name, crestUrl }: { color: string; name: string; crestUrl?: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
+      <Crest url={crestUrl} name={name} />
       <span className="truncate">{name}</span>
     </span>
+  );
+}
+
+/** Small ~16px team crest rendered before a team name. Nothing when absent. */
+function Crest({ url, name }: { url?: string; name: string }) {
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      width={16}
+      height={16}
+      className="inline-block size-4 rounded object-contain align-middle"
+      title={name}
+    />
   );
 }
 

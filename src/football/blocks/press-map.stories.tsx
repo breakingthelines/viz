@@ -91,6 +91,8 @@ const HIGH_PRESS_EVENTS: PressEvent[] = [
 export const Default: Story = {
   args: {
     team: 'Morocco',
+    crestUrl:
+      'https://upload.wikimedia.org/wikipedia/en/thumb/e/e5/Royal_Moroccan_Football_Federation_logo.svg/180px-Royal_Moroccan_Football_Federation_logo.svg.png',
     color: '#eb0000',
     ppda: 8.7,
     events: HIGH_PRESS_EVENTS,

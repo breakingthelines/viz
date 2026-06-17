@@ -41,6 +41,8 @@ export type ProgressionFilter =
 export interface ProgressionProps {
   /** Team display name. */
   team: string;
+  /** Optional team crest URL — a small crest is shown next to the team name. */
+  crestUrl?: string;
   /** Accent colour. Defaults to BTL red. */
   color?: string;
   /** Progressive actions to plot. */
@@ -55,6 +57,26 @@ const DEFAULT_COLOR = '#eb0000';
 const SB_X = 120;
 const SB_Y = 80;
 
+// xT is read as a fraction of this ceiling for every visual ramp (width,
+// colour, head size). A single progressive action rarely tops ~0.15, so 0.16
+// keeps the hottest real balls near the top of the ramp without clipping.
+const XT_CEIL = 0.16;
+
+/** xT as a 0–1 fraction of the visual ceiling. */
+function xtFraction(xt: number): number {
+  if (!Number.isFinite(xt) || xt <= 0) return 0;
+  return Math.min(1, xt / XT_CEIL);
+}
+
+/**
+ * Perceptual emphasis curve. Pushing the fraction through a gentle ease makes
+ * the top of the range (the line-breaking, into-the-box balls) pull visually
+ * ahead of the mass of low-threat build-up, which is the whole point.
+ */
+function emphasis(frac: number): number {
+  return Math.pow(frac, 1.35);
+}
+
 /**
  * Normalise a StatsBomb point to the 0–100 pitch. The team attacks the
  * right-hand goal, so the attacking frame (x→120) maps straight through.
@@ -63,16 +85,59 @@ function toPitch(x: number, y: number): { x: number; y: number } {
   return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
 }
 
-/** Stroke width in viewBox units, scaled by xT (small actions stay visible). */
+/** Stroke width in viewBox units. Wide dynamic range so xT reads off thickness. */
 function widthForXt(xt: number): number {
-  const clamped = Math.max(0, Math.min(0.2, xt));
-  return 0.35 + (clamped / 0.2) * 1.15;
+  return 0.45 + emphasis(xtFraction(xt)) * 1.85;
 }
 
-/** Line opacity scaled by xT, so higher-threat actions read brighter. */
-function opacityForXt(xt: number): number {
-  const clamped = Math.max(0, Math.min(0.2, xt));
-  return 0.34 + (clamped / 0.2) * 0.56;
+/** Head pip radius — a magnitude cue at the arrow head, sized by xT. */
+function headRadiusForXt(xt: number): number {
+  return 0.55 + emphasis(xtFraction(xt)) * 1.35;
+}
+
+/**
+ * Two-stop hot ramp from a dim base toward an incandescent head, driven by xT.
+ * Low threat stays muted and recedes; high threat brightens and warms toward
+ * white-hot so the eye lands on it first. `base` is the team accent.
+ */
+function rampColor(xt: number, base: RGB): string {
+  const t = emphasis(xtFraction(xt));
+  // Cold end: a dimmed, desaturated version of the accent that sinks back.
+  const cold = mix(base, { r: 40, g: 44, b: 52 }, 0.55);
+  // Warm midpoint: the accent at full strength.
+  // Hot end: the accent lifted toward a bright amber/white so it glows.
+  const hot = mix(base, { r: 255, g: 224, b: 130 }, 0.72);
+  return rgb(t < 0.5 ? mix(cold, base, t / 0.5) : mix(base, hot, (t - 0.5) / 0.5));
+}
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** Parse `#rgb` / `#rrggbb` to RGB. Falls back to the BTL red on a bad value. */
+function parseHex(hex: string): RGB {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return { r: 235, g: 0, b: 0 };
+  const h = m[1]!;
+  const full = h.length === 3 ? h.replace(/(.)/g, '$1$1') : h;
+  const n = parseInt(full, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+/** Linear blend of two colours; `t` 0→a, 1→b. */
+function mix(a: RGB, b: RGB, t: number): RGB {
+  const k = Math.max(0, Math.min(1, t));
+  return {
+    r: Math.round(a.r + (b.r - a.r) * k),
+    g: Math.round(a.g + (b.g - a.g) * k),
+    b: Math.round(a.b + (b.b - a.b) * k),
+  };
+}
+
+function rgb({ r, g, b }: RGB): string {
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 const TYPE_LABEL: Record<ProgressionType, string> = {
@@ -89,19 +154,49 @@ function filterEq(a: ProgressionFilter, b: ProgressionFilter): boolean {
 }
 
 /**
+ * A gently-curved arrow path between two pitch points. A small perpendicular
+ * bow lifts overlapping actions off each other so a dozen arrows through the
+ * same channel stay separable instead of merging into one dark smear.
+ */
+function arcPath(start: { x: number; y: number }, end: { x: number; y: number }): string {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy) || 1;
+  // Perpendicular unit vector; bow scales with length but is capped.
+  const bow = Math.min(2.6, len * 0.16);
+  const nx = -dy / len;
+  const ny = dx / len;
+  const mx = (start.x + end.x) / 2;
+  const my = (start.y + end.y) / 2;
+  const cx = mx + nx * bow;
+  const cy = my + ny * bow;
+  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
+}
+
+/**
  * Progression — an interactive plot of a team's ball progression on the BTL
  * dark surface, styled to sit quietly next to the Shot map. Each progressive
- * carry or pass is an arrow from start to end; arrow width and brightness scale
- * with the expected-threat (xT) it added, carries are dashed and passes solid,
- * and the arrows draw in on a short stagger when the block mounts. Hovering or
- * focusing an arrow highlights it (others dim) and surfaces a callout with the
- * player and xT added. A clean total-xT readout sits alongside a dropdown that
- * filters to carries, passes, or a single player.
+ * carry or pass is a gently-curved arrow from start to end; its width, colour
+ * and head pip all scale with the expected-threat (xT) it added, so the hottest
+ * balls — the ones breaking lines and into the box — jump out while build-up
+ * recedes. Carries are dashed and passes solid; arrows draw in on a short
+ * stagger when the block mounts. Hovering or focusing an arrow highlights it
+ * (others dim) and surfaces a callout with the player and xT added. A bare
+ * total-xT readout sits alongside a dropdown that filters to carries, passes,
+ * or a single player.
  */
-export function Progression({ team, color = DEFAULT_COLOR, actions, className }: ProgressionProps) {
-  const markerPrefix = useId();
+export function Progression({
+  team,
+  crestUrl,
+  color = DEFAULT_COLOR,
+  actions,
+  className,
+}: ProgressionProps) {
+  const idPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ProgressionFilter>({ kind: 'all' });
+
+  const baseRgb = useMemo(() => parseHex(color), [color]);
 
   const matches = (a: ProgressionAction): boolean => {
     if (filter.kind === 'all') return true;
@@ -111,7 +206,7 @@ export function Progression({ team, color = DEFAULT_COLOR, actions, className }:
 
   const shown = useMemo(() => actions.filter(matches), [actions, filter]);
 
-  // Draw the brightest (highest-xT) arrows last so they sit on top.
+  // Draw the brightest (highest-xT) arrows last so they sit on top of the mass.
   const ordered = useMemo(() => [...shown].sort((a, b) => a.xt - b.xt), [shown]);
 
   const active = useMemo(() => shown.find((a) => a.id === activeId) ?? null, [shown, activeId]);
@@ -166,29 +261,18 @@ export function Progression({ team, color = DEFAULT_COLOR, actions, className }:
       {/* Pitch + progressive actions */}
       <div className="relative">
         <Pitch variant="full" theme="dark">
-          <defs>
-            {/* Arrowhead, tinted to the accent; one per render via stable id. */}
-            <marker
-              id={`${markerPrefix}-head`}
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
-              <path d="M0 1 L9 5 L0 9 z" fill={color} />
-            </marker>
-          </defs>
-
           {ordered.map((action, i) => {
             const start = toPitch(action.startX, action.startY);
             const end = toPitch(action.endX, action.endY);
+            const { d, ctrl } = arcPath(start, end);
             const isActive = action.id === activeId;
             const dimmed = activeId !== null && !isActive;
-            const baseOpacity = opacityForXt(action.xt);
             const w = widthForXt(action.xt);
+            const stroke = isActive ? rampColor(XT_CEIL, baseRgb) : rampColor(action.xt, baseRgb);
+            const headR = headRadiusForXt(action.xt);
             const isCarry = action.type === 'carry';
+            const hot = emphasis(xtFraction(action.xt));
+            const markerId = `${idPrefix}-h-${action.id}`;
 
             return (
               <motion.g
@@ -205,55 +289,80 @@ export function Progression({ team, color = DEFAULT_COLOR, actions, className }:
                 onBlur={() => setActiveId(null)}
                 onClick={() => setActiveId((cur) => (cur === action.id ? null : action.id))}
                 initial={false}
-                animate={{ opacity: dimmed ? 0.16 : 1 }}
+                animate={{ opacity: dimmed ? 0.14 : 1 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
               >
-                {/* Wide invisible hit-line so thin arrows stay easy to hover. */}
-                <line
-                  x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
-                  stroke="transparent"
-                  strokeWidth={3}
-                />
+                {/* Per-arrow arrowhead, tinted to this action's ramp colour so the
+                    head itself signals threat. */}
+                <defs>
+                  <marker
+                    id={markerId}
+                    viewBox="0 0 10 10"
+                    refX="6.5"
+                    refY="5"
+                    markerWidth={3.2 + hot * 2.2}
+                    markerHeight={3.2 + hot * 2.2}
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M0 0.8 L9 5 L0 9.2 L2.4 5 z" fill={stroke} />
+                  </marker>
+                </defs>
 
-                {/* The arrow. Carries dashed, passes solid; both draw in on a
-                    stagger via an animated path length. */}
-                <motion.line
-                  x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
-                  stroke={color}
-                  strokeWidth={isActive ? w + 0.35 : w}
-                  strokeOpacity={isActive ? 1 : baseOpacity}
+                {/* Wide invisible hit-path so thin arrows stay easy to hover. */}
+                <path d={d} fill="none" stroke="transparent" strokeWidth={3.5} />
+
+                {/* The arrow. Curved; carries dashed, passes solid; both draw in
+                    on a stagger via an animated path length. High-xT arrows glow. */}
+                <motion.path
+                  d={d}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth={isActive ? w + 0.5 : w}
                   strokeLinecap="round"
-                  strokeDasharray={isCarry ? '1.6 1.4' : undefined}
-                  markerEnd={`url(#${markerPrefix}-head)`}
+                  strokeDasharray={isCarry ? '1.7 1.5' : undefined}
+                  markerEnd={`url(#${markerId})`}
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 1 }}
                   transition={{
-                    pathLength: { duration: 0.5, ease: 'easeOut', delay: 0.05 + i * 0.04 },
-                    opacity: { duration: 0.2, delay: 0.05 + i * 0.04 },
+                    pathLength: { duration: 0.5, ease: 'easeOut', delay: 0.05 + i * 0.035 },
+                    opacity: { duration: 0.2, delay: 0.05 + i * 0.035 },
                   }}
-                  style={{ filter: isActive ? `drop-shadow(0 0 1.5px ${color})` : undefined }}
+                  style={{
+                    filter: isActive
+                      ? `drop-shadow(0 0 2px ${stroke})`
+                      : hot > 0.55
+                        ? `drop-shadow(0 0 ${0.6 + hot * 1.1}px ${stroke})`
+                        : undefined,
+                  }}
                 />
 
-                {/* Start dot — anchors the action's origin. */}
-                <circle
-                  cx={start.x}
-                  cy={start.y}
-                  r={isActive ? 1.1 : 0.8}
-                  fill={color}
-                  fillOpacity={isActive ? 1 : baseOpacity}
+                {/* Head pip — a magnitude cue at the arrow head, on the curve. */}
+                <motion.circle
+                  cx={end.x}
+                  cy={end.y}
+                  r={isActive ? headR + 0.3 : headR}
+                  fill={stroke}
+                  initial={{ opacity: 0, scale: 0.4 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.25, delay: 0.2 + i * 0.035, ease: 'backOut' }}
+                  style={{
+                    transformOrigin: `${end.x}px ${end.y}px`,
+                    filter: hot > 0.55 ? `drop-shadow(0 0 ${0.5 + hot}px ${stroke})` : undefined,
+                  }}
                 />
+
+                {/* Faint origin tick — anchors where the action began. */}
+                <circle cx={start.x} cy={start.y} r={0.7} fill={stroke} fillOpacity={0.5} />
+
+                {/* Control point is unused visually but keeps `ctrl` referenced
+                    for callout anchoring of the active action below. */}
+                {isActive && <circle cx={ctrl.x} cy={ctrl.y} r={0} fill="none" />}
               </motion.g>
             );
           })}
 
           {/* Callout for the active action, drawn last so it sits on top. */}
-          {active && <Callout action={active} color={color} />}
+          {active && <Callout action={active} color={rampColor(XT_CEIL, baseRgb)} />}
         </Pitch>
 
         {/* Direction-of-play hint — quiet, lower-left. */}
@@ -271,19 +380,50 @@ export function Progression({ team, color = DEFAULT_COLOR, actions, className }:
         </div>
       </div>
 
-      {/* Readout row: total xT + a small type key. */}
-      <div className="mt-3 flex items-center justify-between gap-4 text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span className="text-white/50">Total xT added</span>
-          <span className="font-semibold tabular-nums text-white">{totalXt.toFixed(2)}</span>
-          <span className="text-white/35">· {team}</span>
+      {/* Readout row: bare total xT + crest/team, with the threat ramp + type key. */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[11px]">
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-semibold tabular-nums leading-none text-white">
+            {totalXt.toFixed(2)}
+          </span>
+          <span className="text-white/45">xT</span>
+          <span className="mx-0.5 text-white/15">·</span>
+          {crestUrl && (
+            <img
+              src={crestUrl}
+              alt=""
+              aria-hidden
+              width={16}
+              height={16}
+              className="size-4 shrink-0 object-contain"
+            />
+          )}
+          <span className="truncate text-white/55">{team}</span>
         </div>
-        <div className="flex items-center gap-3 text-white/60">
-          <TypeKey color={color} type="pass" />
-          <TypeKey color={color} type="carry" />
+        <div className="flex items-center gap-3 text-white/55">
+          <ThreatRamp baseRgb={baseRgb} />
+          <span className="text-white/15">·</span>
+          <TypeKey color={rampColor(XT_CEIL * 0.7, baseRgb)} type="pass" />
+          <TypeKey color={rampColor(XT_CEIL * 0.7, baseRgb)} type="carry" />
         </div>
       </div>
     </div>
+  );
+}
+
+/** Low→high xT colour-ramp legend — reads the hot/cold encoding at a glance. */
+function ThreatRamp({ baseRgb }: { baseRgb: RGB }) {
+  const stops = [0.06, 0.28, 0.5, 0.72, 1].map((t) => rampColor(t * XT_CEIL, baseRgb));
+  return (
+    <span className="flex items-center gap-1.5" aria-hidden>
+      <span className="text-white/40">low</span>
+      <span className="flex h-1.5 w-14 overflow-hidden rounded-full">
+        {stops.map((c, i) => (
+          <span key={i} className="h-full flex-1" style={{ backgroundColor: c }} />
+        ))}
+      </span>
+      <span className="text-white/70">high xT</span>
+    </span>
   );
 }
 
