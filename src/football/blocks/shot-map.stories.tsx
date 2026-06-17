@@ -23,16 +23,13 @@ type Story = StoryObj<typeof meta>;
 
 // A compact, plausible freeze-frame: a clutch of defenders + a keeper between
 // the shot and goal, plus a couple of the shooter's team-mates. StatsBomb
-// 120×80 coords. `gk` places a keeper near the relevant goal line.
-function frame(shotX: number, shotY: number, toRightGoal: boolean): Shot['freezeFrame'] {
-  const goalX = toRightGoal ? 120 : 0;
-  const dir = toRightGoal ? 1 : -1;
-  const lerp = (t: number) => ({
-    x: shotX + (goalX - shotX) * t,
-  });
+// 120×80 coords in the shooter's own attacking frame (x→120 = goal attacked).
+function frame(shotX: number, shotY: number): Shot['freezeFrame'] {
+  const goalX = 120;
+  const lerp = (t: number) => ({ x: shotX + (goalX - shotX) * t });
   return [
     // Keeper just off the line.
-    { x: goalX - dir * 2.5, y: 40, teammate: false, keeper: true },
+    { x: goalX - 2.5, y: 40, teammate: false, keeper: true },
     // Defensive block.
     { x: lerp(0.35).x, y: shotY - 5.5, teammate: false, keeper: false },
     { x: lerp(0.45).x, y: shotY + 3.5, teammate: false, keeper: false },
@@ -41,15 +38,14 @@ function frame(shotX: number, shotY: number, toRightGoal: boolean): Shot['freeze
     // A covering opponent wide.
     { x: lerp(0.5).x, y: 28, teammate: false, keeper: false },
     // Team-mates arriving.
-    { x: shotX - dir * 6, y: shotY + 12, teammate: true, keeper: false },
-    { x: shotX - dir * 9, y: 36, teammate: true, keeper: false },
+    { x: shotX - 6, y: shotY + 12, teammate: true, keeper: false },
+    { x: shotX - 9, y: 36, teammate: true, keeper: false },
   ];
 }
 
-// Argentina (home, red) v France (away, blue) — a 2–1 WC-final-flavoured
-// knockout. Home attacks left→right, so home shots cluster at high x; away
-// shots are given in their own attacking frame (high x) and the component
-// mirrors them to the right-hand goal.
+// Argentina (home, red) v France (away, blue) — a WC-final-flavoured knockout.
+// Each team's shots are given in its own attacking frame (high x = the goal it
+// attacks); the block maps home → right-hand goal and away → left-hand goal.
 const ARG_FRA_SHOTS: Shot[] = [
   // --- Argentina (home) ---
   {
@@ -61,7 +57,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'Á. Di María',
     minute: 9,
-    freezeFrame: frame(88, 33, true),
+    freezeFrame: frame(88, 33),
   },
   {
     id: 'h2',
@@ -72,7 +68,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'L. Messi',
     minute: 17,
-    freezeFrame: frame(101, 30, true),
+    freezeFrame: frame(101, 30),
   },
   {
     id: 'h3',
@@ -83,7 +79,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'L. Messi',
     minute: 23,
-    freezeFrame: frame(109, 41, true),
+    freezeFrame: frame(109, 41),
   },
   {
     id: 'h4',
@@ -94,7 +90,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'Á. Di María',
     minute: 36,
-    freezeFrame: frame(104, 46, true),
+    freezeFrame: frame(104, 46),
   },
   {
     id: 'h5',
@@ -105,7 +101,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'blocked',
     player: 'J. Álvarez',
     minute: 52,
-    freezeFrame: frame(96, 24, true),
+    freezeFrame: frame(96, 24),
   },
   {
     id: 'h6',
@@ -116,7 +112,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'L. Messi',
     minute: 68,
-    freezeFrame: frame(112, 38, true),
+    freezeFrame: frame(112, 38),
   },
   {
     id: 'h7',
@@ -127,7 +123,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'N. Molina',
     minute: 74,
-    freezeFrame: frame(99, 52, true),
+    freezeFrame: frame(99, 52),
   },
   {
     id: 'h8',
@@ -138,9 +134,9 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'L. Messi',
     minute: 108,
-    freezeFrame: frame(113, 44, true),
+    freezeFrame: frame(113, 44),
   },
-  // --- France (away) — given in their own attacking frame (high x). ---
+  // --- France (away) — also in their own attacking frame (high x). ---
   {
     id: 'a1',
     team: 'away',
@@ -150,7 +146,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'O. Dembélé',
     minute: 28,
-    freezeFrame: frame(92, 47, true),
+    freezeFrame: frame(92, 47),
   },
   {
     id: 'a2',
@@ -161,7 +157,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'blocked',
     player: 'A. Tchouaméni',
     minute: 41,
-    freezeFrame: frame(100, 50, true),
+    freezeFrame: frame(100, 50),
   },
   {
     id: 'a3',
@@ -172,7 +168,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'K. Mbappé',
     minute: 80,
-    freezeFrame: frame(108, 38, true),
+    freezeFrame: frame(108, 38),
   },
   {
     id: 'a4',
@@ -183,7 +179,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'K. Mbappé',
     minute: 81,
-    freezeFrame: frame(103, 44, true),
+    freezeFrame: frame(103, 44),
   },
   {
     id: 'a5',
@@ -194,7 +190,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'M. Thuram',
     minute: 97,
-    freezeFrame: frame(97, 33, true),
+    freezeFrame: frame(97, 33),
   },
   {
     id: 'a6',
@@ -205,7 +201,7 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'K. Mbappé',
     minute: 118,
-    freezeFrame: frame(110, 49, true),
+    freezeFrame: frame(110, 49),
   },
   {
     id: 'a7',
@@ -216,11 +212,11 @@ const ARG_FRA_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'K. Coman',
     minute: 121,
-    freezeFrame: frame(90, 27, true),
+    freezeFrame: frame(90, 27),
   },
 ];
 
-/** The headline match: Argentina v France, 3–3 over 120 minutes. */
+/** The headline match: Argentina v France over 120 minutes. */
 export const Default: Story = {
   args: {
     homeTeam: 'Argentina',
@@ -229,7 +225,7 @@ export const Default: Story = {
   },
 };
 
-// A tighter 1–0 semi-final: Argentina edge Croatia, home dominant.
+// A tighter semi-final: Argentina edge Croatia, home dominant.
 const ARG_CRO_SHOTS: Shot[] = [
   {
     id: 'c-h1',
@@ -240,7 +236,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'J. Álvarez',
     minute: 39,
-    freezeFrame: frame(110, 40, true),
+    freezeFrame: frame(110, 40),
   },
   {
     id: 'c-h2',
@@ -251,7 +247,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'L. Messi',
     minute: 34,
-    freezeFrame: frame(102, 32, true),
+    freezeFrame: frame(102, 32),
   },
   {
     id: 'c-h3',
@@ -262,7 +258,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'J. Álvarez',
     minute: 69,
-    freezeFrame: frame(113, 45, true),
+    freezeFrame: frame(113, 45),
   },
   {
     id: 'c-h4',
@@ -273,7 +269,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'goal',
     player: 'L. Messi',
     minute: 70,
-    freezeFrame: frame(107, 36, true),
+    freezeFrame: frame(107, 36),
   },
   {
     id: 'c-h5',
@@ -284,7 +280,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'E. Fernández',
     minute: 58,
-    freezeFrame: frame(95, 51, true),
+    freezeFrame: frame(95, 51),
   },
   {
     id: 'c-h6',
@@ -295,7 +291,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'blocked',
     player: 'N. Tagliafico',
     minute: 84,
-    freezeFrame: frame(98, 22, true),
+    freezeFrame: frame(98, 22),
   },
   {
     id: 'c-a1',
@@ -306,7 +302,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'A. Kramarić',
     minute: 22,
-    freezeFrame: frame(99, 46, true),
+    freezeFrame: frame(99, 46),
   },
   {
     id: 'c-a2',
@@ -317,7 +313,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'off-target',
     player: 'M. Brozović',
     minute: 48,
-    freezeFrame: frame(93, 34, true),
+    freezeFrame: frame(93, 34),
   },
   {
     id: 'c-a3',
@@ -328,7 +324,7 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'saved',
     player: 'B. Petković',
     minute: 77,
-    freezeFrame: frame(105, 52, true),
+    freezeFrame: frame(105, 52),
   },
   {
     id: 'c-a4',
@@ -339,11 +335,11 @@ const ARG_CRO_SHOTS: Shot[] = [
     outcome: 'blocked',
     player: 'I. Perišić',
     minute: 90,
-    freezeFrame: frame(90, 41, true),
+    freezeFrame: frame(90, 41),
   },
 ];
 
-/** A 3–0 semi-final — home-dominant, sparse away threat. */
+/** A semi-final — home-dominant, sparse away threat. */
 export const SemiFinal: Story = {
   args: {
     homeTeam: 'Argentina',
