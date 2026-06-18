@@ -67,9 +67,9 @@ function BtlWordmark() {
   return (
     <span className="flex shrink-0 items-center gap-[7px]" aria-label="Breaking The Lines">
       <BtlMark className="size-[17px] shrink-0" />
-      <span className="flex flex-col gap-0 text-[9.5px] font-semibold leading-[1.08] tracking-[-0.3px] text-white">
-        <span>breaking</span>
-        <span>the lines</span>
+      <span className="flex flex-col gap-0 whitespace-nowrap text-[9.5px] font-semibold leading-[1.08] tracking-[-0.3px] text-white">
+        <span className="whitespace-nowrap">breaking</span>
+        <span className="whitespace-nowrap">the lines</span>
       </span>
     </span>
   );
