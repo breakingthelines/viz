@@ -1,14 +1,16 @@
-import { useId } from 'react';
+import { useId, useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
+import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 
 /**
- * Shared brand + attribution footer for the football blocks: the BTL wordmark
- * on the left, the data provider's mark on the right, on a quiet divider.
+ * Shared brand + attribution + share footer for the football blocks: the BTL
+ * wordmark on the left, then a "Share" control and the data provider's mark on
+ * the right, on a quiet divider.
  *
- * viz is a standalone AGPL package with NO design-system dependency, so the
- * BTL wordmark and the provider mark are inlined here (the design-system
- * `BtlWordmark` SVG geometry is replicated verbatim, white text). Keep this in
- * sync with `design-system/src/components/ui/btl-logo.tsx`.
+ * viz is a standalone AGPL package with NO design-system dependency, so the BTL
+ * wordmark is inlined here (the design-system `BtlWordmark` SVG geometry is
+ * replicated verbatim, white text). Keep this in sync with
+ * `design-system/src/components/ui/btl-logo.tsx`.
  */
 
 /** Data source behind a block — drives the provider mark. */
@@ -60,31 +62,65 @@ function BtlWordmark() {
 }
 
 /**
- * The Hudl StatsBomb provider mark, in white on transparent (the source logo is
- * orange/dark on white). Rendered as a clean white logotype: bold "hudl" +
- * lighter "statsbomb". The exact vector asset can be dropped in here later.
+ * The Hudl StatsBomb provider mark — the official logo (white "hudl" + orange
+ * "statsbomb" + the orange mark) on transparent, inlined as a data URI.
  */
-function StatsBombMark() {
-  return (
-    <span
-      className="flex shrink-0 items-baseline gap-[3px] text-[11px] leading-none"
-      aria-label="Data: Hudl StatsBomb"
-    >
-      <span className="font-bold lowercase tracking-tight text-white">hudl</span>
-      <span className="font-medium lowercase tracking-tight text-white/55">statsbomb</span>
-    </span>
-  );
-}
-
 function ProviderMark({ provider }: { provider: DataProvider }) {
-  if (provider === 'statsbomb') return <StatsBombMark />;
+  if (provider === 'statsbomb') {
+    return (
+      <img
+        src={HUDL_STATSBOMB_LOGO}
+        alt="Data: Hudl StatsBomb"
+        className="h-[14px] w-auto shrink-0 select-none"
+        draggable={false}
+      />
+    );
+  }
   // Other providers fall back to nothing until their mark is added.
   return null;
 }
 
+/** A clean upload/share glyph (no icon dependency in this package). */
+function ShareGlyph({ className }: { className?: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+      <path
+        d="M8 10.5V2.6M8 2.6 5.3 5.3M8 2.6l2.7 2.7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.6 9v3.4a1 1 0 0 0 1 1h6.8a1 1 0 0 0 1-1V9"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Slugify a block title for the saved file name. */
+function slugify(s: string): string {
+  return (
+    s
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'breaking-the-lines'
+  );
+}
+
 /**
- * Brand + attribution strip pinned to the foot of a block panel: BTL wordmark
- * left, data provider right. Subtle top divider separates it from the data key.
+ * Brand + attribution + share strip pinned to the foot of a block panel: BTL
+ * wordmark left; a "Share" button + the data-provider mark right. A subtle top
+ * divider separates it from the data key.
+ *
+ * "Share" rasterises the whole block panel to a PNG (via html-to-image, lazily
+ * imported) and saves it — so a reader can lift the graphic straight out. The
+ * button itself is excluded from the captured image.
  */
 export function PanelFooter({
   provider = 'statsbomb',
@@ -95,15 +131,61 @@ export function PanelFooter({
   /** Extra classes on the footer row. */
   className?: string;
 }) {
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onShare = async () => {
+    // The footer is always a direct child of the block panel, so its parent is
+    // the element we want to capture.
+    const panel = footerRef.current?.parentElement;
+    if (!panel || busy) return;
+    setBusy(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const titleEl = panel.querySelector('.font-semibold');
+      const name = slugify(titleEl?.textContent ?? 'breaking the lines');
+      const dataUrl = await toPng(panel, {
+        pixelRatio: 2,
+        backgroundColor: '#0a0a0a',
+        // Drop the share button itself from the saved image.
+        filter: (node) =>
+          !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
+      });
+      const link = document.createElement('a');
+      link.download = `btl-${name}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      // Best-effort: a capture failure shouldn't disturb the block.
+      console.error('[viz] share-as-image failed', err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div
+      ref={footerRef}
       className={cn(
         'mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-2.5',
         className
       )}
     >
       <BtlWordmark />
-      <ProviderMark provider={provider} />
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          data-export-ignore="true"
+          onClick={onShare}
+          disabled={busy}
+          aria-label="Save this block as an image"
+          className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2 py-1 text-[10.5px] font-medium text-white/65 transition-colors hover:border-white/25 hover:text-white disabled:cursor-default disabled:opacity-50"
+        >
+          <ShareGlyph className={busy ? 'animate-pulse' : undefined} />
+          {busy ? 'Saving…' : 'Share'}
+        </button>
+        <ProviderMark provider={provider} />
+      </div>
     </div>
   );
 }

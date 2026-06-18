@@ -481,7 +481,7 @@ function FocusOverlay({
           y={0}
           fontSize={2.6}
           fill="white"
-          fillOpacity={0.6}
+          fillOpacity={0.92}
           style={{ letterSpacing: '0.02em' }}
         >
           {total} passes · {avgLength.toFixed(1)} m avg

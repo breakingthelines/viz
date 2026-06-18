@@ -80,6 +80,7 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.1",
+    "html-to-image": "^1.11.13",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -101,7 +102,6 @@
     "clsx": "^2.1.1",
     "d3-scale": "^4.0.2",
     "framer-motion": "^12.23.26",
-    "html-to-image": "^1.11.11",
     "oxfmt": "^0.21.0",
     "oxlint": "^1.36.0",
     "playwright": "^1.57.0",
