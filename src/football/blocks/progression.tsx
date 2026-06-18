@@ -272,7 +272,9 @@ export function Progression({
             const isActive = action.id === activeId;
             const dimmed = activeId !== null && !isActive;
             const w = widthForXt(action.xt);
-            const stroke = isActive ? rampColor(XT_CEIL, baseRgb) : rampColor(action.xt, baseRgb);
+            // Keep the arrow's true xT colour on hover — emphasis comes from the
+            // width bump, glow, and the dimming of the others, not a hue change.
+            const stroke = rampColor(action.xt, baseRgb);
             const headR = headRadiusForXt(action.xt);
             const isCarry = action.type === 'carry';
             const hot = emphasis(xtFraction(action.xt));
@@ -315,22 +317,22 @@ export function Progression({
                 {/* Wide invisible hit-path so thin arrows stay easy to hover. */}
                 <path d={d} fill="none" stroke="transparent" strokeWidth={3.5} />
 
-                {/* The arrow. Curved; carries dashed, passes solid; both draw in
-                    on a stagger via an animated path length. High-xT arrows glow. */}
+                {/* The arrow. Curved; carries dashed, passes solid. Fades in on a
+                    stagger (NOT a pathLength draw-in — framer-motion implements
+                    pathLength via strokeDasharray, which would clobber the
+                    carry/pass dash and render every arrow identically). High-xT
+                    arrows glow. */}
                 <motion.path
                   d={d}
                   fill="none"
                   stroke={stroke}
                   strokeWidth={isActive ? w + 0.5 : w}
                   strokeLinecap="round"
-                  strokeDasharray={isCarry ? '1.7 1.5' : undefined}
+                  strokeDasharray={isCarry ? '2 1.7' : undefined}
                   markerEnd={`url(#${markerId})`}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{
-                    pathLength: { duration: 0.5, ease: 'easeOut', delay: 0.05 + i * 0.035 },
-                    opacity: { duration: 0.2, delay: 0.05 + i * 0.035 },
-                  }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 + i * 0.035 }}
                   style={{
                     filter: isActive
                       ? `drop-shadow(0 0 2px ${stroke})`
@@ -365,8 +367,9 @@ export function Progression({
             );
           })}
 
-          {/* Callout for the active action, drawn last so it sits on top. */}
-          {active && <Callout action={active} color={rampColor(XT_CEIL, baseRgb)} />}
+          {/* Callout for the active action, drawn last so it sits on top. Uses
+              the action's own xT colour. */}
+          {active && <Callout action={active} color={rampColor(active.xt, baseRgb)} />}
         </Pitch>
 
         {/* Direction-of-play hint — quiet, lower-left. */}

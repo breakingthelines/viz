@@ -242,8 +242,7 @@ const ARG_PROGRESSION: ProgressionAction[] = [
 export const Default: Story = {
   args: {
     team: 'Argentina',
-    crestUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/2/24/Argentina_national_football_team_logo.svg',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
     actions: ARG_PROGRESSION,
   },
 };

@@ -80,19 +80,19 @@ function ProviderMark({ provider }: { provider: DataProvider }) {
   return null;
 }
 
-/** A clean upload/share glyph (no icon dependency in this package). */
-function ShareGlyph({ className }: { className?: string }) {
+/** A clean save / download glyph (arrow into a tray; no icon dependency). */
+function SaveGlyph({ className }: { className?: string }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
       <path
-        d="M8 10.5V2.6M8 2.6 5.3 5.3M8 2.6l2.7 2.7"
+        d="M8 2.5v7M8 9.5 5.2 6.7M8 9.5l2.8-2.8"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M3.6 9v3.4a1 1 0 0 0 1 1h6.8a1 1 0 0 0 1-1V9"
+        d="M3 11v1.5A1.5 1.5 0 0 0 4.5 14h7a1.5 1.5 0 0 0 1.5-1.5V11"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -134,7 +134,7 @@ export function PanelFooter({
   const footerRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
 
-  const onShare = async () => {
+  const onSave = async () => {
     // The footer is always a direct child of the block panel, so its parent is
     // the element we want to capture.
     const panel = footerRef.current?.parentElement;
@@ -147,7 +147,12 @@ export function PanelFooter({
       const dataUrl = await toPng(panel, {
         pixelRatio: 2,
         backgroundColor: '#0a0a0a',
-        // Drop the share button itself from the saved image.
+        // A failed crest/headshot URL must not abort the whole capture: swap in a
+        // transparent pixel instead of rejecting (html-to-image rejects on any
+        // image load error by default).
+        imagePlaceholder:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        // Drop the save button itself from the saved image.
         filter: (node) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
       });
@@ -176,13 +181,13 @@ export function PanelFooter({
         <button
           type="button"
           data-export-ignore="true"
-          onClick={onShare}
+          onClick={onSave}
           disabled={busy}
           aria-label="Save this block as an image"
-          className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2 py-1 text-[10.5px] font-medium text-white/65 transition-colors hover:border-white/25 hover:text-white disabled:cursor-default disabled:opacity-50"
+          title="Save as image"
+          className="flex size-7 items-center justify-center rounded-[6px] border border-white/10 bg-white/[0.04] text-white/65 transition-colors hover:border-white/25 hover:text-white disabled:cursor-default disabled:opacity-50"
         >
-          <ShareGlyph className={busy ? 'animate-pulse' : undefined} />
-          {busy ? 'Saving…' : 'Share'}
+          <SaveGlyph className={busy ? 'animate-pulse' : undefined} />
         </button>
         <ProviderMark provider={provider} />
       </div>
