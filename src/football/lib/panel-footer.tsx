@@ -33,11 +33,25 @@ function BtlMark({ className }: { className?: string }) {
       aria-hidden
     >
       <defs>
-        <linearGradient id={gl} x1="0" y1="14.01" x2="12.467" y2="14.01" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id={gl}
+          x1="0"
+          y1="14.01"
+          x2="12.467"
+          y2="14.01"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#E20613" />
           <stop offset="1" stopColor="#E5332A" />
         </linearGradient>
-        <linearGradient id={gr} x1="16.628" y1="14.01" x2="29.091" y2="14.01" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id={gr}
+          x1="16.628"
+          y1="14.01"
+          x2="29.091"
+          y2="14.01"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#E20613" />
           <stop offset="1" stopColor="#E5332A" />
         </linearGradient>
@@ -153,8 +167,7 @@ export function PanelFooter({
         imagePlaceholder:
           'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         // Drop the save button itself from the saved image.
-        filter: (node) =>
-          !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
+        filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
       });
       const link = document.createElement('a');
       link.download = `btl-${name}.png`;

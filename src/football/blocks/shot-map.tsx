@@ -250,7 +250,11 @@ export function ShotMap({
               ))
             }
           </ControlDropdown>
-          <PlayerCombobox groups={playerGroups} selected={playerFilter} onSelect={setPlayerFilter} />
+          <PlayerCombobox
+            groups={playerGroups}
+            selected={playerFilter}
+            onSelect={setPlayerFilter}
+          />
         </div>
       </div>
 

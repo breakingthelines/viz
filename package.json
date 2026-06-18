@@ -1,6 +1,6 @@
 {
   "name": "@breakingthelines/viz",
-  "version": "0.0.16",
+  "version": "0.1.0",
   "description": "React components for football data visualisation",
   "license": "AGPL-3.0",
   "author": "Breaking The Lines",
@@ -47,6 +47,10 @@
     "./football/compositions": {
       "types": "./dist/football/compositions/index.d.ts",
       "import": "./dist/football/compositions/index.js"
+    },
+    "./football/blocks": {
+      "types": "./dist/football/blocks/index.d.ts",
+      "import": "./dist/football/blocks/index.js"
     },
     "./football/types": {
       "types": "./dist/football/types/index.d.ts",

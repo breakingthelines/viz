@@ -484,7 +484,9 @@ export function Moment360({
             <LaneCallout
               x={hovered.target.x}
               y={hovered.target.y}
-              label={hovered.opt.player ? surname(hovered.opt.player) : `Option ${(hoverLane ?? 0) + 1}`}
+              label={
+                hovered.opt.player ? surname(hovered.opt.player) : `Option ${(hoverLane ?? 0) + 1}`
+              }
               sub={hovered.inSpace ? 'In space' : 'Covered'}
               color={hovered.inSpace ? accent : 'white'}
             />
