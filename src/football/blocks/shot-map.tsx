@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram } from '#/football/lib/player-name';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
 export type ShotTeam = 'home' | 'away';
@@ -101,14 +102,6 @@ function toPitch(x: number, y: number, team: ShotTeam): { x: number; y: number }
 function radiusForXg(xg: number): number {
   const clamped = Math.max(0, Math.min(1, xg));
   return 1.5 + Math.sqrt(clamped) * 3.4;
-}
-
-/** Up-to-two initials for the shooter monogram ("Lionel Messi" → "LM"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 const OUTCOME_LABEL: Record<ShotOutcome, string> = {

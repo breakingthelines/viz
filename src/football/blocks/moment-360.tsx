@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { surname } from '#/football/lib/player-name';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
 export type MomentTeam = 'home' | 'away';
@@ -85,12 +86,6 @@ function toPitch(p: MomentPoint, team: MomentTeam): { x: number; y: number } {
   return team === 'home' ? { x: px, y: py } : { x: 100 - px, y: 100 - py };
 }
 
-/** Last token of a name, for the lane callout ("Lionel Messi" → "Messi"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
-}
-
 /** Build an SVG polygon point string from normalised points. */
 function toPolygon(points: { x: number; y: number }[]): string {
   return points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
@@ -156,6 +151,10 @@ export function Moment360({
 
   // Quiet caption under the title: who, when, what they were doing.
   const caption = `${event.player} · ${event.minute}' · ${event.type}`;
+
+  // The hovered lane's callout is painted last (section 6 below) so it always
+  // sits above the actor headshot and every marker, never hidden behind them.
+  const hovered = hoverLane !== null ? lanes[hoverLane] : undefined;
 
   return (
     <figure
@@ -316,6 +315,27 @@ export function Moment360({
                     delay: dimmedByHover || isHover ? 0 : T_LANES + i * 0.12,
                   }}
                 >
+                  {/* Invisible continuous hit area: a fat band the length of the
+                      lane plus the receiver, so the pointer never drops into the
+                      dashed-line gaps (which caused enter/leave flicker). */}
+                  <line
+                    x1={origin.x}
+                    y1={origin.y}
+                    x2={target.x}
+                    y2={target.y}
+                    stroke="transparent"
+                    strokeWidth={3.6}
+                    strokeLinecap="round"
+                    style={{ pointerEvents: 'stroke' }}
+                  />
+                  <circle
+                    cx={target.x}
+                    cy={target.y}
+                    r={3.8}
+                    fill="transparent"
+                    style={{ pointerEvents: 'all' }}
+                  />
+
                   {/* Soft "space" halo behind an in-space receiver. */}
                   {live && (
                     <motion.circle
@@ -369,17 +389,6 @@ export function Moment360({
                     strokeWidth={0.35}
                     strokeOpacity={live ? 0.7 : 0.6}
                   />
-
-                  {/* Lane callout on hover. */}
-                  {isHover && (
-                    <LaneCallout
-                      x={target.x}
-                      y={target.y}
-                      label={opt.player ? surname(opt.player) : `Option ${i + 1}`}
-                      sub={live ? 'In space' : 'Covered'}
-                      color={live ? accent : 'white'}
-                    />
-                  )}
                 </motion.g>
               );
             })}
@@ -457,6 +466,18 @@ export function Moment360({
               strokeWidth={0.2}
             />
           </motion.g>
+
+          {/* (6) Hover callout — painted last of all, so it always sits above
+              the actor headshot and every marker, never clipped behind them. */}
+          {hovered && (
+            <LaneCallout
+              x={hovered.target.x}
+              y={hovered.target.y}
+              label={hovered.opt.player ? surname(hovered.opt.player) : `Option ${(hoverLane ?? 0) + 1}`}
+              sub={hovered.opt.inSpace ? 'In space' : 'Covered'}
+              color={hovered.opt.inSpace ? accent : 'white'}
+            />
+          )}
         </Pitch>
       </div>
 
@@ -523,12 +544,14 @@ function LaneCallout({
   sub: string;
   color: string;
 }) {
-  // Keep the card inside the pitch: flip near the right/top edges.
-  const flipX = x > 64;
-  const flipY = y < 16;
   const w = 26;
   const h = 9.5;
   const gap = 2.6;
+  // Place the card to the right of the receiver (open pitch, clear of the
+  // ball-carrier) unless it would overflow the right edge — only then flip
+  // left. Flip down near the top edge.
+  const flipX = x + gap + w > 100;
+  const flipY = y < 16;
   const boxX = flipX ? x - w - gap : x + gap;
   const boxY = flipY ? y + gap : y - h - gap;
 

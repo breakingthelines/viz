@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram, surname } from '#/football/lib/player-name';
 
 /** How a single touch in the move connects to the next. */
 export type GoalStepType = 'pass' | 'carry' | 'shot';
@@ -62,20 +63,6 @@ const GOAL = { x: 100, y: 50 };
 /** Normalise a StatsBomb point to the 0–100 pitch (team attacks left→right). */
 function toPitch(x: number, y: number): { x: number; y: number } {
   return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
-}
-
-/** Last token of a name, for chain labels ("Lionel Messi" → "Messi"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
-}
-
-/** Up-to-two initials for the monogram fallback ("Lionel Messi" → "LM"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 // Per-segment timing for the step-by-step reveal.

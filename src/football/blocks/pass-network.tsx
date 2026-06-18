@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram, surname } from '#/football/lib/player-name';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -65,20 +66,6 @@ function normX(x: number): number {
 }
 function normY(y: number): number {
   return (y * 100) / 80;
-}
-
-/** Last token of a name, for the node label ("Lionel Messi" → "Messi"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
-}
-
-/** Up-to-two initials for the monogram fallback ("Lionel Messi" → "LM"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 /** Linear map of `value` from `[inMin, inMax]` onto `[outMin, outMax]`, clamped. */

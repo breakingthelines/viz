@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram, surname } from '#/football/lib/player-name';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
 export type SetPieceKind = 'corner' | 'free-kick';
@@ -79,20 +80,6 @@ interface Pt {
  */
 function toPitch(x: number, y: number): Pt {
   return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
-}
-
-/** Up-to-two initials for a headshot monogram ("Lionel Messi" → "LM"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
-}
-
-/** Last token of a name, for the small under-marker label ("K. Mbappé" → "Mbappé"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
 }
 
 const KIND_LABEL: Record<SetPieceKind, string> = {

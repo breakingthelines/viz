@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram, surname } from '#/football/lib/player-name';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -60,20 +61,6 @@ const MAX_PASS_LENGTH = 45;
 const FOCUS_CX = 50;
 const FOCUS_CY = 54;
 const FOCUS_RADIUS = 26; // outer reach of the longest wedge in the focus overlay
-
-/** Up-to-two initials for the monogram ("Lionel Messi" → "LM"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
-}
-
-/** Last token of a name, for the under-sonar label ("Bukayo Saka" → "Saka"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
-}
 
 /** Clamp helper. */
 function clamp(v: number, lo: number, hi: number): number {

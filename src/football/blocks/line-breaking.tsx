@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { monogram } from '#/football/lib/player-name';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
 export interface LineBreakingPass {
@@ -48,14 +49,6 @@ const normX = (x: number) => (x * 100) / SB_LENGTH;
 const normY = (y: number) => (y * 100) / SB_WIDTH;
 
 type ViewMode = 'all' | 'breaks';
-
-/** Up-to-two initials for the passer monogram ("Enzo Fernández" → "EF"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
-}
 
 const MODE_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: 'all', label: 'All passes' },

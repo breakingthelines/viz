@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
+import { surname } from '#/football/lib/player-name';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
@@ -73,12 +74,6 @@ const minuteToX = (minute: number): number =>
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-/** Last token of a name, for the on-line goal label ("Lionel Messi" → "Messi"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
 }
 
 /**
