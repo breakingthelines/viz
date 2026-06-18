@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
 export type ShotTeam = 'home' | 'away';
@@ -133,21 +134,70 @@ export function ShotMap({
 }: ShotMapProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [playerFilter, setPlayerFilter] = useState<string | null>(null);
 
   // Filter is controllable; falls back to local state for a standalone block.
   const [filterState, setFilterState] = useState<ShotMapFilter>('both');
   const filter = filterProp ?? filterState;
+
+  // Unique shooters per side, for the player combobox.
+  const playersByTeam = useMemo(() => {
+    const home = new Set<string>();
+    const away = new Set<string>();
+    for (const s of shots) (s.team === 'home' ? home : away).add(s.player);
+    return {
+      home: [...home].sort((a, b) => a.localeCompare(b)),
+      away: [...away].sort((a, b) => a.localeCompare(b)),
+    };
+  }, [shots]);
+
   const setFilter = (next: ShotMapFilter) => {
     if (filterProp === undefined) setFilterState(next);
     onFilterChange?.(next);
+    // Drop the player selection if the new team scope no longer contains them.
+    if (playerFilter && next !== 'both') {
+      const inScope = (next === 'home' ? playersByTeam.home : playersByTeam.away).includes(
+        playerFilter
+      );
+      if (!inScope) setPlayerFilter(null);
+    }
   };
 
   const colorFor = (team: ShotTeam) => (team === 'home' ? homeColor : awayColor);
 
-  const shown = useMemo(
-    () => (filter === 'both' ? shots : shots.filter((s) => s.team === filter)),
-    [shots, filter]
-  );
+  const shown = useMemo(() => {
+    const byTeam = filter === 'both' ? shots : shots.filter((s) => s.team === filter);
+    return playerFilter ? byTeam.filter((s) => s.player === playerFilter) : byTeam;
+  }, [shots, filter, playerFilter]);
+
+  // Player combobox groups, respecting the current team filter (a clear split
+  // between the two sides; searchable).
+  const playerGroups = useMemo(() => {
+    const g: {
+      key: string;
+      teamName: string;
+      color: string;
+      crestUrl?: string;
+      players: string[];
+    }[] = [];
+    if (filter !== 'away')
+      g.push({
+        key: 'home',
+        teamName: homeTeam,
+        color: homeColor,
+        crestUrl: homeCrestUrl,
+        players: playersByTeam.home,
+      });
+    if (filter !== 'home')
+      g.push({
+        key: 'away',
+        teamName: awayTeam,
+        color: awayColor,
+        crestUrl: awayCrestUrl,
+        players: playersByTeam.away,
+      });
+    return g;
+  }, [filter, homeTeam, awayTeam, homeColor, awayColor, homeCrestUrl, awayCrestUrl, playersByTeam]);
 
   // Shots in minute order drive the timeline strip.
   const ordered = useMemo(() => [...shown].sort((a, b) => a.minute - b.minute), [shown]);
@@ -160,7 +210,6 @@ export function ShotMap({
     { value: 'away', label: awayTeam, crestUrl: awayCrestUrl },
   ];
   const activeOption = filterOptions.find((o) => o.value === filter);
-  const filterValueLabel = activeOption?.label ?? 'Both teams';
   const filterValueNode = activeOption ? (
     <span className="flex items-center gap-1.5">
       <Crest url={activeOption.crestUrl} name={activeOption.label} />
@@ -178,28 +227,31 @@ export function ShotMap({
         className
       )}
     >
-      {/* Header: one plain title + clean team-filter dropdown. */}
+      {/* Header: one plain title + team filter + searchable player filter. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Shot map</span>
-        <ControlDropdown label="Showing" valueLabel={filterValueNode}>
-          {(close) =>
-            filterOptions.map((o) => (
-              <DropdownItem
-                key={o.value}
-                selected={o.value === filter}
-                onSelect={() => {
-                  setFilter(o.value);
-                  close();
-                }}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Crest url={o.crestUrl} name={o.label} />
-                  {o.label}
-                </span>
-              </DropdownItem>
-            ))
-          }
-        </ControlDropdown>
+        <div className="flex items-center gap-2">
+          <ControlDropdown label="Showing" valueLabel={filterValueNode}>
+            {(close) =>
+              filterOptions.map((o) => (
+                <DropdownItem
+                  key={o.value}
+                  selected={o.value === filter}
+                  onSelect={() => {
+                    setFilter(o.value);
+                    close();
+                  }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Crest url={o.crestUrl} name={o.label} />
+                    {o.label}
+                  </span>
+                </DropdownItem>
+              ))
+            }
+          </ControlDropdown>
+          <PlayerCombobox groups={playerGroups} selected={playerFilter} onSelect={setPlayerFilter} />
+        </div>
       </div>
 
       {/* Pitch + shots */}
@@ -321,7 +373,7 @@ export function ShotMap({
       </div>
 
       {/* Team key — small data dots + names (no decorative tracking). */}
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
         <TeamKey color={homeColor} name={homeTeam} crestUrl={homeCrestUrl} />
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
       </div>
@@ -378,6 +430,8 @@ export function ShotMap({
           );
         })}
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }
@@ -505,6 +559,104 @@ function Check() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+/** Wider glass panel for the player combobox (search field + grouped, scrollable). */
+const COMBO_CONTENT_CLS =
+  'absolute right-0 top-[calc(100%+6px)] z-50 flex w-[224px] flex-col rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
+
+/**
+ * A searchable player filter, grouped by team — a clear split between the two
+ * sides. Mirrors the ControlDropdown look with a search field on top; picking a
+ * player narrows the plot to their shots, "All players" clears it. Self-contained
+ * (viz has no design-system dependency).
+ */
+function PlayerCombobox({
+  groups,
+  selected,
+  onSelect,
+}: {
+  groups: { key: string; teamName: string; color: string; crestUrl?: string; players: string[] }[];
+  selected: string | null;
+  onSelect: (player: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const filtered = groups
+    .map((g) => ({ ...g, players: g.players.filter((p) => p.toLowerCase().includes(q)) }))
+    .filter((g) => g.players.length > 0);
+
+  const choose = (player: string | null) => {
+    onSelect(player);
+    setOpen(false);
+    setQuery('');
+  };
+
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        // Close once focus leaves the trigger + popover entirely.
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setOpen(false);
+          setQuery('');
+        }
+      }}
+    >
+      <button
+        type="button"
+        className={TRIGGER_CLS}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="text-white/50">Player</span>
+        <span className="max-w-[104px] truncate font-semibold">{selected ?? 'All'}</span>
+        <Caret />
+      </button>
+      {open && (
+        <div className={COMBO_CONTENT_CLS}>
+          <input
+            autoFocus
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search players…"
+            aria-label="Search players"
+            className="mb-1 w-full rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-white placeholder:text-white/30 focus:border-white/25 focus:outline-none"
+          />
+          <div role="listbox" className="flex max-h-[232px] flex-col gap-0.5 overflow-y-auto">
+            <DropdownItem selected={selected === null} onSelect={() => choose(null)}>
+              All players
+            </DropdownItem>
+            {filtered.map((g) => (
+              <div key={g.key}>
+                <div className="flex items-center gap-1.5 px-2.5 pb-1 pt-2 text-[10px] font-semibold text-white/45">
+                  <Crest url={g.crestUrl} name={g.teamName} />
+                  <span className="truncate">{g.teamName}</span>
+                </div>
+                {g.players.map((p) => (
+                  <DropdownItem key={p} selected={selected === p} onSelect={() => choose(p)}>
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block size-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: g.color }}
+                      />
+                      <span className="truncate">{p}</span>
+                    </span>
+                  </DropdownItem>
+                ))}
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-2.5 py-2 text-[12px] text-white/40">No players</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

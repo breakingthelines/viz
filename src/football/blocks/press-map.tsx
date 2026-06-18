@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A defensive ball-hunting action, in StatsBomb pitch coordinates (120 × 80). */
 export interface PressEvent {
@@ -266,7 +267,7 @@ export function PressMap({
       </div>
 
       {/* Footer: team + a small plain action count. */}
-      <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
           {crestUrl && (
@@ -284,6 +285,8 @@ export function PressMap({
           {metric === 'recovery' ? 'recoveries' : metric === 'pressure' ? 'pressures' : 'actions'}
         </span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </figure>
   );
 }

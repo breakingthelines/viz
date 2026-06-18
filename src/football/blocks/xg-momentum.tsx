@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
@@ -363,10 +364,12 @@ export function XgMomentum({
       </div>
 
       {/* Team key — small data dots + names. */}
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
         <TeamKey color={homeColor} name={homeTeam} crestUrl={homeCrestUrl} />
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </figure>
   );
 }

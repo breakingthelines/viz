@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A progressive action: a carry or a pass that advances the ball. */
 export type ProgressionType = 'carry' | 'pass';
@@ -158,7 +159,10 @@ function filterEq(a: ProgressionFilter, b: ProgressionFilter): boolean {
  * bow lifts overlapping actions off each other so a dozen arrows through the
  * same channel stay separable instead of merging into one dark smear.
  */
-function arcPath(start: { x: number; y: number }, end: { x: number; y: number }): string {
+function arcPath(
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): { d: string; ctrl: { x: number; y: number } } {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -170,7 +174,7 @@ function arcPath(start: { x: number; y: number }, end: { x: number; y: number })
   const my = (start.y + end.y) / 2;
   const cx = mx + nx * bow;
   const cy = my + ny * bow;
-  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
+  return { d: `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`, ctrl: { x: cx, y: cy } };
 }
 
 /**
@@ -407,6 +411,8 @@ export function Progression({
           <TypeKey color={rampColor(XT_CEIL * 0.7, baseRgb)} type="carry" />
         </div>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }

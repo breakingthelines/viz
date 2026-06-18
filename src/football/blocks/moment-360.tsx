@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
 export type MomentTeam = 'home' | 'away';
@@ -482,7 +483,7 @@ export function Moment360({
       </div>
 
       {/* Legend — small data dots + plain words. */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/60">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/90">
         <LegendDot color={accent} label="Team-mate" />
         <LegendDot color="#c9d4de" label="Opponent" ring />
         <LegendDot color="transparent" label="Keeper" hollow />
@@ -496,6 +497,8 @@ export function Moment360({
           <span>{spaceCount > 0 ? `In-space pass (${spaceCount})` : 'In-space pass'}</span>
         </span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </figure>
   );
 }

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram, surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** How a single touch in the move connects to the next. */
 export type GoalStepType = 'pass' | 'carry' | 'shot';
@@ -182,11 +183,13 @@ export function GoalSequence({
       </div>
 
       {/* Scorer + minute — data label only, no prose. */}
-      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-white/90">
         <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
         <span className="font-semibold text-white/80">{goal.scorer}</span>
         <span className="tabular-nums">{goal.minute}&apos;</span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }

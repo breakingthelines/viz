@@ -3,9 +3,16 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram, surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
 export type SetPieceKind = 'corner' | 'free-kick';
+
+/**
+ * Delivery flight. An inswinger bends toward the goal mouth, an outswinger away
+ * from it. Defaults to inswinger when unset (the common, dangerous corner).
+ */
+export type SetPieceSwing = 'in' | 'out';
 
 /** Which side a player is on for a given set piece. */
 export type SetPieceTeam = 'attacking' | 'defending';
@@ -38,6 +45,8 @@ export interface SetPiece {
   label: string;
   /** Corner or free-kick. */
   kind: SetPieceKind;
+  /** Delivery flight; defaults to an inswinger (bends toward the goal mouth). */
+  swing?: SetPieceSwing;
   /** Where the delivery is struck from (StatsBomb 120×80). */
   deliveryFrom: { x: number; y: number };
   /** Where the delivery is aimed (the target zone, StatsBomb 120×80). */
@@ -229,6 +238,7 @@ export function SetPiece({
             from={from}
             to={to}
             kind={active.kind}
+            swing={active.swing ?? 'in'}
             color={attackingColor}
             delay={0.15 + active.players.length * 0.04 + 0.1}
           />
@@ -236,15 +246,17 @@ export function SetPiece({
       </div>
 
       {/* Key — small data dots + the set-piece kind. */}
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
         <Key color={attackingColor} label="Attacking" />
         <Key color={defendingColor} label="Defending" />
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full ring-1 ring-white/70" />
           <span className="truncate">Keeper</span>
         </span>
-        <span className="ml-auto tabular-nums text-white/45">{KIND_LABEL[active.kind]}</span>
+        <span className="ml-auto tabular-nums text-white/70">{KIND_LABEL[active.kind]}</span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }
@@ -396,34 +408,49 @@ function PlayerNode({
 /**
  * The delivery: a curved, animated arc from the flag/spot to the target zone.
  * The control point is offset perpendicular to the straight line so the ball
- * bends (an inswinger reads as a bow toward goal); the path strokes itself in
- * via `pathLength`, with a small ball riding the end.
+ * bends. An inswinger bows toward the goal mouth, an outswinger away from it —
+ * picked by comparing the two perpendicular control points to the goal, not by
+ * a fixed axis (which used to bow corners off the pitch). The path strokes
+ * itself in via `pathLength`, with a small ball riding the end.
  */
 function DeliveryArc({
   from,
   to,
   kind,
+  swing,
   color,
   delay,
 }: {
   from: Pt;
   to: Pt;
   kind: SetPieceKind;
+  swing: SetPieceSwing;
   color: string;
   delay: number;
 }) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const len = Math.hypot(dx, dy) || 1;
-  // Unit normal to the delivery line; bow the arc toward the goal line (right).
+  // Unit normal to the delivery line.
   const nx = -dy / len;
   const ny = dx / len;
-  // Corners whip harder than free-kicks; bend points the same way the normal
-  // does, flipped so the bow always lifts toward the right-hand goal.
-  const bend = (kind === 'corner' ? 0.32 : 0.2) * len;
-  const sign = nx >= 0 ? 1 : -1;
-  const mx = (from.x + to.x) / 2 + nx * bend * sign;
-  const my = (from.y + to.y) / 2 + ny * bend * sign;
+  // Corners whip harder than free-kicks.
+  const bend = (kind === 'corner' ? 0.3 : 0.2) * len;
+  const midX = (from.x + to.x) / 2;
+  const midY = (from.y + to.y) / 2;
+  // The attacking side targets the right-hand goal mouth (pitch x=100, y=50).
+  const GOAL_X = 100;
+  const GOAL_Y = 50;
+  // Two candidate control points, perpendicular to either side of the line.
+  const cA = { x: midX + nx * bend, y: midY + ny * bend };
+  const cB = { x: midX - nx * bend, y: midY - ny * bend };
+  const distToGoal = (p: Pt) => (p.x - GOAL_X) ** 2 + (p.y - GOAL_Y) ** 2;
+  const toward = distToGoal(cA) <= distToGoal(cB) ? cA : cB;
+  const away = toward === cA ? cB : cA;
+  const ctrl = swing === 'out' ? away : toward;
+  // Clamp into the pitch so the bow never sweeps off-frame.
+  const mx = Math.max(0, Math.min(100, ctrl.x));
+  const my = Math.max(0, Math.min(100, ctrl.y));
   const d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
 
   return (

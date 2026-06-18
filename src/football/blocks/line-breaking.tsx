@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
 export interface LineBreakingPass {
@@ -208,7 +209,7 @@ export function LineBreaking({
       </div>
 
       {/* Team key + count read-out — small + plain, mirrors the shot-map team key row. */}
-      <div className="mt-3 flex items-center gap-3 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-3 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           {crestUrl && (
             <img
@@ -228,6 +229,8 @@ export function LineBreaking({
           <span>line {breakCount === 1 ? 'break' : 'breaks'}</span>
         </span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }

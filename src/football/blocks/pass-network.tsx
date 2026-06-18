@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram, surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -350,16 +351,18 @@ export function PassNetwork({
       </div>
 
       {/* Legend — small data dot + counts. */}
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
           <Crest url={crestUrl} name={team} />
           <span className="truncate">{team}</span>
         </span>
-        <span className="tabular-nums text-white/40">
+        <span className="tabular-nums text-white/90">
           {players.length} players · {links.length} links
         </span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }

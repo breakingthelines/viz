@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram, surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -311,6 +312,8 @@ export function PassSonar({
           </AnimatePresence>
         </Pitch>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </div>
   );
 }

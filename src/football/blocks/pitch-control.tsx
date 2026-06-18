@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { surname } from '#/football/lib/player-name';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** BTL team accents — the only two colours on the control surface. */
 const HOME_COLOR = '#eb0000';
@@ -17,6 +19,8 @@ export interface PitchControlPlayer {
   y: number;
   /** Which side the player belongs to. */
   team: 'home' | 'away';
+  /** Display name, surfaced in the hover callout. */
+  name?: string;
   /** Marks the goalkeeper — rendered as a hollow ringed dot. */
   isGoalkeeper?: boolean;
 }
@@ -223,11 +227,21 @@ export function PitchControl({
               </motion.g>
             );
           })}
+
+          {/* Name callout for the hovered player — drawn last, on top. */}
+          {hovered?.name && (
+            <HoverLabel
+              cx={hovered.cx}
+              cy={hovered.cy}
+              label={surname(hovered.name)}
+              color={hovered.team === 'home' ? HOME_COLOR : AWAY_COLOR}
+            />
+          )}
         </svg>
 
         {/* Attack-direction cue (home attacks right) — quiet, no eyebrow. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center">
-          <span className="flex items-center gap-1.5 text-[10px] text-white/30">
+          <span className="flex items-center gap-1.5 text-[10px] text-white/90">
             {homeCrestUrl && (
               <img
                 src={homeCrestUrl}
@@ -259,8 +273,10 @@ export function PitchControl({
           active={hovered?.team === 'away'}
           dim={hovered != null && hovered.team !== 'away'}
         />
-        {hovered?.isGoalkeeper && <span className="tabular-nums text-white/40">GK</span>}
+        {hovered?.isGoalkeeper && <span className="tabular-nums text-white/70">GK</span>}
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </figure>
   );
 }
@@ -283,7 +299,7 @@ function TeamKey({
     <span
       className={cn(
         'flex items-center gap-1.5 transition-colors',
-        active ? 'text-white/90' : dim ? 'text-white/35' : 'text-white/60'
+        active ? 'text-white/90' : dim ? 'text-white/35' : 'text-white/90'
       )}
     >
       <span
@@ -303,6 +319,62 @@ function TeamKey({
       )}
       <span className="truncate">{name}</span>
     </span>
+  );
+}
+
+/**
+ * A small name label above the hovered player dot. Lives in the dots' SVG
+ * (0..100 user space); flips below the dot near the top edge and clamps to the
+ * pitch so it never spills off the frame.
+ */
+function HoverLabel({
+  cx,
+  cy,
+  label,
+  color,
+}: {
+  cx: number;
+  cy: number;
+  label: string;
+  color: string;
+}) {
+  const w = Math.max(13, label.length * 1.5 + 5);
+  const h = 5.6;
+  const gap = 2.6;
+  const bx = Math.max(1, Math.min(100 - w - 1, cx - w / 2));
+  const by = cy > 14 ? cy - h - gap : cy + gap + 1.5;
+  return (
+    <motion.g
+      initial={{ opacity: 0, y: 1 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.16, ease: 'easeOut' }}
+      style={{ pointerEvents: 'none' }}
+    >
+      <rect
+        x={bx}
+        y={by}
+        width={w}
+        height={h}
+        rx={1.2}
+        fill="#0a0a0a"
+        fillOpacity={0.92}
+        stroke={color}
+        strokeOpacity={0.55}
+        strokeWidth={0.3}
+      />
+      <rect x={bx} y={by} width={0.9} height={h} rx={0.4} fill={color} />
+      <text
+        x={bx + w / 2 + 0.45}
+        y={by + h / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={2.8}
+        fontWeight="bold"
+        fill="white"
+      >
+        {label}
+      </text>
+    </motion.g>
   );
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
+import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A single on-ball touch in StatsBomb pitch coordinates (120 × 80). */
 export interface HeatMapTouch {
@@ -131,7 +132,7 @@ export function HeatMap({
       </div>
 
       {/* Footer: team + a small plain touch count. */}
-      <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/60">
+      <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
           <Crest url={crestUrl} name={team} />
@@ -141,6 +142,8 @@ export function HeatMap({
           <span className="tabular-nums text-white/80">{visibleTouches.length}</span> touches
         </span>
       </div>
+
+      <PanelFooter provider="statsbomb" />
     </figure>
   );
 }
