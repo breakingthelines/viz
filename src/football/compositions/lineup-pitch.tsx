@@ -3,6 +3,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
+import { monogram, surname } from '#/football/lib/player-name';
 
 /** A player assigned to a lineup slot. */
 export interface LineupSlotPlayer {
@@ -282,18 +283,4 @@ export function LineupPitch({
       </Pitch>
     </div>
   );
-}
-
-/** Last token of a name, for the under-marker label ("Bukayo Saka" → "Saka"). */
-function surname(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts[parts.length - 1] ?? name;
-}
-
-/** Up-to-two initials for the monogram fallback ("Bukayo Saka" → "BS"). */
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
