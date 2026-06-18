@@ -372,10 +372,17 @@ export function ShotMap({
         </Pitch>
       </div>
 
-      {/* Team key — small data dots + names (no decorative tracking). */}
+      {/* Team key — small data dots + names. A freeze-frame key appears while a
+          shot is active so the faint dots that pop up read as player positions. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
         <TeamKey color={homeColor} name={homeTeam} crestUrl={homeCrestUrl} />
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
+        {active && (
+          <span className="flex items-center gap-1.5 text-white/45">
+            <span className="inline-block size-1.5 rounded-full bg-white/55" />
+            <span>positions at this shot</span>
+          </span>
+        )}
       </div>
 
       {/* Timeline strip — shots in minute order; click to step through. */}

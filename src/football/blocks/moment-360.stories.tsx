@@ -76,14 +76,16 @@ const VISIBLE_AREA: MomentPoint[] = [
   { x: 42, y: 40 },
 ];
 
-// Four options off Messi's right foot. Two genuinely in space (the run in
-// behind the right channel; the late central runner between the lines), two
-// covered (the wide-left pin; the safe recycle to the pivot).
+// Four options off Messi's right foot. Coverage is COMPUTED from the freeze-
+// frame (no hand-set inSpace): a receiver is "covered" when a France defender is
+// within ~6.5m, otherwise in space. So Mac Allister (Mbappé/Hernández tight) is
+// covered; Álvarez in behind, Fernández between the lines, and De Paul on the
+// recycle are all unmarked.
 const PASSING_OPTIONS: MomentPassingOption[] = [
-  { x: 92, y: 24, inSpace: true, player: 'J. Álvarez' }, // through the channel
-  { x: 84, y: 44, inSpace: true, player: 'E. Fernández' }, // between the lines
-  { x: 88, y: 66, inSpace: false, player: 'A. Mac Allister' }, // covered wide
-  { x: 46, y: 50, inSpace: false, player: 'R. De Paul' }, // safe recycle
+  { x: 92, y: 24, player: 'J. Álvarez' }, // run in behind the right channel
+  { x: 84, y: 44, player: 'E. Fernández' }, // ghosting in between the lines
+  { x: 88, y: 66, player: 'A. Mac Allister' }, // wide left, picked up
+  { x: 46, y: 50, player: 'R. De Paul' }, // simple recycle to the pivot
 ];
 
 const MESSI_ACTOR: MomentPoint = { x: 55, y: 40 };
@@ -178,10 +180,12 @@ export const AwayCounter: Story = {
     players: [...ARG_LOW_BLOCK, ...FRANCE_BREAK],
     visibleArea: VISIBLE_AREA,
     passingOptions: [
+      // Thuram is in behind the line — explicitly in-space (a pure distance
+      // check would read the chasing defender as cover). The rest compute.
       { x: 94, y: 18, inSpace: true, player: 'M. Thuram' },
-      { x: 90, y: 44, inSpace: true, player: 'K. Coman' },
-      { x: 82, y: 66, inSpace: false, player: 'O. Dembélé' },
-      { x: 50, y: 48, inSpace: false, player: 'A. Tchouaméni' },
+      { x: 90, y: 44, player: 'K. Coman' },
+      { x: 82, y: 66, player: 'O. Dembélé' },
+      { x: 50, y: 48, player: 'A. Tchouaméni' },
     ],
   },
 };

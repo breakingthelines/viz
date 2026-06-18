@@ -41,10 +41,13 @@ export interface MomentPlayer extends MomentPoint {
 /** A pass the actor could play, with whether the receiver is in space. */
 export interface MomentPassingOption extends MomentPoint {
   /**
-   * True when the receiver is genuinely free — behind or between the lines.
-   * These lanes glow in the team colour and carry a "space" halo.
+   * Override for whether the receiver is in space. Omit it (the default) to let
+   * the block COMPUTE coverage from the freeze-frame — a receiver is "covered"
+   * when an opponent is within `coverRadius`, otherwise "in space". Set it only
+   * to override the geometry (e.g. a run in behind the line that a pure distance
+   * check would misread). In-space lanes glow and carry a "space" halo.
    */
-  inSpace: boolean;
+  inSpace?: boolean;
   /** Optional receiver name, surfaced in the lane callout on hover. */
   player?: string;
 }
@@ -63,6 +66,11 @@ export interface Moment360Props {
   visibleArea: MomentPoint[];
   /** Passes the actor could play from this position. */
   passingOptions?: MomentPassingOption[];
+  /**
+   * Distance (StatsBomb units, ~metres) within which an opponent is treated as
+   * covering a receiver, when coverage is computed. Defaults to 6.5.
+   */
+  coverRadius?: number;
   /** Home accent. Defaults to BTL home red. */
   homeColor?: string;
   /** Away accent. Defaults to BTL away blue. */
@@ -117,6 +125,7 @@ export function Moment360({
   players,
   visibleArea,
   passingOptions = [],
+  coverRadius = 6.5,
   homeColor = HOME_COLOR,
   awayColor = AWAY_COLOR,
   className,
@@ -136,19 +145,27 @@ export function Moment360({
     [visibleArea, event.team]
   );
 
+  // Opponents in the freeze-frame (outfield, not the keeper) — used to decide
+  // whether each passing option's receiver is covered.
+  const opponents = useMemo(() => players.filter((p) => !p.teammate && !p.keeper), [players]);
+
   const lanes = useMemo(
     () =>
-      passingOptions.map((opt) => ({
-        opt,
-        target: toPitch(opt, event.team),
-      })),
-    [passingOptions, event.team]
+      passingOptions.map((opt) => {
+        // Covered = an opponent within coverRadius of the receiver; otherwise in
+        // space. The author can override with an explicit `inSpace` (e.g. a run
+        // in behind the line that a pure distance check would miss).
+        const nearest = opponents.reduce(
+          (min, o) => Math.min(min, Math.hypot(opt.x - o.x, opt.y - o.y)),
+          Infinity
+        );
+        const inSpace = opt.inSpace ?? nearest >= coverRadius;
+        return { opt, target: toPitch(opt, event.team), inSpace };
+      }),
+    [passingOptions, event.team, opponents, coverRadius]
   );
 
-  const spaceCount = useMemo(
-    () => passingOptions.filter((o) => o.inSpace).length,
-    [passingOptions]
-  );
+  const spaceCount = useMemo(() => lanes.filter((l) => l.inSpace).length, [lanes]);
 
   // Quiet caption under the title: who, when, what they were doing.
   const caption = `${event.player} · ${event.minute}' · ${event.type}`;
@@ -287,10 +304,10 @@ export function Moment360({
 
           {/* (4) Passing lanes — drawn last, after the players have settled. */}
           <g>
-            {lanes.map(({ opt, target }, i) => {
+            {lanes.map(({ opt, target, inSpace }, i) => {
               const isHover = hoverLane === i;
               const dimmedByHover = hoverLane !== null && !isHover;
-              const live = opt.inSpace;
+              const live = inSpace;
               const laneColor = live ? accent : 'white';
               const baseOpacity = live ? 0.7 : 0.32;
               const opacity = dimmedByHover ? 0.14 : isHover ? 1 : baseOpacity;
@@ -457,15 +474,8 @@ export function Moment360({
                 filter={`url(#${glowId})`}
               />
             )}
-            {/* The ball, just off the carrying foot. */}
-            <circle
-              cx={origin.x + 1.7}
-              cy={origin.y + 1.4}
-              r={0.85}
-              fill="white"
-              stroke="#0a0a0a"
-              strokeWidth={0.2}
-            />
+            {/* The ball at the carrying foot — a small football. */}
+            <Football cx={origin.x + 1.9} cy={origin.y + 1.6} r={1.15} />
           </motion.g>
 
           {/* (6) Hover callout — painted last of all, so it always sits above
@@ -475,8 +485,8 @@ export function Moment360({
               x={hovered.target.x}
               y={hovered.target.y}
               label={hovered.opt.player ? surname(hovered.opt.player) : `Option ${(hoverLane ?? 0) + 1}`}
-              sub={hovered.opt.inSpace ? 'In space' : 'Covered'}
-              color={hovered.opt.inSpace ? accent : 'white'}
+              sub={hovered.inSpace ? 'In space' : 'Covered'}
+              color={hovered.inSpace ? accent : 'white'}
             />
           )}
         </Pitch>
@@ -500,6 +510,33 @@ export function Moment360({
 
       <PanelFooter provider="statsbomb" />
     </figure>
+  );
+}
+
+/** A small football — white with a central dark pentagon and short seams. */
+function Football({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  const rp = r * 0.42; // central pentagon radius
+  const verts = Array.from({ length: 5 }, (_, i) => {
+    const a = ((-90 + i * 72) * Math.PI) / 180;
+    return { x: cx + rp * Math.cos(a), y: cy + rp * Math.sin(a), a };
+  });
+  const pentPoints = verts.map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`).join(' ');
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill="white" stroke="#0a0a0a" strokeWidth={0.14} />
+      <polygon points={pentPoints} fill="#0a0a0a" />
+      {verts.map((v, i) => (
+        <line
+          key={i}
+          x1={v.x}
+          y1={v.y}
+          x2={cx + r * 0.95 * Math.cos(v.a)}
+          y2={cy + r * 0.95 * Math.sin(v.a)}
+          stroke="#0a0a0a"
+          strokeWidth={0.14}
+        />
+      ))}
+    </g>
   );
 }
 
