@@ -68,6 +68,13 @@ export interface PassNetworkProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 /** StatsBomb pitch is 120×80; normalise to the 0–100 `Pitch` viewBox. */
@@ -141,6 +148,7 @@ export function PassNetwork({
   links,
   className,
   wordmark,
+  builderControls,
 }: PassNetworkProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -340,7 +348,7 @@ export function PassNetwork({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
   );
 }

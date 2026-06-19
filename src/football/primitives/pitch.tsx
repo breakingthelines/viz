@@ -91,8 +91,20 @@ export function Pitch({
         </g>
       )}
 
-      {/* Pitch markings */}
-      <g stroke={resolvedLines} strokeWidth="0.3" fill="none">
+      {/*
+       * Pitch markings. The stroke width is set per-theme: the dark theme uses a
+       * slightly heavier line (0.45 ≈ 1.3–1.5px at the blocks' render size) so
+       * the semi-transparent white markings stay legible behind/under the
+       * screen-blend data layers the blocks paint on top. `vectorEffect`
+       * non-scaling-stroke is deliberately NOT used — the markings should scale
+       * with the pitch so half-pitch variants keep their proportions.
+       */}
+      <g
+        stroke={resolvedLines}
+        strokeWidth={isDark ? 0.45 : 0.3}
+        fill="none"
+        strokeLinejoin="round"
+      >
         {/* Pitch outline */}
         <rect x="0" y="0" width="100" height="100" />
 
@@ -101,25 +113,25 @@ export function Pitch({
 
         {/* Center circle */}
         <circle cx="50" cy="50" r="9.15" />
-        <circle cx="50" cy="50" r="0.5" fill={resolvedLines} />
+        <circle cx="50" cy="50" r="0.6" fill={resolvedLines} stroke="none" />
 
         {/* Left penalty area */}
         <rect x="0" y="21.1" width="16.5" height="57.8" />
         <rect x="0" y="36.8" width="5.5" height="26.4" />
-        <circle cx="11" cy="50" r="0.5" fill={resolvedLines} />
+        <circle cx="11" cy="50" r="0.6" fill={resolvedLines} stroke="none" />
         <path d="M 16.5 40.1 A 9.15 9.15 0 0 1 16.5 59.9" />
 
         {/* Left goal */}
-        <rect x="-2" y="45.2" width="2" height="9.6" strokeWidth="0.2" />
+        <rect x="-2" y="45.2" width="2" height="9.6" strokeWidth={isDark ? 0.35 : 0.2} />
 
         {/* Right penalty area */}
         <rect x="83.5" y="21.1" width="16.5" height="57.8" />
         <rect x="94.5" y="36.8" width="5.5" height="26.4" />
-        <circle cx="89" cy="50" r="0.5" fill={resolvedLines} />
+        <circle cx="89" cy="50" r="0.6" fill={resolvedLines} stroke="none" />
         <path d="M 83.5 40.1 A 9.15 9.15 0 0 0 83.5 59.9" />
 
         {/* Right goal */}
-        <rect x="100" y="45.2" width="2" height="9.6" strokeWidth="0.2" />
+        <rect x="100" y="45.2" width="2" height="9.6" strokeWidth={isDark ? 0.35 : 0.2} />
 
         {/* Corner arcs */}
         <path d="M 0 1 A 1 1 0 0 0 1 0" />

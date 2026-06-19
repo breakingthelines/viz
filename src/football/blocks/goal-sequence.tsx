@@ -59,6 +59,13 @@ export interface GoalSequenceProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 const ACCENT = '#eb0000';
@@ -94,6 +101,7 @@ export function GoalSequence({
   color = ACCENT,
   className,
   wordmark,
+  builderControls,
 }: GoalSequenceProps) {
   // Bumping `runId` remounts the animated layer, so it replays from the start
   // declaratively (no effects, no imperative animation controls).
@@ -200,7 +208,7 @@ export function GoalSequence({
         <span className="tabular-nums">{goal.minute}&apos;</span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
   );
 }

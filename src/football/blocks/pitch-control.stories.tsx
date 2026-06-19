@@ -107,3 +107,31 @@ export const EvenContest: Story = {
     players: evenGame,
   },
 };
+
+/**
+ * A SPARSE freeze-frame — only a handful of tracked players, clustered on one
+ * side. This is the degenerate input a host can emit when its frame selection
+ * picks an event with few tracked players (see the block doc-comment). The
+ * block must NOT collapse into one solid territory: with the capped-reach
+ * influence model, far-from-everyone space stays neutral dark and only the
+ * pockets around the players are washed, so the result still reads as a pitch
+ * with a few contested zones rather than "one team owns 99%". The fix for the
+ * lopsided split itself is host-side (select the frame with the most tracked
+ * players, closest to 22).
+ */
+const sparseFrame: PitchControlPlayer[] = [
+  { id: 'h-st', x: 96, y: 38, team: 'home', name: 'Jesus' },
+  { id: 'h-rw', x: 92, y: 16, team: 'home', name: 'Saka' },
+  { id: 'a-rcb', x: 90, y: 48, team: 'away', name: 'Tarkowski' },
+  { id: 'a-gk', x: 104, y: 40, team: 'away', isGoalkeeper: true, name: 'Pickford' },
+];
+
+export const SparseFrame: Story = {
+  args: {
+    homeTeam: 'Arsenal',
+    awayTeam: 'Everton',
+    homeCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
+    awayCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg',
+    players: sparseFrame,
+  },
+};

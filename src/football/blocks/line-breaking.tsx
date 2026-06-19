@@ -49,6 +49,13 @@ export interface LineBreakingProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 /** StatsBomb pitch is 120 long × 80 wide; the Pitch primitive is 100 × 100. */
@@ -80,6 +87,7 @@ export function LineBreaking({
   passes,
   className,
   wordmark,
+  builderControls,
 }: LineBreakingProps) {
   const uid = useId();
   const arrowId = `${uid}-arrow`;
@@ -242,7 +250,7 @@ export function LineBreaking({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
   );
 }

@@ -46,6 +46,13 @@ export interface PitchControlProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -61,6 +68,16 @@ const GRID_H = 40;
  * not produce an infinite 1/d² influence — keeps the falloff soft, not spiky.
  */
 const MIN_DIST_SQ = 2.2;
+
+/**
+ * Influence reach, in grid units. Each player's pull decays with a Gaussian
+ * envelope of this sigma so cells far from EVERY player stay (near-)unowned and
+ * read as neutral space — instead of a single distant player claiming the whole
+ * pitch. This is what keeps a SPARSE freeze-frame (a handful of tracked players)
+ * from collapsing into one solid territory: empty regions go dark/neutral rather
+ * than lopsided. Sized so a full 22-player frame still fills the pitch.
+ */
+const INFLUENCE_SIGMA = 14;
 
 /** A player resolved to grid-space, with the normalised pitch coords for SVG. */
 interface ResolvedPlayer extends PitchControlPlayer {
@@ -95,6 +112,7 @@ export function PitchControl({
   players,
   className,
   wordmark,
+  builderControls,
 }: PitchControlProps) {
   const titleId = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -288,7 +306,7 @@ export function PitchControl({
         {hovered?.isGoalkeeper && <span className="tabular-nums text-white/70">GK</span>}
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </figure>
   );
 }
@@ -391,25 +409,45 @@ function HoverLabel({
 }
 
 /**
- * Sweep the grid once: for every cell, accumulate each side's 1/d² influence,
- * decide the owner and the control margin, and tally area share. Pure + cheap
- * (GRID_W × GRID_H × players), so it runs in a `useMemo`.
+ * Sweep the grid once: for every cell, accumulate each side's distance-weighted
+ * influence (1/d² close in, faded out by a Gaussian envelope so a lone distant
+ * player can't claim the whole pitch), decide the owner + control margin, and
+ * tally area share. Pure + cheap (GRID_W × GRID_H × players), so it runs in a
+ * `useMemo`.
+ *
+ * `coverage` (0..1 per cell) reports how much total influence reaches the cell.
+ * Cells far from every player have ~0 coverage and are rendered as neutral dark
+ * space — that, plus the Gaussian envelope, is what makes a SPARSE freeze-frame
+ * read as small owned pockets rather than one team owning everything.
  */
 function computeControl(players: ResolvedPlayer[]): {
   owner: Int8Array;
   margin: Float32Array;
+  coverage: Float32Array;
   share: { home: number; away: number };
 } {
   const cells = GRID_W * GRID_H;
   const owner = new Int8Array(cells); // 1 = home, -1 = away, 0 = none
   const margin = new Float32Array(cells); // 0..1 dominance of the owner
+  const coverage = new Float32Array(cells); // 0..1 how strongly held the cell is
 
-  if (players.length === 0) {
-    return { owner, margin, share: { home: 0.5, away: 0.5 } };
+  // Need at least one player on EACH side for a meaningful contest. With a
+  // single side (or none), there is no territory split — report an even bar and
+  // a flat field; the dots still render so the frame isn't blank.
+  const hasHome = players.some((p) => p.team === 'home');
+  const hasAway = players.some((p) => p.team === 'away');
+  if (players.length === 0 || !hasHome || !hasAway) {
+    return { owner, margin, coverage, share: { home: 0.5, away: 0.5 } };
   }
 
+  const twoSigmaSq = 2 * INFLUENCE_SIGMA * INFLUENCE_SIGMA;
   let homeCells = 0;
   let ownedCells = 0;
+  let maxTotal = 0;
+  // First pass: influences + track the peak total influence for normalising
+  // coverage. Stash per-cell totals so the second pass stays O(cells).
+  const homeInfAll = new Float32Array(cells);
+  const awayInfAll = new Float32Array(cells);
 
   for (let cy = 0; cy < GRID_H; cy++) {
     for (let cx = 0; cx < GRID_W; cx++) {
@@ -424,35 +462,52 @@ function computeControl(players: ResolvedPlayer[]): {
         if (!p) continue;
         const dx = px - p.gx;
         const dy = py - p.gy;
-        const dSq = Math.max(dx * dx + dy * dy, MIN_DIST_SQ);
-        const inf = 1 / dSq;
+        const dSq = dx * dx + dy * dy;
+        // 1/d² near the player, multiplied by a Gaussian reach envelope so the
+        // contribution vanishes far away (a lone player can't own the pitch).
+        const inf = (1 / Math.max(dSq, MIN_DIST_SQ)) * Math.exp(-dSq / twoSigmaSq);
         if (p.team === 'home') homeInf += inf;
         else awayInf += inf;
       }
 
       const idx = cy * GRID_W + cx;
+      homeInfAll[idx] = homeInf;
+      awayInfAll[idx] = awayInf;
       const total = homeInf + awayInf;
-      if (total <= 0) {
-        owner[idx] = 0;
-        margin[idx] = 0;
-        continue;
-      }
-
-      // Margin: how lopsided this cell is (0 = even, 1 = total control).
-      const diff = Math.abs(homeInf - awayInf) / total;
-      if (homeInf >= awayInf) {
-        owner[idx] = 1;
-        homeCells++;
-      } else {
-        owner[idx] = -1;
-      }
-      margin[idx] = diff;
-      ownedCells++;
+      if (total > maxTotal) maxTotal = total;
     }
   }
 
+  // Second pass: owner, margin, coverage (normalised to the peak total).
+  const invMax = maxTotal > 0 ? 1 / maxTotal : 0;
+  for (let idx = 0; idx < cells; idx++) {
+    const homeInf = homeInfAll[idx]!;
+    const awayInf = awayInfAll[idx]!;
+    const total = homeInf + awayInf;
+    if (total <= 0) {
+      owner[idx] = 0;
+      margin[idx] = 0;
+      coverage[idx] = 0;
+      continue;
+    }
+
+    // Margin: how lopsided this cell is (0 = even, 1 = total control).
+    const diff = Math.abs(homeInf - awayInf) / total;
+    if (homeInf >= awayInf) {
+      owner[idx] = 1;
+      homeCells++;
+    } else {
+      owner[idx] = -1;
+    }
+    margin[idx] = diff;
+    // Coverage saturates quickly so well-held zones read fully, but cells the
+    // envelope barely reaches stay dim — sqrt lifts the low end a little.
+    coverage[idx] = Math.sqrt(Math.min(1, total * invMax));
+    ownedCells++;
+  }
+
   const share = ownedCells > 0 ? homeCells / ownedCells : 0.5;
-  return { owner, margin, share: { home: share, away: 1 - share } };
+  return { owner, margin, coverage, share: { home: share, away: 1 - share } };
 }
 
 interface ControlCanvasProps {
@@ -542,30 +597,34 @@ function ControlCanvas({ players, hoveredId }: ControlCanvasProps) {
 
     const home = hexToRgb(HOME_COLOR);
     const away = hexToRgb(AWAY_COLOR);
-    const { owner, margin } = field;
+    const { owner, margin, coverage } = field;
 
     for (let idx = 0; idx < GRID_W * GRID_H; idx++) {
       const own = owner[idx] ?? 0;
       if (own === 0) continue;
       const m = margin[idx] ?? 0;
+      const cov = coverage[idx] ?? 0;
       const isHome = own === 1;
       const c = isHome ? home : away;
 
-      // Calm wash: a low ceiling, biased by how decisively the cell is held.
-      // A near-even cell (small margin) stays close to transparent.
-      let alpha = 0.06 + m * 0.26;
+      // Territory wash: a clearly visible base lifted by how decisively the cell
+      // is held, then scaled by COVERAGE so cells the influence envelope barely
+      // reaches fade toward neutral dark (the key to a sparse frame reading as
+      // owned pockets, not one flat colour). Brighter than before so the wash is
+      // legible through the screen blend over the near-black pitch.
+      let alpha = (0.12 + m * 0.42) * cov;
 
       // Hover emphasis: the hovered player's own cells bloom; everything else
       // settles toward a fainter base.
       if (hoveredOwnedCells) {
-        alpha = hoveredOwnedCells[idx] ? Math.min(0.62, alpha + 0.3) : alpha * 0.45;
+        alpha = hoveredOwnedCells[idx] ? Math.min(0.72, alpha + 0.34) : alpha * 0.42;
       }
 
       const o = idx * 4;
       img.data[o] = c.r;
       img.data[o + 1] = c.g;
       img.data[o + 2] = c.b;
-      img.data[o + 3] = Math.round(alpha * 255);
+      img.data[o + 3] = Math.round(Math.min(1, alpha) * 255);
     }
 
     octx.putImageData(img, 0, 0);

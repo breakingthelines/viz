@@ -45,6 +45,13 @@ export interface XgMomentumProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 const HOME_RED = '#eb0000';
@@ -150,6 +157,7 @@ export function XgMomentum({
   awayColor = AWAY_BLUE,
   className,
   wordmark,
+  builderControls,
 }: XgMomentumProps) {
   const uid = useId();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -447,7 +455,7 @@ export function XgMomentum({
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </figure>
   );
 }

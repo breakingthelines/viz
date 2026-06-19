@@ -85,6 +85,13 @@ export interface Moment360Props {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -138,6 +145,7 @@ export function Moment360({
   awayColor = AWAY_COLOR,
   className,
   wordmark,
+  builderControls,
 }: Moment360Props) {
   const maskId = useId();
   const desatId = useId();
@@ -525,7 +533,7 @@ export function Moment360({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </figure>
   );
 }

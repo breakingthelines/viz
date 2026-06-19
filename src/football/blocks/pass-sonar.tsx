@@ -56,6 +56,13 @@ export interface PassSonarProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 const TEAM_COLOR = '#eb0000';
@@ -156,6 +163,7 @@ export function PassSonar({
   players,
   className,
   wordmark,
+  builderControls,
 }: PassSonarProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -331,7 +339,7 @@ export function PassSonar({
         </Pitch>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
   );
 }
