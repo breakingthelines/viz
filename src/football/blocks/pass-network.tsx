@@ -1,9 +1,10 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
-import { monogram, surname } from '#/football/lib/player-name';
+import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { SvgHeadshot } from '#/football/lib/headshot';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -134,7 +135,6 @@ export function PassNetwork({
   className,
   wordmark,
 }: PassNetworkProps) {
-  const clipPrefix = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const nodes = useMemo<ResolvedNode[]>(() => {
@@ -252,8 +252,6 @@ export function PassNetwork({
           {nodes.map((node) => {
             const isHovered = node.id === hoveredId;
             const dimmed = connectedIds !== null && !connectedIds.has(node.id);
-            const showHeadshot = Boolean(node.imageUrl);
-            const clipId = `${clipPrefix}-node-${node.id}`;
             return (
               <motion.g
                 key={node.id}
@@ -281,62 +279,25 @@ export function PassNetwork({
                   />
                 )}
 
-                {showHeadshot ? (
-                  <>
-                    {/* Headshot clipped to the node disc; coloured backing +
-                        ring so a transparent / loading photo still reads. */}
-                    <defs>
-                      <clipPath id={clipId}>
-                        <circle cx={node.cx} cy={node.cy} r={node.r} />
-                      </clipPath>
-                    </defs>
-                    <circle cx={node.cx} cy={node.cy} r={node.r} fill={color} fillOpacity={0.92} />
-                    <image
-                      href={node.imageUrl}
-                      x={node.cx - node.r}
-                      y={node.cy - node.r}
-                      width={node.r * 2}
-                      height={node.r * 2}
-                      clipPath={`url(#${clipId})`}
-                      preserveAspectRatio="xMidYMid slice"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <circle
-                      cx={node.cx}
-                      cy={node.cy}
-                      r={node.r}
-                      fill="none"
-                      stroke="white"
-                      strokeWidth={0.4}
-                      strokeOpacity={isHovered ? 0.9 : 0.6}
-                    />
-                  </>
-                ) : (
-                  <>
-                    {/* Solid disc + monogram fallback. */}
-                    <circle
-                      cx={node.cx}
-                      cy={node.cy}
-                      r={node.r}
-                      fill={color}
-                      stroke="white"
-                      strokeWidth={0.3}
-                      fillOpacity={isHovered ? 1 : 0.92}
-                    />
-                    <text
-                      x={node.cx}
-                      y={node.cy}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fill="white"
-                      fontSize={node.r * 0.82}
-                      fontWeight="bold"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {monogram(node.name)}
-                    </text>
-                  </>
-                )}
+                {/* Headshot clipped to the node disc (coloured backing + ring so
+                    a transparent / loading / 404 photo still reads), else a solid
+                    disc + monogram — also used when the photo fails to load. */}
+                <SvgHeadshot
+                  cx={node.cx}
+                  cy={node.cy}
+                  r={node.r}
+                  name={node.name}
+                  imageUrl={node.imageUrl}
+                  color={color}
+                  ringColor="white"
+                  ringWidth={0.4}
+                  ringOpacity={isHovered ? 0.9 : 0.6}
+                  backingOpacity={isHovered ? 1 : 0.92}
+                  monogramFill="white"
+                  monogramSizeRatio={0.82}
+                  fallbackStroke="white"
+                  fallbackStrokeWidth={0.3}
+                />
 
                 {/* Surname label */}
                 <text

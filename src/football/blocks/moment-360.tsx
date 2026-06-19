@@ -142,6 +142,8 @@ export function Moment360({
   const glowId = useId();
   const actorClipId = useId();
   const [hoverLane, setHoverLane] = useState<number | null>(null);
+  // Flips when the actor headshot 404s, so it falls back to the accent dot.
+  const [actorPhotoFailed, setActorPhotoFailed] = useState(false);
 
   const accent = event.team === 'home' ? homeColor : awayColor;
 
@@ -446,8 +448,8 @@ export function Moment360({
               }}
             />
             {/* Actor marker — headshot photo clipped to the circle, or the
-                accent dot when no photo is supplied. */}
-            {event.imageUrl ? (
+                accent dot when no photo is supplied or the photo fails to load. */}
+            {event.imageUrl && !actorPhotoFailed ? (
               <>
                 <circle cx={origin.x} cy={origin.y} r={2.4} fill={accent} />
                 <image
@@ -458,6 +460,7 @@ export function Moment360({
                   height={4.8}
                   clipPath={`url(#${actorClipId})`}
                   preserveAspectRatio="xMidYMid slice"
+                  onError={() => setActorPhotoFailed(true)}
                   style={{ pointerEvents: 'none' }}
                 />
                 <circle

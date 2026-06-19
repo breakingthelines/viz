@@ -2,8 +2,9 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
-import { monogram, surname } from '#/football/lib/player-name';
+import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { SvgHeadshot } from '#/football/lib/headshot';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -360,7 +361,6 @@ function FocusOverlay({
 
   const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
   const lengthCeiling = lengthCeilingFor(player);
-  const photoClip = `${clipId}-photo`;
 
   return (
     <motion.g
@@ -415,50 +415,21 @@ function FocusOverlay({
         <circle cx={FOCUS_CX} cy={FOCUS_CY} r={1.4} fill="white" fillOpacity={0.85} />
       </motion.g>
 
-      {/* Circular headshot, or a monogram chip when no photo is supplied. */}
-      {player.imageUrl ? (
-        <>
-          <defs>
-            <clipPath id={photoClip}>
-              <circle cx={avatarCx} cy={avatarCy} r={avatarR} />
-            </clipPath>
-          </defs>
-          <circle cx={avatarCx} cy={avatarCy} r={avatarR} fill={color} />
-          <image
-            href={player.imageUrl}
-            x={avatarCx - avatarR}
-            y={avatarCy - avatarR}
-            width={avatarR * 2}
-            height={avatarR * 2}
-            clipPath={`url(#${photoClip})`}
-            preserveAspectRatio="xMidYMid slice"
-          />
-          <circle
-            cx={avatarCx}
-            cy={avatarCy}
-            r={avatarR}
-            fill="none"
-            stroke={color}
-            strokeWidth={0.4}
-            strokeOpacity={0.95}
-          />
-        </>
-      ) : (
-        <>
-          <circle cx={avatarCx} cy={avatarCy} r={avatarR} fill={color} fillOpacity={0.9} />
-          <text
-            x={avatarCx}
-            y={avatarCy}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={avatarR * 0.95}
-            fontWeight="bold"
-            fill="#0a0a0a"
-          >
-            {monogram(player.name)}
-          </text>
-        </>
-      )}
+      {/* Circular headshot, or a monogram chip when no photo is supplied — or
+          when the supplied one fails to load. */}
+      <SvgHeadshot
+        cx={avatarCx}
+        cy={avatarCy}
+        r={avatarR}
+        name={player.name}
+        imageUrl={player.imageUrl}
+        color={color}
+        ringColor={color}
+        ringWidth={0.4}
+        backingOpacity={0.9}
+        monogramFill="#0a0a0a"
+        monogramSizeRatio={0.95}
+      />
 
       {/* Name + crest + breakdown. */}
       <text x={textX} y={avatarCy - 0.8} fontSize={4} fontWeight="bold" fill="white">

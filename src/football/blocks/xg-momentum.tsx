@@ -6,7 +6,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
-  /** Match minute the shot was taken (0–95+). */
+  /** Match minute the shot was taken (0–90+ in normal time, up to 120+ in extra time). */
   minute: number;
   /** Which side took it — drives the colour and which line it steps up. */
   team: 'home' | 'away';
@@ -57,7 +57,31 @@ const PAD_T = 18;
 const PAD_B = 34;
 const PLOT_W = VB_W - PAD_L - PAD_R;
 const PLOT_H = VB_H - PAD_T - PAD_B;
-const MAX_MINUTE = 95;
+
+/**
+ * The x-axis floor: a normal-time match always reads to at least 95' so a 90'
+ * shot (plus a little stoppage) sits comfortably inside the plot rather than on
+ * the right edge. Extra-time matches extend the domain past this — see
+ * {@link xDomainMax}.
+ */
+const BASE_MAX_MINUTE = 95;
+
+/** Hard ceiling on the domain so a stray bad minute can't blow out the axis. */
+const ABSOLUTE_MAX_MINUTE = 135;
+
+/**
+ * The right edge of the time axis in minutes, derived from the data. Normal-time
+ * matches stay at {@link BASE_MAX_MINUTE}; once a shot lands past 90' (extra
+ * time) the domain extends to the last shot's minute plus a small margin so the
+ * final attempt isn't jammed against the frame, capped at
+ * {@link ABSOLUTE_MAX_MINUTE}. Returns a clean value so the ET ticks land on it.
+ */
+function xDomainMax(maxShotMinute: number): number {
+  if (maxShotMinute <= BASE_MAX_MINUTE) return BASE_MAX_MINUTE;
+  // Round up to the next 5' past the last shot for a little headroom, capped.
+  const padded = Math.ceil((maxShotMinute + 2) / 5) * 5;
+  return Math.min(padded, ABSOLUTE_MAX_MINUTE);
+}
 
 /** A shot with its running cumulative xG for that team, in plot coordinates. */
 interface Step {
@@ -76,16 +100,34 @@ interface TeamSeries {
   total: number;
 }
 
-const minuteToX = (minute: number): number =>
-  PAD_L + (clamp(minute, 0, MAX_MINUTE) / MAX_MINUTE) * PLOT_W;
+/** Map a match minute to an x in viewBox units, given the axis domain max. */
+const minuteToX = (minute: number, domainMax: number): number =>
+  PAD_L + (clamp(minute, 0, domainMax) / domainMax) * PLOT_W;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
 /**
+ * Minute-axis ticks across the (possibly extended) domain. Normal time reads in
+ * 15' steps to 90'. When the match ran to extra time the domain extends and we
+ * add 105' / 120' (and the true end) so the timeline stays legible through ET.
+ */
+function minuteTicks(domainMax: number): number[] {
+  const ticks = [0, 15, 30, 45, 60, 75, 90];
+  if (domainMax <= BASE_MAX_MINUTE) return ticks;
+  // Extra time: 90' is full-time, then the two ET periods.
+  for (const t of [105, 120]) if (t <= domainMax) ticks.push(t);
+  // Surface the actual end if it sits clear of the last fixed ET tick.
+  const last = ticks[ticks.length - 1] ?? 0;
+  if (domainMax - last >= 6) ticks.push(domainMax);
+  return ticks;
+}
+
+/**
  * Expected-goals momentum — a cumulative-xG "race" between two sides across the
- * 95 minutes. Each team's line steps up at every shot by that chance's xG, so
+ * match (normal time, and through extra time when it ran that long). Each team's
+ * line steps up at every shot by that chance's xG, so
  * the gap between the lines reads as who was creating the better chances and
  * when. Goals are marked with a filled node + the scorer's surname; the lines
  * draw in on mount. Hovering (or dragging) the plot snaps a vertical guide to
@@ -111,8 +153,13 @@ export function XgMomentum({
   // The minute the guide is snapped to. `null` = no scrub (resting state).
   const [scrubMinute, setScrubMinute] = useState<number | null>(null);
 
-  const { home, away, yMax, ordered } = useMemo(() => {
+  const { home, away, yMax, xMax, ordered } = useMemo(() => {
     const ordered = [...shots].sort((a, b) => a.minute - b.minute);
+    // The time axis extends to fit the latest shot — through extra time when the
+    // match ran past 90'. Derived once here and threaded into every minute→x map.
+    const lastMinute = ordered.length > 0 ? (ordered[ordered.length - 1]?.minute ?? 0) : 0;
+    const xMax = xDomainMax(lastMinute);
+
     const build = (team: 'home' | 'away', color: string): TeamSeries => {
       let cumulative = 0;
       const steps: Step[] = [];
@@ -122,7 +169,7 @@ export function XgMomentum({
         steps.push({
           shot,
           cumulative,
-          x: minuteToX(shot.minute),
+          x: minuteToX(shot.minute, xMax),
           y: 0, // y filled once yMax is known, below
         });
       }
@@ -138,7 +185,7 @@ export function XgMomentum({
     const yFor = (cumulative: number): number => PAD_T + PLOT_H - (cumulative / yMax) * PLOT_H;
     for (const s of [...home.steps, ...away.steps]) s.y = yFor(s.cumulative);
 
-    return { home, away, yMax, ordered };
+    return { home, away, yMax, xMax, ordered };
   }, [shots, homeColor, awayColor]);
 
   // Both series, back-to-front: away painted first so the home red reads forward.
@@ -164,11 +211,11 @@ export function XgMomentum({
 
   // Cumulative totals for each team *as of* the scrubbed minute (the readout).
   const readout = useMemo(() => {
-    const at = scrubMinute ?? MAX_MINUTE;
+    const at = scrubMinute ?? xMax;
     return { home: totalAtMinute(home, at), away: totalAtMinute(away, at) };
-  }, [scrubMinute, home, away]);
+  }, [scrubMinute, home, away, xMax]);
 
-  const guideX = scrubMinute === null ? null : minuteToX(scrubMinute);
+  const guideX = scrubMinute === null ? null : minuteToX(scrubMinute, xMax);
 
   /** Translate a pointer event to the nearest whole match minute. */
   const handleMove = (clientX: number) => {
@@ -178,7 +225,7 @@ export function XgMomentum({
     if (rect.width === 0) return;
     const vbX = ((clientX - rect.left) / rect.width) * VB_W;
     const ratio = clamp((vbX - PAD_L) / PLOT_W, 0, 1);
-    setScrubMinute(Math.round(ratio * MAX_MINUTE));
+    setScrubMinute(Math.round(ratio * xMax));
   };
 
   return (
@@ -274,8 +321,8 @@ export function XgMomentum({
 
           {/* Half-time marker — a quiet dashed divider at 45'. */}
           <line
-            x1={minuteToX(45)}
-            x2={minuteToX(45)}
+            x1={minuteToX(45, xMax)}
+            x2={minuteToX(45, xMax)}
             y1={PAD_T}
             y2={baselineY}
             stroke="white"
@@ -284,11 +331,26 @@ export function XgMomentum({
             strokeDasharray="3 5"
           />
 
-          {/* Minute axis ticks. */}
-          {[0, 15, 30, 45, 60, 75, 90].map((m) => (
+          {/* Full-time divider at 90' — only when the match ran to extra time, to
+              set the ET periods apart from normal time. */}
+          {xMax > BASE_MAX_MINUTE && (
+            <line
+              x1={minuteToX(90, xMax)}
+              x2={minuteToX(90, xMax)}
+              y1={PAD_T}
+              y2={baselineY}
+              stroke="white"
+              strokeOpacity={0.1}
+              strokeWidth={1}
+              strokeDasharray="3 5"
+            />
+          )}
+
+          {/* Minute axis ticks — extended through extra time when present. */}
+          {minuteTicks(xMax).map((m) => (
             <text
               key={`tick-${m}`}
-              x={minuteToX(m)}
+              x={minuteToX(m, xMax)}
               y={baselineY + 20}
               textAnchor="middle"
               fill="white"
@@ -480,7 +542,8 @@ function TeamPath({
 /**
  * A goal: a node on the line with the scorer's surname above it. When the shot
  * carries an `imageUrl`, the node becomes a small circular headshot ringed in
- * the team colour; otherwise it falls back to a clean filled dot.
+ * the team colour; when there's no photo — or the supplied one fails to load —
+ * it falls back to a clean filled dot (the surname above still names the scorer).
  */
 function GoalNode({
   step,
@@ -493,7 +556,9 @@ function GoalNode({
   label: string;
   clipId: string;
 }) {
-  const hasImage = typeof step.shot.imageUrl === 'string' && step.shot.imageUrl.length > 0;
+  const [failed, setFailed] = useState(false);
+  const hasImage =
+    typeof step.shot.imageUrl === 'string' && step.shot.imageUrl.length > 0 && !failed;
   const headR = 7;
   return (
     <motion.g
@@ -519,6 +584,8 @@ function GoalNode({
             height={headR * 2}
             clipPath={`url(#${clipId})`}
             preserveAspectRatio="xMidYMid slice"
+            // Missing/404 photo → fall back to the filled dot below.
+            onError={() => setFailed(true)}
           />
           {/* Team-colour ring + dark seam so it reads on either line. */}
           <circle cx={step.x} cy={step.y} r={headR} fill="none" stroke={color} strokeWidth={1.5} />

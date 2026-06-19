@@ -1,9 +1,10 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
-import { monogram, surname } from '#/football/lib/player-name';
+import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { SvgHeadshot } from '#/football/lib/headshot';
 
 /** How a single touch in the move connects to the next. */
 export type GoalStepType = 'pass' | 'carry' | 'shot';
@@ -92,7 +93,6 @@ export function GoalSequence({
   className,
   wordmark,
 }: GoalSequenceProps) {
-  const clipPrefix = useId();
   // Bumping `runId` remounts the animated layer, so it replays from the start
   // declaratively (no effects, no imperative animation controls).
   const [runId, setRunId] = useState(0);
@@ -179,12 +179,10 @@ export function GoalSequence({
         <Pitch variant="full" theme="dark">
           <MoveLayer
             key={runId}
-            clipPrefix={`${clipPrefix}-${runId}`}
             steps={steps}
             points={points}
             finishIndex={finishIndex}
             color={color}
-            scorer={goal.scorer}
           />
         </Pitch>
       </div>
@@ -207,19 +205,15 @@ export function GoalSequence({
  * the touch marker pops. The finish gets a red bloom + the scorer's headshot.
  */
 function MoveLayer({
-  clipPrefix,
   steps,
   points,
   finishIndex,
   color,
-  scorer,
 }: {
-  clipPrefix: string;
   steps: GoalStep[];
   points: { x: number; y: number }[];
   finishIndex: number;
   color: string;
-  scorer: string;
 }) {
   // The path ends at the goal mouth for the shot; otherwise at the next touch.
   const targetFor = (i: number): { x: number; y: number } => {
@@ -299,9 +293,7 @@ function MoveLayer({
         if (!p) return null;
         const isFinish = i === finishIndex;
         const delay = segDelay(i);
-        const showHeadshot = isFinish && Boolean(step.imageUrl);
         const r = isFinish ? 2.2 : 1.4;
-        const clipId = `${clipPrefix}-touch-${i}`;
         // Keep labels inside the pitch near the right edge / top.
         const labelAbove = p.y > 16;
         const labelY = labelAbove ? p.y - r - 1.3 : p.y + r + 2.6;
@@ -314,41 +306,23 @@ function MoveLayer({
             transition={{ delay, duration: 0.32, ease: 'backOut' }}
             style={{ transformOrigin: `${p.x}px ${p.y}px` }}
           >
-            {showHeadshot ? (
-              <>
-                <defs>
-                  <clipPath id={clipId}>
-                    <circle cx={p.x} cy={p.y} r={r} />
-                  </clipPath>
-                </defs>
-                <circle cx={p.x} cy={p.y} r={r} fill={color} />
-                <image
-                  href={step.imageUrl}
-                  x={p.x - r}
-                  y={p.y - r}
-                  width={r * 2}
-                  height={r * 2}
-                  clipPath={`url(#${clipId})`}
-                  preserveAspectRatio="xMidYMid slice"
-                />
-                <circle cx={p.x} cy={p.y} r={r} fill="none" stroke={color} strokeWidth={0.7} />
-              </>
-            ) : isFinish ? (
-              // Finish without a photo: a filled accent marker carrying initials.
-              <>
-                <circle cx={p.x} cy={p.y} r={r} fill={color} stroke="white" strokeWidth={0.3} />
-                <text
-                  x={p.x}
-                  y={p.y}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={r * 0.95}
-                  fontWeight="bold"
-                  fill="#0a0a0a"
-                >
-                  {monogram(step.player)}
-                </text>
-              </>
+            {isFinish ? (
+              // The finish: the scorer's headshot, or a filled accent marker
+              // carrying initials when there's no photo or it fails to load.
+              <SvgHeadshot
+                cx={p.x}
+                cy={p.y}
+                r={r}
+                name={step.player}
+                imageUrl={step.imageUrl}
+                color={color}
+                ringColor={color}
+                ringWidth={0.7}
+                monogramFill="#0a0a0a"
+                monogramSizeRatio={0.95}
+                fallbackStroke="white"
+                fallbackStrokeWidth={0.3}
+              />
             ) : (
               // A build-up touch: small numbered node.
               <>

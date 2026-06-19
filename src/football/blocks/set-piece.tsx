@@ -1,9 +1,10 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
-import { monogram, surname } from '#/football/lib/player-name';
+import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { SvgHeadshot } from '#/football/lib/headshot';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
 export type SetPieceKind = 'corner' | 'free-kick';
@@ -121,7 +122,6 @@ export function SetPiece({
   className,
   wordmark,
 }: SetPieceProps) {
-  const clipPrefix = useId();
 
   const first = setPieces[0];
 
@@ -234,7 +234,6 @@ export function SetPiece({
               key={`p-${i}`}
               player={player}
               index={i}
-              clipId={`${clipPrefix}-p-${i}`}
               attackingColor={attackingColor}
               defendingColor={defendingColor}
             />
@@ -286,13 +285,11 @@ function Key({ color, label }: { color: string; label: string }) {
 function PlayerNode({
   player,
   index,
-  clipId,
   attackingColor,
   defendingColor,
 }: {
   player: SetPiecePlayer;
   index: number;
-  clipId: string;
   attackingColor: string;
   defendingColor: string;
 }) {
@@ -323,49 +320,23 @@ function PlayerNode({
         />
       )}
 
-      {isHeadshot && player.imageUrl ? (
-        <>
-          <defs>
-            <clipPath id={clipId}>
-              <circle cx={p.x} cy={p.y} r={r} />
-            </clipPath>
-          </defs>
-          <circle cx={p.x} cy={p.y} r={r} fill={color} />
-          <image
-            href={player.imageUrl}
-            x={p.x - r}
-            y={p.y - r}
-            width={r * 2}
-            height={r * 2}
-            clipPath={`url(#${clipId})`}
-            preserveAspectRatio="xMidYMid slice"
-          />
-          <circle
-            cx={p.x}
-            cy={p.y}
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth={0.6}
-            strokeOpacity={0.95}
-          />
-        </>
-      ) : isHeadshot ? (
-        // Headshot actor without a photo: a larger filled disc + monogram.
-        <>
-          <circle cx={p.x} cy={p.y} r={r} fill={color} stroke="white" strokeWidth={0.3} />
-          <text
-            x={p.x}
-            y={p.y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={r * 0.85}
-            fontWeight="bold"
-            fill="white"
-          >
-            {monogram(player.name ?? '?')}
-          </text>
-        </>
+      {isHeadshot ? (
+        // Headshot actor: the photo, or a filled disc + monogram when no photo
+        // is supplied or the supplied one fails to load.
+        <SvgHeadshot
+          cx={p.x}
+          cy={p.y}
+          r={r}
+          name={player.name ?? '?'}
+          imageUrl={player.imageUrl}
+          color={color}
+          ringColor={color}
+          ringWidth={0.6}
+          monogramFill="white"
+          monogramSizeRatio={0.85}
+          fallbackStroke="white"
+          fallbackStrokeWidth={0.3}
+        />
       ) : player.keeper ? (
         // Keeper — a ringed dot, in the defending colour by default.
         <>
