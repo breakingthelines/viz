@@ -82,10 +82,15 @@ function BtlWordmark() {
 function ProviderMark({ provider }: { provider: DataProvider }) {
   if (provider === 'statsbomb') {
     return (
+      // Height is inlined, not a Tailwind class: viz is a standalone package, so a
+      // consumer that doesn't compile viz's arbitrary classes (or whose editor
+      // content area resets <img> sizing) would otherwise render the mark at its
+      // intrinsic 55px. An inline style pins it to the colophon height regardless.
       <img
         src={HUDL_STATSBOMB_LOGO}
         alt="Data: Hudl StatsBomb"
-        className="h-[14px] w-auto shrink-0 select-none"
+        style={{ height: 14, width: 'auto' }}
+        className="shrink-0 select-none"
         draggable={false}
       />
     );
