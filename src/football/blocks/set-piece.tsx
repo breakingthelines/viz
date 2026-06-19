@@ -77,6 +77,13 @@ export interface SetPieceProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 const ATTACKING_COLOR = '#eb0000';
@@ -123,6 +130,7 @@ export function SetPiece({
   onSelect,
   className,
   wordmark,
+  builderControls,
 }: SetPieceProps) {
   const first = setPieces[0];
 
@@ -266,7 +274,7 @@ export function SetPiece({
         <span className="ml-auto tabular-nums text-white/70">{KIND_LABEL[active.kind]}</span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
   );
 }

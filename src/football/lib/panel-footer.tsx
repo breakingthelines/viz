@@ -145,6 +145,7 @@ export function PanelFooter({
   provider = 'statsbomb',
   className,
   wordmark,
+  builderControls,
 }: {
   /** Data source shown on the right. Defaults to StatsBomb. */
   provider?: DataProvider;
@@ -157,6 +158,16 @@ export function PanelFooter({
    * when omitted (Storybook / standalone) we fall back to the inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional leading slot rendered at the START (left) of the footer row, before
+   * the wordmark — purely additive. The editor uses it to mount its match-picker
+   * chip INSIDE the colophon row instead of as a separate bar below the block;
+   * the wordmark, Share control, and provider mark stay on the right exactly as
+   * before. The reader path passes nothing, so the footer looks unchanged. The
+   * slot is excluded from the "Share as image" capture (it is a builder-only
+   * control, not part of the published graphic).
+   */
+  builderControls?: ReactNode;
 }) {
   const footerRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -202,7 +213,16 @@ export function PanelFooter({
         className
       )}
     >
-      {wordmark ?? <BtlWordmark />}
+      <div className="flex min-w-0 items-center gap-3">
+        {/* Builder-only leading slot (e.g. the editor's match picker). Marked
+            export-ignore so it never lands in the saved PNG. */}
+        {builderControls != null && (
+          <div data-export-ignore="true" className="flex min-w-0 items-center">
+            {builderControls}
+          </div>
+        )}
+        {wordmark ?? <BtlWordmark />}
+      </div>
       <div className="flex items-center gap-3">
         <button
           type="button"

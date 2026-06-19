@@ -42,14 +42,52 @@ export interface HeatMapProps {
    * where the footer falls back to viz's inlined replica.
    */
   wordmark?: ReactNode;
+  /**
+   * Optional builder-only controls (e.g. the editor's match picker) rendered in
+   * the footer colophon row, to the LEFT of the wordmark. Purely additive: the
+   * reader path passes nothing and the footer is unchanged. Forwarded straight
+   * to {@link PanelFooter}.
+   */
+  builderControls?: ReactNode;
 }
 
 /** StatsBomb pitch dimensions. */
 const SB_LENGTH = 120;
 const SB_WIDTH = 80;
 
-/** Soft-blob radius as a fraction of the canvas's shorter edge. */
-const BLOB_RADIUS_RATIO = 0.085;
+/**
+ * Density-field resolution. Touches are binned into a `DENSITY_W × DENSITY_H`
+ * scalar field which is normalised and then up-scaled with smoothing for a soft
+ * gradient — the same soft-falloff trick the pitch-control surface uses. Kept
+ * deliberately coarse so the bilinear up-scale blends neighbouring cells into
+ * smooth zones rather than per-touch speckle.
+ */
+const DENSITY_W = 60;
+const DENSITY_H = 40;
+
+/**
+ * Per-touch kernel radius in GRID cells. It scales DOWN with touch count so a
+ * dense team map concentrates into hot zones instead of smearing into a flood:
+ * few touches → a broad, soft bloom; many touches → tighter contributions that
+ * pile up only where play actually clustered. The band keeps even a busy map's
+ * kernel wide enough (≥4 cells) that overlapping touches fuse into zones.
+ */
+const KERNEL_MIN = 4;
+const KERNEL_MAX = 11;
+
+/**
+ * Ceiling alpha for the very hottest zone. The normalised field tops out here so
+ * even a team's busiest area reads as a strong warm region, never a fully
+ * saturated lava blob — the dark pitch and its markings stay readable beneath.
+ */
+const HEAT_CEILING = 0.8;
+
+/**
+ * Gamma applied to the normalised field before mapping to alpha. >1 lifts the
+ * mid/low density so warm regions spread legibly rather than collapsing to a few
+ * pinpoints, while the peak stays bounded by {@link HEAT_CEILING}.
+ */
+const HEAT_GAMMA = 0.72;
 
 /**
  * Heat map — a restrained density "bloom" of a team's touches on the
@@ -70,6 +108,7 @@ export function HeatMap({
   players,
   className,
   wordmark,
+  builderControls,
 }: HeatMapProps) {
   // `null` = the "All" option; otherwise a player id.
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
@@ -154,7 +193,7 @@ export function HeatMap({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" wordmark={wordmark} />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </figure>
   );
 }
@@ -280,11 +319,19 @@ interface DensityCanvasProps {
 }
 
 /**
- * The bloom layer. Renders accumulated soft radial gradients (additive) onto a
- * DPR-scaled canvas sized to its container, then fades in on mount. Because the
- * parent keys this component on the active filter, React remounts it on each
- * filter change — `AnimatePresence` cross-fades the old cloud out as the new
- * one blooms in.
+ * The bloom layer. Builds a normalised scalar DENSITY FIELD from the touches,
+ * then maps it through a transparent→colour ramp and up-scales it with smoothing
+ * for a soft gradient — so the result reads as positional HOT ZONES over a
+ * mostly-dark pitch, not a saturated flood. Because the parent keys this
+ * component on the active filter, React remounts it on each filter change —
+ * `AnimatePresence` cross-fades the old cloud out as the new one blooms in.
+ *
+ * Why a field (not additive blobs painted straight to the canvas): additive
+ * `lighter` painting has no ceiling — more touches just pile up to solid colour.
+ * Accumulating into a grid lets us NORMALISE by the field's own peak and cap the
+ * hottest cell, so a 300-touch team map and a 30-touch player map both read as
+ * graded zones rather than one flooding and the other vanishing. The field is
+ * composited normally (no `screen` blend) so the dark grass stays dark.
  */
 function DensityCanvas({ touches, color }: DensityCanvasProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -317,28 +364,73 @@ function DensityCanvas({ touches, color }: DensityCanvasProps) {
 
     if (touches.length === 0) return;
 
-    const { r, g, b } = hexToRgb(color);
-    const radius = Math.max(size * BLOB_RADIUS_RATIO, 6);
-    // Per-touch ceiling: many overlaps build toward the colour without any
-    // single touch shouting. Additive 'lighter' blending does the stacking.
-    const peak = Math.min(0.16, 7 / Math.sqrt(touches.length));
+    // ── 1. Accumulate a scalar density field ──────────────────────────────
+    // Kernel radius shrinks as the touch set grows: dense maps concentrate into
+    // zones instead of smearing. A radial (1 - (d/R)²)² falloff per touch.
+    const field = new Float32Array(DENSITY_W * DENSITY_H);
+    // Count-aware kernel: broad for a sparse player map, tighter for a dense
+    // team map (but never so tight that touches stop fusing — see KERNEL_MIN).
+    const kernel = clamp(95 / Math.sqrt(touches.length), KERNEL_MIN, KERNEL_MAX);
+    const kr = Math.ceil(kernel);
+    const krSq = kernel * kernel;
 
-    ctx.globalCompositeOperation = 'lighter';
     for (const t of touches) {
-      // StatsBomb (120×80) → 0..1 → canvas px. SB y already runs left→right
-      // matching the Pitch's y (0 = left touchline).
-      const cx = (t.x / SB_LENGTH) * size;
-      const cy = (t.y / SB_WIDTH) * size;
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${peak})`);
-      grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${peak * 0.4})`);
-      grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
+      // StatsBomb (120×80) → grid cell. SB y already runs left→right matching
+      // the Pitch's y (0 = left touchline).
+      const gx = (t.x / SB_LENGTH) * DENSITY_W;
+      const gy = (t.y / SB_WIDTH) * DENSITY_H;
+      const x0 = Math.max(0, Math.floor(gx - kr));
+      const x1 = Math.min(DENSITY_W - 1, Math.ceil(gx + kr));
+      const y0 = Math.max(0, Math.floor(gy - kr));
+      const y1 = Math.min(DENSITY_H - 1, Math.ceil(gy + kr));
+      for (let cy = y0; cy <= y1; cy++) {
+        for (let cx = x0; cx <= x1; cx++) {
+          const dx = cx + 0.5 - gx;
+          const dy = cy + 0.5 - gy;
+          const dSq = dx * dx + dy * dy;
+          if (dSq >= krSq) continue;
+          // Smooth bump: (1 - (d/R)²)² — 1 at the centre, 0 at the edge.
+          const f = 1 - dSq / krSq;
+          field[cy * DENSITY_W + cx] += f * f;
+        }
+      }
     }
-    ctx.globalCompositeOperation = 'source-over';
+
+    // ── 2. Normalise by the field's peak ──────────────────────────────────
+    let peak = 0;
+    for (let i = 0; i < field.length; i++) {
+      if (field[i]! > peak) peak = field[i]!;
+    }
+    if (peak <= 0) return;
+
+    // ── 3. Map the normalised field → transparent→colour ramp ─────────────
+    const { r, g, b } = hexToRgb(color);
+    const off = document.createElement('canvas');
+    off.width = DENSITY_W;
+    off.height = DENSITY_H;
+    const octx = off.getContext('2d');
+    if (!octx) return;
+    const img = octx.createImageData(DENSITY_W, DENSITY_H);
+
+    for (let i = 0; i < field.length; i++) {
+      const norm = field[i]! / peak; // 0..1
+      if (norm <= 0.001) continue; // leave cold cells fully transparent
+      // Gamma-lift the mids so warm regions spread, then cap at the ceiling.
+      const a = Math.min(HEAT_CEILING, norm ** HEAT_GAMMA * HEAT_CEILING);
+      const o = i * 4;
+      img.data[o] = r;
+      img.data[o + 1] = g;
+      img.data[o + 2] = b;
+      img.data[o + 3] = Math.round(a * 255);
+    }
+
+    octx.putImageData(img, 0, 0);
+    // Up-scale the tiny field with smoothing — that interpolation IS the soft
+    // gradient falloff, no separate blur pass needed. Normal compositing keeps
+    // the dark pitch dark where there is no heat.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(off, 0, 0, size, size);
   }, [touches, color, size]);
 
   return (
@@ -351,11 +443,15 @@ function DensityCanvas({ touches, color }: DensityCanvasProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-0 h-full w-full"
-          style={{ mixBlendMode: 'screen' }}
         />
       </AnimatePresence>
     </div>
   );
+}
+
+/** Clamp `n` into the inclusive `[lo, hi]` band. */
+function clamp(n: number, lo: number, hi: number): number {
+  return n < lo ? lo : n > hi ? hi : n;
 }
 
 /** Parse a `#rgb`/`#rrggbb` hex string into 0–255 channels (falls back to red). */

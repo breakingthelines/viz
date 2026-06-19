@@ -9,10 +9,13 @@
   --color-pitch-lines: oklch(0.95 0.01 90);
   --color-pitch-lines-muted: oklch(0.75 0.01 90);
 
-  /* Dark pitch (BTL Match Centre photo-hero theme — near-black grass, white
-     lines, no green stripe pattern). Matches the dark page token #0d0d0d. */
+  /* Dark pitch (BTL Match Centre photo-hero theme — near-black grass, soft
+     white lines, no green stripe pattern). Matches the dark page token #0d0d0d.
+     The lines are a SEMI-TRANSPARENT white so they read as quiet pitch markings
+     (not a harsh white grid) and stay legible UNDER the screen-blend data layers
+     the blocks paint on top. */
   --color-pitch-grass-dark: oklch(0.14 0 0);
-  --color-pitch-lines-dark: oklch(1 0 0);
+  --color-pitch-lines-dark: rgba(255, 255, 255, 0.28);
 
   /* Marker colors */
   --color-marker-goal: oklch(0.65 0.2 145);

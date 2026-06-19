@@ -362,3 +362,39 @@ export const SemiFinal: Story = {
     shots: ARG_CRO_SHOTS,
   },
 };
+
+/**
+ * Demonstrates the additive `builderControls` footer slot — the editor mounts
+ * its match-picker chip here, INSIDE the colophon row to the left of the BTL
+ * wordmark, instead of as a separate bar below the block. Every block forwards
+ * this prop to its {@link PanelFooter}. The reader path passes nothing, so the
+ * footer is unchanged; the slot is also excluded from the "Share as image"
+ * capture. The chip below is a stand-in for the real editor control.
+ */
+export const WithBuilderControls: Story = {
+  args: {
+    homeTeam: 'Argentina',
+    awayTeam: 'France',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
+    shots: ARG_FRA_SHOTS,
+    builderControls: (
+      <button
+        type="button"
+        className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25"
+      >
+        <span className="text-white/50">Match</span>
+        <span className="font-semibold">ARG v FRA</span>
+        <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
+          <path
+            d="M4 6l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    ),
+  },
+};
