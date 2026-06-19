@@ -4,6 +4,7 @@ import type { PitchTheme } from '#/football/primitives/pitch';
 import { PlayerMarker } from '#/football/primitives/player-marker';
 import type { Formation, FormationPosition } from '#/football/types';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
+import { BLOCK_FONT_STACK } from '#/football/lib/font';
 
 export interface FormationBoardProps {
   /** Formation data to display */
@@ -61,13 +62,14 @@ export function FormationBoard({
   };
 
   return (
-    <div className={cn('flex flex-col', className)}>
+    // Inter-first sans (product decision): opt out of the host page's editorial
+    // serif so the chip + the pitch's SVG labels render in Inter.
+    <div className={cn('flex flex-col', className)} style={{ fontFamily: BLOCK_FONT_STACK }}>
       {/* Formation chip — Wave 6.4.8 moved out of the pitch corner and onto
           its own row above the pitch frame; mirrors `PlayerRatingBoard`. */}
       <div
         data-slot="formation-board-chip"
         className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 font-sans text-[12px] tracking-tight text-white/70"
-        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
       >
         <span className="font-semibold text-white/85">
           {formation.team.shortName ?? formation.team.name}

@@ -5,6 +5,7 @@ import type { PitchTheme } from '#/football/primitives/pitch';
 import type { MatchEvent, PitchCoordinates, ShotEventData } from '#/football/types';
 import { ShotOutcome, shotOutcomeName, isShot } from '#/football/types';
 import { finite, finitePositive } from '#/football/lib/finite';
+import { BLOCK_FONT_STACK } from '#/football/lib/font';
 
 /** Shot event type - MatchEvent with shot data */
 type ShotMatchEvent = MatchEvent & { eventData: { case: 'shot'; value: ShotEventData } };
@@ -121,7 +122,9 @@ export function ShotMap({
   };
 
   return (
-    <div className={cn('relative', className)}>
+    // Inter-first sans (product decision): opt out of the host page's editorial
+    // serif so the shot markers' SVG labels render in Inter.
+    <div className={cn('relative', className)} style={{ fontFamily: BLOCK_FONT_STACK }}>
       <Pitch variant={variant} theme={theme}>
         {shotEvents.map((shot) => {
           const shotData = shot.eventData.value;

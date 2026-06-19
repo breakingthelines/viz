@@ -5,6 +5,7 @@ import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { monogram, surname } from '#/football/lib/player-name';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite, finitePositive } from '#/football/lib/finite';
+import { BLOCK_FONT_STACK } from '#/football/lib/font';
 
 /** A player assigned to a lineup slot. */
 export interface LineupSlotPlayer {
@@ -97,12 +98,13 @@ export function LineupPitch({
   const markerSize = finitePositive(markerSizeRaw, 3.4);
 
   return (
-    <div className={cn('flex flex-col', className)}>
+    // Inter-first sans (product decision): opt out of the host page's editorial
+    // serif so the chip + the pitch's SVG labels render in Inter.
+    <div className={cn('flex flex-col', className)} style={{ fontFamily: BLOCK_FONT_STACK }}>
       {!editable && (chipLabel || formationLabel) && (
         <div
           data-slot="lineup-pitch-chip"
           className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 text-[12px] tracking-tight"
-          style={{ fontFamily: 'inherit' }}
         >
           {chipLabel && <span className="font-semibold text-white/90">{chipLabel}</span>}
           {formationLabel && <span className="tabular-nums text-white/55">{formationLabel}</span>}
