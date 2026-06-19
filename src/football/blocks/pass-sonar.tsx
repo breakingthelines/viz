@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -47,6 +47,12 @@ export interface PassSonarProps {
   players: PassSonarPlayer[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const TEAM_COLOR = '#eb0000';
@@ -145,6 +151,7 @@ export function PassSonar({
   color = TEAM_COLOR,
   players,
   className,
+  wordmark,
 }: PassSonarProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -313,7 +320,7 @@ export function PassSonar({
         </Pitch>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

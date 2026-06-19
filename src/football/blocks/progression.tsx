@@ -50,6 +50,12 @@ export interface ProgressionProps {
   actions: ProgressionAction[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const DEFAULT_COLOR = '#eb0000';
@@ -195,6 +201,7 @@ export function Progression({
   color = DEFAULT_COLOR,
   actions,
   className,
+  wordmark,
 }: ProgressionProps) {
   const idPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -415,7 +422,7 @@ export function Progression({
         </div>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

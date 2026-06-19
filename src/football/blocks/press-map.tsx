@@ -48,6 +48,12 @@ export interface PressMapProps {
   thirds?: PressThirds;
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -124,6 +130,7 @@ export function PressMap({
   events,
   thirds: thirdsProp,
   className,
+  wordmark,
 }: PressMapProps) {
   const [metric, setMetric] = useState<PressMetric>('all');
   const [hoverThird, setHoverThird] = useState<ThirdKey | null>(null);
@@ -286,7 +293,7 @@ export function PressMap({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </figure>
   );
 }

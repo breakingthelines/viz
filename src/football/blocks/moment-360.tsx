@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -77,6 +77,12 @@ export interface Moment360Props {
   awayColor?: string;
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -129,6 +135,7 @@ export function Moment360({
   homeColor = HOME_COLOR,
   awayColor = AWAY_COLOR,
   className,
+  wordmark,
 }: Moment360Props) {
   const maskId = useId();
   const desatId = useId();
@@ -510,7 +517,7 @@ export function Moment360({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </figure>
   );
 }

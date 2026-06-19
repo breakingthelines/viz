@@ -41,6 +41,12 @@ export interface LineBreakingProps {
   passes: LineBreakingPass[];
   /** Additional CSS classes for the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 /** StatsBomb pitch is 120 long × 80 wide; the Pitch primitive is 100 × 100. */
@@ -71,6 +77,7 @@ export function LineBreaking({
   color = '#eb0000',
   passes,
   className,
+  wordmark,
 }: LineBreakingProps) {
   const uid = useId();
   const arrowId = `${uid}-arrow`;
@@ -230,7 +237,7 @@ export function LineBreaking({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

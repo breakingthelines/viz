@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -38,6 +38,12 @@ export interface PitchControlProps {
   players: PitchControlPlayer[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -86,6 +92,7 @@ export function PitchControl({
   awayCrestUrl,
   players,
   className,
+  wordmark,
 }: PitchControlProps) {
   const titleId = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -276,7 +283,7 @@ export function PitchControl({
         {hovered?.isGoalkeeper && <span className="tabular-nums text-white/70">GK</span>}
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </figure>
   );
 }

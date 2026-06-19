@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
@@ -59,6 +59,12 @@ export interface PassNetworkProps {
   links: PassNetworkLink[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 /** StatsBomb pitch is 120×80; normalise to the 0–100 `Pitch` viewBox. */
@@ -126,6 +132,7 @@ export function PassNetwork({
   players,
   links,
   className,
+  wordmark,
 }: PassNetworkProps) {
   const clipPrefix = useId();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -362,7 +369,7 @@ export function PassNetwork({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

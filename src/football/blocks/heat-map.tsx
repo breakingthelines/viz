@@ -35,6 +35,12 @@ export interface HeatMapProps {
   players?: HeatMapPlayer[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -62,6 +68,7 @@ export function HeatMap({
   touches,
   players,
   className,
+  wordmark,
 }: HeatMapProps) {
   // `null` = the "All" option; otherwise a player id.
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
@@ -143,7 +150,7 @@ export function HeatMap({
         </span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </figure>
   );
 }
