@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { type ReactNode, useId, useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
 import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 
@@ -67,9 +67,9 @@ function BtlWordmark() {
   return (
     <span className="flex shrink-0 items-center gap-[7px]" aria-label="Breaking The Lines">
       <BtlMark className="size-[17px] shrink-0" />
-      <span className="flex flex-col gap-0 text-[9.5px] font-semibold leading-[1.08] tracking-[-0.3px] text-white">
-        <span>breaking</span>
-        <span>the lines</span>
+      <span className="flex flex-col gap-0 whitespace-nowrap text-[9.5px] font-semibold leading-[1.08] tracking-[-0.3px] text-white">
+        <span className="whitespace-nowrap">breaking</span>
+        <span className="whitespace-nowrap">the lines</span>
       </span>
     </span>
   );
@@ -82,10 +82,15 @@ function BtlWordmark() {
 function ProviderMark({ provider }: { provider: DataProvider }) {
   if (provider === 'statsbomb') {
     return (
+      // Height is inlined, not a Tailwind class: viz is a standalone package, so a
+      // consumer that doesn't compile viz's arbitrary classes (or whose editor
+      // content area resets <img> sizing) would otherwise render the mark at its
+      // intrinsic 55px. An inline style pins it to the colophon height regardless.
       <img
         src={HUDL_STATSBOMB_LOGO}
         alt="Data: Hudl StatsBomb"
-        className="h-[14px] w-auto shrink-0 select-none"
+        style={{ height: 14, width: 'auto' }}
+        className="shrink-0 select-none"
         draggable={false}
       />
     );
@@ -139,11 +144,19 @@ function slugify(s: string): string {
 export function PanelFooter({
   provider = 'statsbomb',
   className,
+  wordmark,
 }: {
   /** Data source shown on the right. Defaults to StatsBomb. */
   provider?: DataProvider;
   /** Extra classes on the footer row. */
   className?: string;
+  /**
+   * The BTL wordmark on the left. viz is a standalone AGPL package with NO
+   * design-system dependency, so it CANNOT import the real `BtlWordmark`. A host
+   * that has the design system (the editor) passes the genuine component here;
+   * when omitted (Storybook / standalone) we fall back to the inlined replica.
+   */
+  wordmark?: ReactNode;
 }) {
   const footerRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -189,7 +202,7 @@ export function PanelFooter({
         className
       )}
     >
-      <BtlWordmark />
+      {wordmark ?? <BtlWordmark />}
       <div className="flex items-center gap-3">
         <button
           type="button"

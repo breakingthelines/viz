@@ -75,6 +75,12 @@ export interface ShotMapProps {
   onFilterChange?: (filter: ShotMapFilter) => void;
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -131,6 +137,7 @@ export function ShotMap({
   filter: filterProp,
   onFilterChange,
   className,
+  wordmark,
 }: ShotMapProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -442,7 +449,7 @@ export function ShotMap({
         })}
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

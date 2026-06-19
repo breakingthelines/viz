@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { surname } from '#/football/lib/player-name';
@@ -37,6 +37,12 @@ export interface XgMomentumProps {
   awayColor?: string;
   /** Additional classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const HOME_RED = '#eb0000';
@@ -98,6 +104,7 @@ export function XgMomentum({
   homeColor = HOME_RED,
   awayColor = AWAY_BLUE,
   className,
+  wordmark,
 }: XgMomentumProps) {
   const uid = useId();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -369,7 +376,7 @@ export function XgMomentum({
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </figure>
   );
 }

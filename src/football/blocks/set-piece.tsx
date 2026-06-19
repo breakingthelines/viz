@@ -68,6 +68,12 @@ export interface SetPieceProps {
   onSelect?: (id: string) => void;
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const ATTACKING_COLOR = '#eb0000';
@@ -113,6 +119,7 @@ export function SetPiece({
   activeId: activeIdProp,
   onSelect,
   className,
+  wordmark,
 }: SetPieceProps) {
   const clipPrefix = useId();
 
@@ -256,7 +263,7 @@ export function SetPiece({
         <span className="ml-auto tabular-nums text-white/70">{KIND_LABEL[active.kind]}</span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }

@@ -50,6 +50,12 @@ export interface GoalSequenceProps {
   color?: string;
   /** Additional CSS classes on the outer panel. */
   className?: string;
+  /**
+   * BTL wordmark for the footer colophon. A design-system-aware host (the
+   * editor) passes the real `BtlWordmark`; omitted in Storybook/standalone,
+   * where the footer falls back to viz's inlined replica.
+   */
+  wordmark?: ReactNode;
 }
 
 const ACCENT = '#eb0000';
@@ -84,6 +90,7 @@ export function GoalSequence({
   goals,
   color = ACCENT,
   className,
+  wordmark,
 }: GoalSequenceProps) {
   const clipPrefix = useId();
   // Bumping `runId` remounts the animated layer, so it replays from the start
@@ -189,7 +196,7 @@ export function GoalSequence({
         <span className="tabular-nums">{goal.minute}&apos;</span>
       </div>
 
-      <PanelFooter provider="statsbomb" />
+      <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
   );
 }
