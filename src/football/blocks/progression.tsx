@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite } from '#/football/lib/finite';
 
 /** A progressive action: a carry or a pass that advances the ball. */
 export type ProgressionType = 'carry' | 'pass';
@@ -89,7 +90,7 @@ function emphasis(frac: number): number {
  * right-hand goal, so the attacking frame (x→120) maps straight through.
  */
 function toPitch(x: number, y: number): { x: number; y: number } {
-  return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
+  return { x: finite((x * 100) / SB_X), y: finite((y * 100) / SB_Y) };
 }
 
 /** Stroke width in viewBox units. Wide dynamic range so xT reads off thickness. */

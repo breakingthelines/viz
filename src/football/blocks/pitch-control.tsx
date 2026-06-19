@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite } from '#/football/lib/finite';
 
 /** BTL team accents — the only two colours on the control surface. */
 const HOME_COLOR = '#eb0000';
@@ -101,10 +102,10 @@ export function PitchControl({
     () =>
       players.map((p) => ({
         ...p,
-        gx: (p.x / SB_LENGTH) * GRID_W,
-        gy: (p.y / SB_WIDTH) * GRID_H,
-        cx: (p.x * 100) / SB_LENGTH,
-        cy: (p.y * 100) / SB_WIDTH,
+        gx: finite((p.x / SB_LENGTH) * GRID_W),
+        gy: finite((p.y / SB_WIDTH) * GRID_H),
+        cx: finite((p.x * 100) / SB_LENGTH),
+        cy: finite((p.y * 100) / SB_WIDTH),
       })),
     [players]
   );

@@ -4,6 +4,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import type { MatchEvent, PitchCoordinates, ShotEventData } from '#/football/types';
 import { ShotOutcome, shotOutcomeName, isShot } from '#/football/types';
+import { finite, finitePositive } from '#/football/lib/finite';
 
 /** Shot event type - MatchEvent with shot data */
 type ShotMatchEvent = MatchEvent & { eventData: { case: 'shot'; value: ShotEventData } };
@@ -124,13 +125,17 @@ export function ShotMap({
       <Pitch variant={variant} theme={theme}>
         {shotEvents.map((shot) => {
           const shotData = shot.eventData.value;
-          const xg = shotData.xg ?? 0.1;
-          const size = sizeScale(xg);
+          const xg = finite(shotData.xg ?? 0.1, 0.1);
+          const size = finitePositive(sizeScale(xg), minSize);
           const isSelected = shot.id === selectedShotId;
           const color = getMarkerColor(shot);
           const isGoal = shotData.outcome === ShotOutcome.GOAL;
           const outcomeName = shotOutcomeName[shotData.outcome];
-          const point = placeShot(shot);
+          const rawPoint = placeShot(shot);
+          const point =
+            rawPoint && Number.isFinite(rawPoint.x) && Number.isFinite(rawPoint.y)
+              ? rawPoint
+              : undefined;
 
           return (
             <g

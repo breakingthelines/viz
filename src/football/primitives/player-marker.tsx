@@ -1,4 +1,5 @@
 import { cn } from '#/lib/utils';
+import { finite, finitePositive } from '#/football/lib/finite';
 import type { PitchCoordinates } from '#/football/types';
 
 export interface PlayerMarkerProps {
@@ -36,7 +37,7 @@ export interface PlayerMarkerProps {
  */
 export function PlayerMarker({
   position,
-  size = 2,
+  size: sizeRaw = 2,
   color = 'var(--color-team-home)',
   strokeColor = 'white',
   number,
@@ -49,6 +50,11 @@ export function PlayerMarker({
 }: PlayerMarkerProps) {
   const effectiveOpacity = variant === 'predicted' ? opacity * 0.6 : opacity;
   const strokeDashArray = variant === 'predicted' ? '0.6 0.4' : undefined;
+  // Guard against sparse/partial position or size data producing NaN/undefined
+  // SVG attributes (e.g. `<circle> attribute r: Expected length`).
+  const cx = finite(position.x);
+  const cy = finite(position.y);
+  const size = finitePositive(sizeRaw, 2);
 
   return (
     <g
@@ -62,8 +68,8 @@ export function PlayerMarker({
       {/* Selection ring */}
       {selected && (
         <circle
-          cx={position.x}
-          cy={position.y}
+          cx={cx}
+          cy={cy}
           r={size + 1}
           fill="none"
           stroke={strokeColor}
@@ -74,8 +80,8 @@ export function PlayerMarker({
 
       {/* Main marker */}
       <circle
-        cx={position.x}
-        cy={position.y}
+        cx={cx}
+        cy={cy}
         r={size}
         fill={color}
         stroke={strokeColor}
@@ -86,8 +92,8 @@ export function PlayerMarker({
       {/* Player number */}
       {number !== undefined && (
         <text
-          x={position.x}
-          y={position.y}
+          x={cx}
+          y={cy}
           textAnchor="middle"
           dominantBaseline="central"
           fill={strokeColor}

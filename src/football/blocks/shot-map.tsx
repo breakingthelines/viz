@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite, finitePositive } from '#/football/lib/finite';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
 export type ShotTeam = 'home' | 'away';
@@ -100,14 +101,15 @@ const SB_Y = 80;
  * right for both sides — the geometry reads correctly for a fixed viewer.
  */
 function toPitch(x: number, y: number, team: ShotTeam): { x: number; y: number } {
-  const px = (x * 100) / SB_X;
-  const py = (y * 100) / SB_Y;
+  const px = finite((x * 100) / SB_X);
+  const py = finite((y * 100) / SB_Y);
   return team === 'home' ? { x: px, y: py } : { x: 100 - px, y: py };
 }
 
 /** Marker radius in viewBox units, scaled by xG (small chances stay legible). */
 function radiusForXg(xg: number): number {
-  const clamped = Math.max(0, Math.min(1, xg));
+  // A missing xG must still yield a legible marker, not a NaN radius.
+  const clamped = Number.isFinite(xg) ? Math.max(0, Math.min(1, xg)) : 0;
   return 1.5 + Math.sqrt(clamped) * 3.4;
 }
 
@@ -416,9 +418,9 @@ export function ShotMap({
  * than leaving a flat coloured disc.
  */
 function ShotMarkerBody({
-  cx,
-  cy,
-  r,
+  cx: cxRaw,
+  cy: cyRaw,
+  r: rRaw,
   color,
   isGoal,
   player,
@@ -436,6 +438,9 @@ function ShotMarkerBody({
 }) {
   const [failed, setFailed] = useState(false);
   const showPhoto = typeof imageUrl === 'string' && imageUrl.length > 0 && !failed;
+  const cx = finite(cxRaw);
+  const cy = finite(cyRaw);
+  const r = finitePositive(rRaw, 1);
 
   if (showPhoto) {
     return (
@@ -805,9 +810,9 @@ function FreezeFrameLayer({ shot, color }: { shot: Shot; color: string }) {
 
 /** Animated xG ring: a track + an accent arc that sweeps to the xG fraction. */
 function XgRing({
-  cx,
-  cy,
-  r,
+  cx: cxRaw,
+  cy: cyRaw,
+  r: rRaw,
   xg,
   color,
 }: {
@@ -817,7 +822,10 @@ function XgRing({
   xg: number;
   color: string;
 }) {
-  const clamped = Math.max(0, Math.min(1, xg));
+  const cx = finite(cxRaw);
+  const cy = finite(cyRaw);
+  const r = finitePositive(rRaw, 1);
+  const clamped = Number.isFinite(xg) ? Math.max(0, Math.min(1, xg)) : 0;
   const circumference = 2 * Math.PI * r;
   return (
     <g style={{ pointerEvents: 'none' }}>

@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite } from '#/football/lib/finite';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
 export type MomentTeam = 'home' | 'away';
@@ -94,8 +95,8 @@ const SB_Y = 80;
 
 /** Normalise a StatsBomb point to 0–100 pitch coords, mirroring the away side. */
 function toPitch(p: MomentPoint, team: MomentTeam): { x: number; y: number } {
-  const px = (p.x * 100) / SB_X;
-  const py = (p.y * 100) / SB_Y;
+  const px = finite((p.x * 100) / SB_X);
+  const py = finite((p.y * 100) / SB_Y);
   // Home attacks left→right (keep). Away attacks right→left (mirror both axes
   // so the camera geometry reads coherently toward the goal being attacked).
   return team === 'home' ? { x: px, y: py } : { x: 100 - px, y: 100 - py };

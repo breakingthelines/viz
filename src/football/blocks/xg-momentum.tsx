@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite } from '#/football/lib/finite';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
@@ -102,9 +103,10 @@ interface TeamSeries {
 
 /** Map a match minute to an x in viewBox units, given the axis domain max. */
 const minuteToX = (minute: number, domainMax: number): number =>
-  PAD_L + (clamp(minute, 0, domainMax) / domainMax) * PLOT_W;
+  finite(PAD_L + (clamp(minute, 0, domainMax) / domainMax) * PLOT_W, PAD_L);
 
 function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, value));
 }
 
@@ -157,7 +159,7 @@ export function XgMomentum({
     const ordered = [...shots].sort((a, b) => a.minute - b.minute);
     // The time axis extends to fit the latest shot — through extra time when the
     // match ran past 90'. Derived once here and threaded into every minute→x map.
-    const lastMinute = ordered.length > 0 ? (ordered[ordered.length - 1]?.minute ?? 0) : 0;
+    const lastMinute = ordered.length > 0 ? finite(ordered[ordered.length - 1]?.minute ?? 0) : 0;
     const xMax = xDomainMax(lastMinute);
 
     const build = (team: 'home' | 'away', color: string): TeamSeries => {
@@ -165,7 +167,9 @@ export function XgMomentum({
       const steps: Step[] = [];
       for (const shot of ordered) {
         if (shot.team !== team) continue;
-        cumulative += shot.xg;
+        // A missing xG must not poison the running total (NaN would propagate to
+        // every later step's y, and to the whole axis ceiling).
+        cumulative += finite(shot.xg);
         steps.push({
           shot,
           cumulative,
@@ -182,7 +186,8 @@ export function XgMomentum({
     const peak = Math.max(home.total, away.total, 0.5);
     const yMax = Math.ceil(peak * 2) / 2 + 0.25;
 
-    const yFor = (cumulative: number): number => PAD_T + PLOT_H - (cumulative / yMax) * PLOT_H;
+    const yFor = (cumulative: number): number =>
+      finite(PAD_T + PLOT_H - (cumulative / yMax) * PLOT_H, PAD_T + PLOT_H);
     for (const s of [...home.steps, ...away.steps]) s.y = yFor(s.cumulative);
 
     return { home, away, yMax, xMax, ordered };

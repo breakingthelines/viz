@@ -5,6 +5,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { SvgHeadshot } from '#/football/lib/headshot';
+import { finite } from '#/football/lib/finite';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -70,8 +71,9 @@ const FOCUS_CX = 50;
 const FOCUS_CY = 54;
 const FOCUS_RADIUS = 26; // outer reach of the longest wedge in the focus overlay
 
-/** Clamp helper. */
+/** Clamp helper. A non-finite input collapses to the low bound. */
 function clamp(v: number, lo: number, hi: number): number {
+  if (!Number.isFinite(v)) return lo;
   return Math.max(lo, Math.min(hi, v));
 }
 
@@ -214,6 +216,10 @@ export function PassSonar({
               const dimmed = activeId !== null && !isActive;
               const lengthCeiling = lengthCeilingFor(player);
               const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
+              // Average position can be missing on sparse data — guard so the hub,
+              // wedges, hit-area and label never get NaN coordinates.
+              const px = finite(player.x);
+              const py = finite(player.y);
 
               return (
                 <g key={player.id}>
@@ -227,8 +233,8 @@ export function PassSonar({
                   >
                     {/* Faint hub disc so an empty direction still anchors the player. */}
                     <circle
-                      cx={player.x}
-                      cy={player.y}
+                      cx={px}
+                      cy={py}
                       r={BASE_RADIUS}
                       fill="white"
                       fillOpacity={0.03}
@@ -240,7 +246,7 @@ export function PassSonar({
                     {player.wedges.map((wedge, wedgeIndex) => {
                       const lengthFrac = clamp(wedge.avgLength / lengthCeiling, 0, 1);
                       const r = MIN_WEDGE + lengthFrac * (BASE_RADIUS - MIN_WEDGE);
-                      const d = wedgePath(player.x, player.y, r, wedge.angleDeg, span);
+                      const d = wedgePath(px, py, r, wedge.angleDeg, span);
 
                       return (
                         <motion.path
@@ -262,12 +268,12 @@ export function PassSonar({
                     })}
 
                     {/* Hub dot. */}
-                    <circle cx={player.x} cy={player.y} r={0.7} fill="white" fillOpacity={0.85} />
+                    <circle cx={px} cy={py} r={0.7} fill="white" fillOpacity={0.85} />
 
                     {/* Quiet surname label beneath the resting sonar. */}
                     <text
-                      x={player.x}
-                      y={player.y + BASE_RADIUS + 2.6}
+                      x={px}
+                      y={py + BASE_RADIUS + 2.6}
                       textAnchor="middle"
                       fill="white"
                       fontSize="2.4"
@@ -283,8 +289,8 @@ export function PassSonar({
                       player; enter sets focus, leave clears it. It stays put (no
                       growth), so enter/leave fire cleanly every cycle. */}
                   <circle
-                    cx={player.x}
-                    cy={player.y}
+                    cx={px}
+                    cy={py}
                     r={BASE_RADIUS + 1.4}
                     fill="transparent"
                     role="button"

@@ -5,6 +5,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { SvgHeadshot } from '#/football/lib/headshot';
+import { finite } from '#/football/lib/finite';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
 export type SetPieceKind = 'corner' | 'free-kick';
@@ -95,7 +96,7 @@ interface Pt {
  * defended penalty box. The y-axis (touchline) maps straight through.
  */
 function toPitch(x: number, y: number): Pt {
-  return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
+  return { x: finite((x * 100) / SB_X), y: finite((y * 100) / SB_Y) };
 }
 
 const KIND_LABEL: Record<SetPieceKind, string> = {

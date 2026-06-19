@@ -3,6 +3,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import type { Formation, FormationPosition } from '#/football/types';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
+import { finite, finitePositive } from '#/football/lib/finite';
 
 /**
  * Player grade — 1 (best) through 6 (worst). BTL appropriates the BILD
@@ -157,7 +158,7 @@ export function PlayerRatingBoard({
   teamColor,
   className,
 }: PlayerRatingBoardProps) {
-  const radius = markerSize;
+  const radius = finitePositive(markerSize, 3.9);
   const strokeDashArray = markerVariant === 'predicted' ? '0.6 0.4' : undefined;
   const effectiveOpacity = markerVariant === 'predicted' ? 0.6 : 1;
   const teamLabel = formation.team.shortName ?? formation.team.name;
@@ -192,6 +193,9 @@ export function PlayerRatingBoard({
           const ungraded = ungradedMarkerColors(teamColor);
           const fill = grade !== undefined ? gradeFill(grade) : ungraded.fill;
           const stroke = grade !== undefined ? 'rgba(255,255,255,0.6)' : ungraded.stroke;
+          // Guard against a position missing its coords on sparse formation data.
+          const posX = finite(pos.position.x);
+          const posY = finite(pos.position.y);
 
           return (
             <g
@@ -212,8 +216,8 @@ export function PlayerRatingBoard({
             >
               {isTopGraded && (
                 <circle
-                  cx={pos.position.x}
-                  cy={pos.position.y}
+                  cx={posX}
+                  cy={posY}
                   r={radius + 0.9}
                   fill="none"
                   stroke="var(--color-red-100, #eb0000)"
@@ -222,8 +226,8 @@ export function PlayerRatingBoard({
               )}
               {isSelected && (
                 <circle
-                  cx={pos.position.x}
-                  cy={pos.position.y}
+                  cx={posX}
+                  cy={posY}
                   r={radius + 0.55}
                   fill="none"
                   stroke="white"
@@ -235,8 +239,8 @@ export function PlayerRatingBoard({
                   intensity for graded, grey for empty state); shape is a
                   circle to match the PlayerMarker convention. */}
               <circle
-                cx={pos.position.x}
-                cy={pos.position.y}
+                cx={posX}
+                cy={posY}
                 r={radius}
                 fill={fill}
                 stroke={stroke}
@@ -248,8 +252,8 @@ export function PlayerRatingBoard({
                   circle so the layout doesn't shift. */}
               {pos.player.shirtNumber ? (
                 <text
-                  x={pos.position.x}
-                  y={pos.position.y}
+                  x={posX}
+                  y={posY}
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill="white"
@@ -266,16 +270,16 @@ export function PlayerRatingBoard({
               {grade !== undefined ? (
                 <g style={{ pointerEvents: 'none' }}>
                   <circle
-                    cx={pos.position.x + radius * 0.85}
-                    cy={pos.position.y - radius * 0.85}
+                    cx={posX + radius * 0.85}
+                    cy={posY - radius * 0.85}
                     r={radius * 0.55}
                     fill="rgba(0,0,0,0.7)"
                     stroke="white"
                     strokeWidth={0.18}
                   />
                   <text
-                    x={pos.position.x + radius * 0.85}
-                    y={pos.position.y - radius * 0.85}
+                    x={posX + radius * 0.85}
+                    y={posY - radius * 0.85}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="white"
@@ -291,8 +295,8 @@ export function PlayerRatingBoard({
                   from Wave 6.4.8 so names read cleanly at default viewport
                   sizes. */}
               <text
-                x={pos.position.x}
-                y={pos.position.y + radius + 2}
+                x={posX}
+                y={posY + radius + 2}
                 textAnchor="middle"
                 fill="white"
                 fontSize="2.6"
