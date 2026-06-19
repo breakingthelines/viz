@@ -242,7 +242,11 @@ export function LineBreaking({
   );
 }
 
-/** Small circular passer headshot for the hover callout; monogram fallback. */
+/**
+ * Small circular passer headshot for the hover callout. Falls back to the
+ * player's monogram when there's no photo — or when the supplied one fails to
+ * load (a 404 / dead link) — so a missing image never leaves a blank chip.
+ */
 function PasserAvatar({
   name,
   imageUrl,
@@ -252,13 +256,20 @@ function PasserAvatar({
   imageUrl?: string;
   color: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  const showPhoto = typeof imageUrl === 'string' && imageUrl.length > 0 && !failed;
   return (
     <span
       className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
       style={{ boxShadow: `inset 0 0 0 1px ${color}` }}
     >
-      {imageUrl ? (
-        <img src={imageUrl} alt="" className="size-full object-cover" />
+      {showPhoto ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setFailed(true)}
+        />
       ) : (
         <span className="text-[9px] font-semibold leading-none text-white/70">
           {monogram(name)}

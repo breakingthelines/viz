@@ -22,26 +22,31 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Argentina v France — the 2022 final reimagined as a cumulative-xG race.
- * Argentina create the better chances through the first hour (two goals on the
- * line), France surge late as the game opens up. ~14 shots, finishing roughly
- * 2.4 xG to 1.6 — one side edging it, the other within touching distance.
+ * Argentina v France — the 2022 final as a cumulative-xG race, the way the match
+ * actually ran: Argentina create the better chances through the first hour (two
+ * goals on the line), France surge to level late, and it spills into extra time,
+ * where Messi and an Mbappé penalty trade blows (3–3 before penalties). The late
+ * extra-time shots (108', 118') exercise the time axis past 90'.
  */
 const finalShots: XgMomentumShot[] = [
   { minute: 8, team: 'home', xg: 0.06, player: 'Ángel Di María', outcome: 'off-target' },
   { minute: 17, team: 'home', xg: 0.09, player: 'Julián Álvarez', outcome: 'blocked' },
-  { minute: 22, team: 'home', xg: 0.79, player: 'Lionel Messi', outcome: 'goal' },
+  { minute: 23, team: 'home', xg: 0.79, player: 'Lionel Messi', outcome: 'goal' },
   { minute: 31, team: 'away', xg: 0.04, player: 'Ousmane Dembélé', outcome: 'off-target' },
   { minute: 36, team: 'home', xg: 0.71, player: 'Ángel Di María', outcome: 'goal' },
   { minute: 41, team: 'home', xg: 0.08, player: 'Alexis Mac Allister', outcome: 'saved' },
   { minute: 54, team: 'away', xg: 0.05, player: 'Kylian Mbappé', outcome: 'blocked' },
   { minute: 63, team: 'home', xg: 0.12, player: 'Julián Álvarez', outcome: 'saved' },
   { minute: 71, team: 'away', xg: 0.07, player: 'Marcus Thuram', outcome: 'off-target' },
-  { minute: 79, team: 'away', xg: 0.76, player: 'Kylian Mbappé', outcome: 'goal' },
-  { minute: 81, team: 'away', xg: 0.78, player: 'Kylian Mbappé', outcome: 'goal' },
+  { minute: 80, team: 'away', xg: 0.78, player: 'Kylian Mbappé', outcome: 'goal' },
+  { minute: 81, team: 'away', xg: 0.76, player: 'Kylian Mbappé', outcome: 'goal' },
   { minute: 86, team: 'home', xg: 0.1, player: 'Lautaro Martínez', outcome: 'saved' },
   { minute: 90, team: 'away', xg: 0.09, player: 'Randal Kolo Muani', outcome: 'off-target' },
-  { minute: 94, team: 'home', xg: 0.55, player: 'Lionel Messi', outcome: 'goal' },
+  // Extra time.
+  { minute: 100, team: 'home', xg: 0.14, player: 'Lautaro Martínez', outcome: 'saved' },
+  { minute: 108, team: 'home', xg: 0.42, player: 'Lionel Messi', outcome: 'goal' },
+  { minute: 118, team: 'away', xg: 0.76, player: 'Kylian Mbappé', outcome: 'goal' },
+  { minute: 123, team: 'away', xg: 0.61, player: 'Randal Kolo Muani', outcome: 'saved' },
 ];
 
 // Wikimedia national flags, used as team crests.

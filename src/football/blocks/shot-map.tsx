@@ -314,66 +314,19 @@ export function ShotMap({
                 )}
 
                 {/* Marker body. With a headshot, the marker is the shooter's
-                    photo clipped to the circle; otherwise goals are filled rings
-                    and others hollow with a faint fill so overlaps stay readable. */}
-                {shot.imageUrl ? (
-                  <>
-                    <defs>
-                      <clipPath id={clipId}>
-                        <circle cx={p.x} cy={p.y} r={r} />
-                      </clipPath>
-                    </defs>
-                    <circle cx={p.x} cy={p.y} r={r} fill={color} />
-                    <image
-                      href={shot.imageUrl}
-                      x={p.x - r}
-                      y={p.y - r}
-                      width={r * 2}
-                      height={r * 2}
-                      clipPath={`url(#${clipId})`}
-                      preserveAspectRatio="xMidYMid slice"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <circle
-                      cx={p.x}
-                      cy={p.y}
-                      r={r}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth={isGoal ? 0.8 : 0.6}
-                      strokeOpacity={0.95}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <circle
-                      cx={p.x}
-                      cy={p.y}
-                      r={r}
-                      fill={color}
-                      fillOpacity={isGoal ? 0.9 : 0.16}
-                      stroke={color}
-                      strokeWidth={isGoal ? 0.6 : 0.5}
-                      strokeOpacity={0.95}
-                    />
-
-                    {/* Goals carry the shooter monogram. */}
-                    {isGoal && (
-                      <text
-                        x={p.x}
-                        y={p.y}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fontSize={r * 0.9}
-                        fontWeight="bold"
-                        fill="#0a0a0a"
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        {monogram(shot.player)}
-                      </text>
-                    )}
-                  </>
-                )}
+                    photo clipped to the circle; otherwise (no photo, or one that
+                    fails to load) goals are filled rings carrying the shooter
+                    monogram and others hollow so overlaps stay readable. */}
+                <ShotMarkerBody
+                  cx={p.x}
+                  cy={p.y}
+                  r={r}
+                  color={color}
+                  isGoal={isGoal}
+                  player={shot.player}
+                  imageUrl={shot.imageUrl}
+                  clipId={clipId}
+                />
               </motion.g>
             );
           })}
@@ -451,6 +404,102 @@ export function ShotMap({
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} />
     </div>
+  );
+}
+
+/**
+ * The shot marker glyph. When a shooter headshot is supplied it clips the photo
+ * into the marker disc (over a team-colour backing, ringed); when there's no
+ * photo — or the supplied one 404s — it falls back to the data marker: a filled
+ * ring carrying the shooter's monogram for goals, a faint hollow disc otherwise.
+ * Owns the load-error flag so a dead image URL degrades to the monogram rather
+ * than leaving a flat coloured disc.
+ */
+function ShotMarkerBody({
+  cx,
+  cy,
+  r,
+  color,
+  isGoal,
+  player,
+  imageUrl,
+  clipId,
+}: {
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  isGoal: boolean;
+  player: string;
+  imageUrl?: string;
+  clipId: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showPhoto = typeof imageUrl === 'string' && imageUrl.length > 0 && !failed;
+
+  if (showPhoto) {
+    return (
+      <>
+        <defs>
+          <clipPath id={clipId}>
+            <circle cx={cx} cy={cy} r={r} />
+          </clipPath>
+        </defs>
+        <circle cx={cx} cy={cy} r={r} fill={color} />
+        <image
+          href={imageUrl}
+          x={cx - r}
+          y={cy - r}
+          width={r * 2}
+          height={r * 2}
+          clipPath={`url(#${clipId})`}
+          preserveAspectRatio="xMidYMid slice"
+          // Missing/404 photo → fall back to the data marker below.
+          onError={() => setFailed(true)}
+          style={{ pointerEvents: 'none' }}
+        />
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={isGoal ? 0.8 : 0.6}
+          strokeOpacity={0.95}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill={color}
+        fillOpacity={isGoal ? 0.9 : 0.16}
+        stroke={color}
+        strokeWidth={isGoal ? 0.6 : 0.5}
+        strokeOpacity={0.95}
+      />
+
+      {/* Goals carry the shooter monogram. */}
+      {isGoal && (
+        <text
+          x={cx}
+          y={cy}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={r * 0.9}
+          fontWeight="bold"
+          fill="#0a0a0a"
+          style={{ pointerEvents: 'none' }}
+        >
+          {monogram(player)}
+        </text>
+      )}
+    </>
   );
 }
 

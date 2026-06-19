@@ -107,6 +107,20 @@ function countThirds(events: PressEvent[]): PressThirds {
 }
 
 /**
+ * PPDA → a plain-language press band. PPDA (passes the opponent is allowed per
+ * defensive action) runs low-to-high: the fewer passes a side concedes before
+ * engaging, the higher the press. Real single-match values sit roughly 5–10 for
+ * an aggressive high press, 10–13 for a mid block, and 13+ for a side that sits
+ * off — so the bands are set there (≤ 10 reads as a genuine high press, which a
+ * 7–9 number should).
+ */
+function pressIntensity(ppda: number): string {
+  if (ppda <= 10) return 'High press';
+  if (ppda <= 13) return 'Mid block';
+  return 'Low block';
+}
+
+/**
  * Press map — a restrained density "bloom" of where a team hunts the ball on
  * the dark BTL pitch, styled to sit quietly next to the Territory heat map.
  * Pressures and ball-recoveries are accumulated as additive soft radial
@@ -155,7 +169,7 @@ export function PressMap({
     METRIC_OPTIONS.find((o) => o.value === metric)?.label ?? METRIC_OPTIONS[0]!.label;
 
   // PPDA framing — a calm three-band scale so the readout reads without a chart.
-  const intensity = ppda <= 8.5 ? 'High press' : ppda <= 12 ? 'Mid block' : 'Low block';
+  const intensity = pressIntensity(ppda);
 
   return (
     <figure
@@ -225,6 +239,10 @@ export function PressMap({
           onHover={setHoverThird}
         />
       </div>
+
+      {/* Legend: what the bloom means + which way the side attacks. Anchors the
+          encoding so the density ramp and left→right orientation read at a glance. */}
+      <DensityLegend color={color} metric={metric} />
 
       {/* Thirds breakdown — share bar + per-third counts; hover-linked to pitch. */}
       <div className="mt-3 grid grid-cols-3 gap-1.5">
@@ -397,6 +415,54 @@ function Check() {
   );
 }
 
+/**
+ * Compact legend under the pitch. The left half decodes the bloom — a faint→solid
+ * team-colour ramp labelled Low / High so the reader knows brighter = more
+ * pressing actions clustered there. The right half states the fixed attacking
+ * direction (the side presses toward the opposition goal on the right), which is
+ * what makes the thirds and bloom read correctly for a still viewer. When the
+ * unfiltered "all actions" view is shown, a line notes that recoveries render as
+ * the tighter, brighter cores within the broader pressure haze.
+ */
+function DensityLegend({ color, metric }: { color: string; metric: PressMetric }) {
+  const { r, g, b } = hexToRgb(color);
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-[10px] text-white/45">
+      <span className="flex items-center gap-1.5">
+        <span className="text-white/35">Press density</span>
+        <span
+          aria-hidden
+          className="h-1.5 w-16 rounded-full"
+          style={{
+            background: `linear-gradient(to right, rgba(${r},${g},${b},0.06), rgba(${r},${g},${b},0.9))`,
+          }}
+        />
+        <span className="flex w-16 justify-between text-white/35">
+          <span>Low</span>
+          <span>High</span>
+        </span>
+      </span>
+      <span className="flex items-center gap-1.5 text-white/35">
+        <span>Attacking</span>
+        <svg width="22" height="8" viewBox="0 0 22 8" fill="none" aria-hidden>
+          <path
+            d="M1 4h18m0 0l-4-3m4 3l-4 3"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      {metric === 'all' && (
+        <span className="basis-full text-white/30">
+          Recoveries show as the tighter, brighter cores within the pressure haze.
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface ThirdsOverlayProps {
   thirds: PressThirds;
   shareOf: (key: ThirdKey) => number;
@@ -508,9 +574,14 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
 
     const { r, g, b } = hexToRgb(color);
     const baseRadius = Math.max(size * BLOB_RADIUS_RATIO, 6);
-    // Per-action ceiling: many overlaps build toward the colour without any
-    // single action shouting. Additive 'lighter' blending does the stacking.
-    const peak = Math.min(0.16, 7 / Math.sqrt(events.length));
+    // Per-action alpha, scaled DOWN as the cloud grows. Under additive
+    // ('lighter') blending the hottest zone stacks ~√n overlapping blobs, so a
+    // 1/√n peak holds the hottest point at a roughly constant, *un-clipped*
+    // brightness whatever the match's action count — which is what keeps the
+    // bloom a legible gradient (hot vs warm vs cold) instead of one saturated
+    // smear. The old code pinned this at a 0.16 ceiling, so any real match
+    // (≳ 50 actions) clipped to a flat blob. Floor keeps a lone action visible.
+    const peak = clamp(0.55 / Math.sqrt(Math.max(events.length, 1)), 0.03, 0.16);
 
     ctx.globalCompositeOperation = 'lighter';
     for (const e of events) {
@@ -544,11 +615,15 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-0 h-full w-full"
-          style={{ mixBlendMode: 'screen' }}
         />
       </AnimatePresence>
     </div>
   );
+}
+
+/** Clamp a number into the inclusive `[min, max]` range. */
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 /** Parse a `#rgb`/`#rrggbb` hex string into 0–255 channels (falls back to red). */

@@ -109,13 +109,16 @@ export const BlueAccent: Story = {
   },
 };
 
-/** Caller supplies the thirds split explicitly (used for the unfiltered view). */
+/**
+ * Caller supplies the thirds split explicitly (used for the unfiltered view).
+ * Kept consistent with the plotted cloud so the breakdown and the bloom agree.
+ */
 export const ExplicitThirds: Story = {
   args: {
     team: 'Morocco',
     color: '#10b981',
     ppda: 8.1,
     events: HIGH_PRESS_EVENTS,
-    thirds: { defensive: 18, middle: 34, attacking: 100 },
+    thirds: { defensive: 13, middle: 53, attacking: 86 },
   },
 };

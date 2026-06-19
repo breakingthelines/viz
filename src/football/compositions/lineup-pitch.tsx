@@ -1,9 +1,9 @@
-import { useId } from 'react';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { monogram, surname } from '#/football/lib/player-name';
+import { SvgHeadshot } from '#/football/lib/headshot';
 
 /** A player assigned to a lineup slot. */
 export interface LineupSlotPlayer {
@@ -93,7 +93,6 @@ export function LineupPitch({
   const color = teamColor ?? 'var(--color-team-home)';
   const chipLabel = teamShortName ?? teamName;
   const formationLabel = formatFormationLabel(formation);
-  const clipPrefix = useId();
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -117,8 +116,6 @@ export function LineupPitch({
 
           if (slot.player) {
             const player = slot.player;
-            const showHeadshot = markerContent === 'headshot' && Boolean(player.imageUrl);
-            const clipId = `${clipPrefix}-${index}`;
             return (
               <g
                 key={`slot-${index}`}
@@ -139,33 +136,23 @@ export function LineupPitch({
                   />
                 )}
 
-                {showHeadshot ? (
-                  <>
-                    <defs>
-                      <clipPath id={clipId}>
-                        <circle cx={position.x} cy={position.y} r={markerSize} />
-                      </clipPath>
-                    </defs>
-                    <circle cx={position.x} cy={position.y} r={markerSize} fill={color} />
-                    <image
-                      href={player.imageUrl}
-                      x={position.x - markerSize}
-                      y={position.y - markerSize}
-                      width={markerSize * 2}
-                      height={markerSize * 2}
-                      clipPath={`url(#${clipId})`}
-                      preserveAspectRatio="xMidYMid slice"
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <circle
-                      cx={position.x}
-                      cy={position.y}
-                      r={markerSize}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="0.5"
-                    />
-                  </>
+                {markerContent === 'headshot' ? (
+                  // Headshot mode: the player's photo, falling back to a monogram
+                  // disc when there's no photo or the supplied one fails to load.
+                  <SvgHeadshot
+                    cx={position.x}
+                    cy={position.y}
+                    r={markerSize}
+                    name={player.name}
+                    imageUrl={player.imageUrl}
+                    color={color}
+                    ringColor={color}
+                    ringWidth={0.5}
+                    monogramFill={numberColor}
+                    monogramSizeRatio={0.8}
+                    fallbackStroke="white"
+                    fallbackStrokeWidth={0.3}
+                  />
                 ) : (
                   <>
                     <circle
@@ -183,16 +170,12 @@ export function LineupPitch({
                       dominantBaseline="central"
                       fill={numberColor}
                       fontSize={
-                        markerContent === 'number' && player.shirtNumber !== undefined
-                          ? markerSize
-                          : markerSize * 0.8
+                        player.shirtNumber !== undefined ? markerSize : markerSize * 0.8
                       }
                       fontWeight="bold"
                       style={{ pointerEvents: 'none' }}
                     >
-                      {markerContent === 'number' && player.shirtNumber !== undefined
-                        ? player.shirtNumber
-                        : monogram(player.name)}
+                      {player.shirtNumber !== undefined ? player.shirtNumber : monogram(player.name)}
                     </text>
                   </>
                 )}
