@@ -169,13 +169,13 @@ export function LineupPitch({
                       textAnchor="middle"
                       dominantBaseline="central"
                       fill={numberColor}
-                      fontSize={
-                        player.shirtNumber !== undefined ? markerSize : markerSize * 0.8
-                      }
+                      fontSize={player.shirtNumber !== undefined ? markerSize : markerSize * 0.8}
                       fontWeight="bold"
                       style={{ pointerEvents: 'none' }}
                     >
-                      {player.shirtNumber !== undefined ? player.shirtNumber : monogram(player.name)}
+                      {player.shirtNumber !== undefined
+                        ? player.shirtNumber
+                        : monogram(player.name)}
                     </text>
                   </>
                 )}
