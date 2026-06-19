@@ -122,7 +122,6 @@ export function SetPiece({
   className,
   wordmark,
 }: SetPieceProps) {
-
   const first = setPieces[0];
 
   // Active set piece is controllable; falls back to local state for a standalone block.
