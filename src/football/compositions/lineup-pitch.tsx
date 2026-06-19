@@ -4,6 +4,7 @@ import type { PitchTheme } from '#/football/primitives/pitch';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { monogram, surname } from '#/football/lib/player-name';
 import { SvgHeadshot } from '#/football/lib/headshot';
+import { finite, finitePositive } from '#/football/lib/finite';
 
 /** A player assigned to a lineup slot. */
 export interface LineupSlotPlayer {
@@ -83,7 +84,7 @@ export function LineupPitch({
   numberColor = 'white',
   theme = 'dark',
   className,
-  markerSize = 3.4,
+  markerSize: markerSizeRaw = 3.4,
   markerContent = 'number',
   showNames = true,
   editable = false,
@@ -93,6 +94,7 @@ export function LineupPitch({
   const color = teamColor ?? 'var(--color-team-home)';
   const chipLabel = teamShortName ?? teamName;
   const formationLabel = formatFormationLabel(formation);
+  const markerSize = finitePositive(markerSizeRaw, 3.4);
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -109,7 +111,7 @@ export function LineupPitch({
 
       <Pitch variant="full" theme={theme}>
         {slots.map((slot, index) => {
-          const position = { x: slot.x, y: slot.y };
+          const position = { x: finite(slot.x), y: finite(slot.y) };
           const isSelected = selectedSlotIndex === index;
           const interactive = editable && Boolean(onSlotClick);
           const handleClick = interactive ? () => onSlotClick?.(index) : undefined;

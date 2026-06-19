@@ -122,7 +122,7 @@ function pressIntensity(ppda: number): string {
 
 /**
  * Press map — a restrained density "bloom" of where a team hunts the ball on
- * the dark BTL pitch, styled to sit quietly next to the Territory heat map.
+ * the dark BTL pitch, styled to sit quietly next to the Heat map.
  * Pressures and ball-recoveries are accumulated as additive soft radial
  * gradients on a `<canvas>` layered over the {@link Pitch} primitive and
  * colour-mapped toward the team colour, so you read *where* the press lives.

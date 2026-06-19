@@ -5,6 +5,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { SvgHeadshot } from '#/football/lib/headshot';
+import { finite } from '#/football/lib/finite';
 
 /** How a single touch in the move connects to the next. */
 export type GoalStepType = 'pass' | 'carry' | 'shot';
@@ -70,7 +71,7 @@ const GOAL = { x: 100, y: 50 };
 
 /** Normalise a StatsBomb point to the 0–100 pitch (team attacks left→right). */
 function toPitch(x: number, y: number): { x: number; y: number } {
-  return { x: (x * 100) / SB_X, y: (y * 100) / SB_Y };
+  return { x: finite((x * 100) / SB_X), y: finite((y * 100) / SB_Y) };
 }
 
 // Per-segment timing for the step-by-step reveal.

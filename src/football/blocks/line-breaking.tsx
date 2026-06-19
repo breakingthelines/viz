@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { finite } from '#/football/lib/finite';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
 export interface LineBreakingPass {
@@ -52,8 +53,8 @@ export interface LineBreakingProps {
 /** StatsBomb pitch is 120 long × 80 wide; the Pitch primitive is 100 × 100. */
 const SB_LENGTH = 120;
 const SB_WIDTH = 80;
-const normX = (x: number) => (x * 100) / SB_LENGTH;
-const normY = (y: number) => (y * 100) / SB_WIDTH;
+const normX = (x: number) => finite((x * 100) / SB_LENGTH);
+const normY = (y: number) => finite((y * 100) / SB_WIDTH);
 
 type ViewMode = 'all' | 'breaks';
 

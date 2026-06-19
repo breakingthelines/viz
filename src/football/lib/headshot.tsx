@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { monogram } from '#/football/lib/player-name';
+import { finite, finitePositive } from '#/football/lib/finite';
 
 /**
  * A circular player headshot for the SVG football blocks, with a robust monogram
@@ -47,9 +48,9 @@ export interface SvgHeadshotProps {
 }
 
 export function SvgHeadshot({
-  cx,
-  cy,
-  r,
+  cx: cxRaw,
+  cy: cyRaw,
+  r: rRaw,
   name,
   imageUrl,
   color,
@@ -67,6 +68,12 @@ export function SvgHeadshot({
   const [failed, setFailed] = useState(false);
   const showPhoto = typeof imageUrl === 'string' && imageUrl.length > 0 && !failed;
   const stroke = ringColor ?? color;
+  // Backstop: a consumer that hands us a coord/radius derived from sparse data
+  // could pass NaN/undefined; collapse to safe finite values so the rendered
+  // `<circle>`/`<image>` never emit an invalid attribute.
+  const cx = finite(cxRaw);
+  const cy = finite(cyRaw);
+  const r = finitePositive(rRaw, 1);
   const style = pointerEvents === 'none' ? { pointerEvents: 'none' as const } : undefined;
 
   if (showPhoto) {

@@ -5,6 +5,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { SvgHeadshot } from '#/football/lib/headshot';
+import { finite } from '#/football/lib/finite';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -70,13 +71,17 @@ export interface PassNetworkProps {
 
 /** StatsBomb pitch is 120×80; normalise to the 0–100 `Pitch` viewBox. */
 function normX(x: number): number {
-  return (x * 100) / 120;
+  return finite((x * 100) / 120);
 }
 function normY(y: number): number {
-  return (y * 100) / 80;
+  return finite((y * 100) / 80);
 }
 
-/** Linear map of `value` from `[inMin, inMax]` onto `[outMin, outMax]`, clamped. */
+/**
+ * Linear map of `value` from `[inMin, inMax]` onto `[outMin, outMax]`, clamped.
+ * Any non-finite input (a missing involvement, an all-`undefined` domain) maps
+ * to the mid-output so a node radius is never NaN.
+ */
 function scale(
   value: number,
   inMin: number,
@@ -84,9 +89,10 @@ function scale(
   outMin: number,
   outMax: number
 ): number {
-  if (inMax <= inMin) return (outMin + outMax) / 2;
+  const mid = (outMin + outMax) / 2;
+  if (!Number.isFinite(value) || inMax <= inMin) return mid;
   const t = Math.min(1, Math.max(0, (value - inMin) / (inMax - inMin)));
-  return outMin + t * (outMax - outMin);
+  return finite(outMin + t * (outMax - outMin), mid);
 }
 
 interface ResolvedNode extends PassNetworkPlayer {

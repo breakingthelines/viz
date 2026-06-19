@@ -51,7 +51,7 @@ const SB_WIDTH = 80;
 const BLOB_RADIUS_RATIO = 0.085;
 
 /**
- * Territory heat map — a restrained density "bloom" of a team's touches on the
+ * Heat map — a restrained density "bloom" of a team's touches on the
  * dark BTL pitch, styled to sit quietly next to the Shot map. Touches are
  * accumulated as additive soft radial gradients on a `<canvas>` layered over
  * the {@link Pitch} primitive, colour-mapped from transparent to the team
@@ -101,7 +101,7 @@ export function HeatMap({
       {/* Header: one plain title + clean player-filter dropdown. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span id={titleId} className="text-[13px] font-semibold tracking-tight text-white">
-          Territory
+          Heat Map
         </span>
         {options.length > 1 && (
           <ControlDropdown label="Player" valueLabel={activeLabel}>
