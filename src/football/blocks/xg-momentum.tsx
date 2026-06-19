@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
@@ -236,6 +237,9 @@ export function XgMomentum({
   return (
     <figure
       data-slot="xg-momentum"
+      // Inter-first sans (product decision): opt out of the host page's
+      // editorial serif so all block text/labels/ticks render in Inter.
+      style={{ fontFamily: BLOCK_FONT_STACK }}
       className={cn(
         'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
         'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',

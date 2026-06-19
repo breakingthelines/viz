@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 
@@ -196,6 +197,9 @@ export function PassNetwork({
 
   return (
     <div
+      // Inter-first sans (product decision): opt out of the host page's
+      // editorial serif so all block text/labels/ticks render in Inter.
+      style={{ fontFamily: BLOCK_FONT_STACK }}
       className={cn(
         'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4',
         'shadow-[0_1px_2px_rgba(0,0,0,0.3)] backdrop-blur-[12px] [border-top-color:rgba(255,255,255,0.10)]',
