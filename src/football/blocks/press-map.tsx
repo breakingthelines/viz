@@ -589,14 +589,16 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
     // Per-action alpha, scaled DOWN as the cloud grows. Under additive
     // ('lighter') blending the hottest zone stacks ~√n overlapping blobs, so a
     // 1/√n peak holds the hottest point at a roughly constant, *un-clipped*
-    // brightness whatever the match's action count — which is what keeps the
-    // bloom a legible gradient (hot vs warm vs cold) instead of one saturated
-    // smear. The numerator + ceiling are lifted hard from the old 0.55/0.16
-    // (which left a real ~226-action match sitting at a muddy ~0.04 per blob,
-    // so even the busiest zone barely glowed): a higher per-blob alpha makes the
-    // pressing cores genuinely vivid and the high/low contrast pronounced, while
-    // the 1/√n falloff and the ceiling still stop the densest map clipping flat.
-    const peak = clamp(1.15 / Math.sqrt(Math.max(events.length, 1)), 0.05, 0.34);
+    // brightness whatever the match's action count.
+    //
+    // The old numerator/ceiling (1.15 / 0.34) left a real ~226-action match at a
+    // muddy ~0.077 per blob, so even the busiest zone read as a soft mid haze
+    // with no defined core. Both are lifted hard here — and the falloff steepened
+    // (an inner full-strength PLATEAU out to ~30% of the radius, then a fast
+    // drop) — so the hottest zones build into bright, well-defined cores while
+    // the broad skirt stays cool: pronounced hot/cold contrast, not a diffuse
+    // wash. The ceiling still caps the densest map short of a flat clip.
+    const peak = clamp(2.1 / Math.sqrt(Math.max(events.length, 1)), 0.09, 0.6);
 
     ctx.globalCompositeOperation = 'lighter';
     for (const e of events) {
@@ -608,11 +610,15 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
       // wider — so a mixed plot reads as bright recovery points inside a broader,
       // cooler pressure haze (which is what the legend promises).
       const recovery = e.kind === 'recovery';
-      const radius = recovery ? baseRadius * 0.72 : baseRadius;
+      const radius = recovery ? baseRadius * 0.66 : baseRadius;
       const core = recovery ? peak * 1.7 : peak;
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      // Full-strength plateau at the centre keeps the core solid; the bulk of the
+      // alpha is then spent in the first third of the radius so a cluster reads as
+      // a crisp bright knot rather than a soft gaussian smear.
       grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${core})`);
-      grad.addColorStop(recovery ? 0.4 : 0.5, `rgba(${r}, ${g}, ${b}, ${core * 0.42})`);
+      grad.addColorStop(recovery ? 0.22 : 0.28, `rgba(${r}, ${g}, ${b}, ${core})`);
+      grad.addColorStop(recovery ? 0.5 : 0.58, `rgba(${r}, ${g}, ${b}, ${core * 0.34})`);
       grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
       ctx.fillStyle = grad;
       ctx.beginPath();

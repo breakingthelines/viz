@@ -331,8 +331,19 @@ export function Progression({
         </div>
       </div>
 
-      {/* Pitch + progressive actions */}
-      <div className="relative">
+      {/* Pitch + progressive actions. A container-level pointer-leave clears the
+          active arrow as a backstop: each arrow clears itself on `mouseleave`,
+          but flicking the pointer between two overlapping curved arrows (or off a
+          thin arrow into a gap) can drop the per-arrow leave event and leave the
+          callout stuck open after the pointer is gone. Clearing on leave of the
+          whole pitch — and on blur leaving it — guarantees it never persists. */}
+      <div
+        className="relative"
+        onPointerLeave={() => setActiveId(null)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setActiveId(null);
+        }}
+      >
         <Pitch variant="full" theme="dark">
           {ordered.map((action, i) => {
             const start = toPitch(action.startX, action.startY);

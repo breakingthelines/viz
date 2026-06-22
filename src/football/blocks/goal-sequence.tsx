@@ -188,9 +188,14 @@ export function GoalSequence({
         </div>
       </div>
 
-      {/* Pitch + the animated move. Keyed by runId so each run replays cleanly. */}
+      {/* Pitch + the move. The STATIC base draws the full sequence at rest so the
+          block is meaningful the instant it renders — and whenever the animation
+          isn't running — rather than a near-empty pitch until Replay is pressed.
+          The animated reveal (keyed by runId so each Replay re-runs it) plays its
+          travelling ball + draw-in + bloom directly over that base. */}
       <div className="relative">
         <Pitch variant="full" theme="dark">
+          <StaticMove steps={steps} points={points} finishIndex={finishIndex} color={color} />
           <MoveLayer
             key={runId}
             steps={steps}
@@ -213,10 +218,136 @@ export function GoalSequence({
   );
 }
 
+/** The path ends at the goal mouth for a shot; otherwise at the next touch. */
+function targetFor(
+  steps: GoalStep[],
+  points: { x: number; y: number }[],
+  i: number
+): { x: number; y: number } {
+  if (steps[i]?.type === 'shot') return GOAL;
+  return points[i + 1] ?? points[i] ?? GOAL;
+}
+
 /**
- * The animated chain. Each segment (touch → next touch) reveals after the
- * previous one: the connecting line draws in, a ball dot travels along it, and
- * the touch marker pops. The finish gets a red bloom + the scorer's headshot.
+ * The complete move drawn STATICALLY at its settled appearance — every
+ * connecting segment, numbered touch node, the finish marker, and the surnames.
+ * This is the move's resting state: it is always present, so the block shows the
+ * full sequence the instant it renders (and whenever the animation isn't
+ * playing), instead of a near-empty pitch with a single marker until Replay is
+ * pressed. The animated {@link MoveLayer} reveal then plays its cinematic
+ * travelling ball + draw-in + bloom directly OVER this base.
+ */
+function StaticMove({
+  steps,
+  points,
+  finishIndex,
+  color,
+}: {
+  steps: GoalStep[];
+  points: { x: number; y: number }[];
+  finishIndex: number;
+  color: string;
+}) {
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      {/* Connecting segments. */}
+      {steps.map((step, i) => {
+        const from = points[i];
+        if (!from) return null;
+        const to = targetFor(steps, points, i);
+        const isShot = step.type === 'shot';
+        return (
+          <line
+            key={`base-seg-${i}`}
+            x1={from.x}
+            y1={from.y}
+            x2={to.x}
+            y2={to.y}
+            stroke={color}
+            strokeWidth={isShot ? 0.7 : 0.5}
+            strokeOpacity={isShot ? 0.95 : 0.7}
+            strokeLinecap="round"
+            strokeDasharray={step.type === 'carry' ? '1.4 1.2' : undefined}
+          />
+        );
+      })}
+
+      {/* Touch markers + labels. */}
+      {steps.map((step, i) => {
+        const p = points[i];
+        if (!p) return null;
+        const isFinish = i === finishIndex;
+        const r = isFinish ? 2.2 : 1.4;
+        const labelAbove = p.y > 16;
+        const labelY = labelAbove ? p.y - r - 1.3 : p.y + r + 2.6;
+        return (
+          <g key={`base-touch-${i}`}>
+            {isFinish ? (
+              <SvgHeadshot
+                cx={p.x}
+                cy={p.y}
+                r={r}
+                name={step.player}
+                imageUrl={step.imageUrl}
+                color={color}
+                ringColor={color}
+                ringWidth={0.7}
+                monogramFill="#0a0a0a"
+                monogramSizeRatio={0.95}
+                fallbackStroke="white"
+                fallbackStrokeWidth={0.3}
+              />
+            ) : (
+              <>
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={r}
+                  fill={color}
+                  fillOpacity={0.2}
+                  stroke={color}
+                  strokeWidth={0.45}
+                  strokeOpacity={0.95}
+                />
+                <text
+                  x={p.x}
+                  y={p.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={1.6}
+                  fontWeight="bold"
+                  fill="white"
+                  fillOpacity={0.85}
+                >
+                  {i + 1}
+                </text>
+              </>
+            )}
+            <text
+              x={p.x}
+              y={labelY}
+              textAnchor="middle"
+              fontSize={isFinish ? 2.6 : 2.1}
+              fontWeight={isFinish ? 'bold' : '600'}
+              fill="white"
+              fillOpacity={isFinish ? 0.95 : 0.7}
+            >
+              {surname(step.player)}
+            </text>
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/**
+ * The animated reveal, drawn OVER the {@link StaticMove} base. It re-traces the
+ * already-visible chain: each segment's line draws in over its static twin, a
+ * ball travels along it, the touch markers re-pop, and the finish gets a red
+ * bloom — the cinematic flourish, keyed by `runId` so Replay re-runs it. Because
+ * the full move is already drawn by the static base, the pre-Replay first frame
+ * is meaningful; this layer only adds motion on top.
  */
 function MoveLayer({
   steps,
@@ -229,22 +360,16 @@ function MoveLayer({
   finishIndex: number;
   color: string;
 }) {
-  // The path ends at the goal mouth for the shot; otherwise at the next touch.
-  const targetFor = (i: number): { x: number; y: number } => {
-    if (steps[i]?.type === 'shot') return GOAL;
-    return points[i + 1] ?? points[i] ?? GOAL;
-  };
-
   const segDelay = (i: number) => i * (SEG_DURATION + SEG_GAP);
   const totalSteps = steps.length;
 
   return (
     <g style={{ pointerEvents: 'none' }}>
-      {/* Connecting segments, drawn in order. */}
+      {/* Connecting segments, drawn in order over the static base. */}
       {steps.map((step, i) => {
         const from = points[i];
         if (!from) return null;
-        const to = targetFor(i);
+        const to = targetFor(steps, points, i);
         const isShot = step.type === 'shot';
         const delay = segDelay(i);
 
@@ -301,16 +426,14 @@ function MoveLayer({
         style={{ transformOrigin: `${GOAL.x}px ${GOAL.y}px`, filter: 'blur(1.1px)' }}
       />
 
-      {/* Touch markers + labels, popping as each touch is reached. */}
+      {/* Touch markers, re-popping as each touch is reached (over the static
+          twins). Labels live in the static base — not repeated here. */}
       {steps.map((step, i) => {
         const p = points[i];
         if (!p) return null;
         const isFinish = i === finishIndex;
         const delay = segDelay(i);
         const r = isFinish ? 2.2 : 1.4;
-        // Keep labels inside the pitch near the right edge / top.
-        const labelAbove = p.y > 16;
-        const labelY = labelAbove ? p.y - r - 1.3 : p.y + r + 2.6;
 
         return (
           <motion.g
@@ -364,19 +487,6 @@ function MoveLayer({
                 </text>
               </>
             )}
-
-            {/* Surname along the chain. The finish reads brighter. */}
-            <text
-              x={p.x}
-              y={labelY}
-              textAnchor="middle"
-              fontSize={isFinish ? 2.6 : 2.1}
-              fontWeight={isFinish ? 'bold' : '600'}
-              fill="white"
-              fillOpacity={isFinish ? 0.95 : 0.7}
-            >
-              {surname(step.player)}
-            </text>
           </motion.g>
         );
       })}

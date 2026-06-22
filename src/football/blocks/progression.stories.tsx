@@ -248,6 +248,32 @@ export const Default: Story = {
   },
 };
 
+/**
+ * Tooltip-clear lock (viz #27, item 4): the action callout must close once the
+ * pointer leaves the pitch. Hovers an arrow to open the callout, then moves the
+ * pointer off the pitch (onto the block title) and asserts the callout is gone —
+ * guarding the container-level pointer-leave backstop against a regression where
+ * a stuck tooltip lingers after the pointer has left.
+ */
+export const TooltipClearsOnLeave: Story = {
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The callout is an SVG <g> carrying the action's player text. Detect it by
+    // the accent <rect> the callout draws (rx 1.4) — absent at rest.
+    const calloutOpen = () => [...canvasElement.querySelectorAll('rect[rx="1.4"]')].length > 0;
+
+    // Hover the first progressive action (a labelled, role=button <g>).
+    const arrow = canvas.getAllByRole('button', { name: /xT/i })[0]!;
+    await userEvent.hover(arrow);
+    await waitFor(() => expect(calloutOpen()).toBe(true));
+
+    // Move the pointer off the pitch onto the block title — the callout clears.
+    await userEvent.pointer([{ target: arrow }, { target: canvas.getByText('Progression') }]);
+    await waitFor(() => expect(calloutOpen()).toBe(false));
+  },
+};
+
 // A France set, away-flavoured blue, fewer actions but Mbappé-heavy on the left.
 const FRA_PROGRESSION: ProgressionAction[] = [
   {

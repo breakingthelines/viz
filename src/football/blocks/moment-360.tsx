@@ -443,7 +443,16 @@ export function Moment360({
             transition={{ duration: 0.5, ease: 'backOut', delay: T_PLAYER_BASE - 0.1 }}
             style={{ transformOrigin: `${origin.x}px ${origin.y}px`, pointerEvents: 'none' }}
           >
-            {/* Slow breathing pulse ring. */}
+            {/* Slow breathing pulse ring. Animates `scale` (a transform), NOT the
+                `r` attribute: animating an SVG geometry attribute like `r` via
+                `animate` makes framer-motion take over the attribute, and on the
+                transition's setup frame it resolves to `undefined` before the
+                keyframes apply — React then renders `r="undefined"` for a frame
+                (the `<circle> attribute r: Expected length, "undefined"` dev
+                warning). A static `r` + an animated `scale` keeps `r` fixed and
+                is also cheaper. Scale 1→1.75 reaches the same 4.2 outer radius
+                (2.4 × 1.75 = 4.2); `transformOrigin` pins the swell to the
+                ring's centre. Matches every other ring/halo in the package. */}
             <motion.circle
               cx={origin.x}
               cy={origin.y}
@@ -451,7 +460,8 @@ export function Moment360({
               fill="none"
               stroke={accent}
               strokeWidth={0.4}
-              animate={{ r: [2.4, 4.2], opacity: [0.5, 0] }}
+              initial={{ scale: 1, opacity: 0.5 }}
+              animate={{ scale: [1, 1.75], opacity: [0.5, 0] }}
               transition={{
                 duration: 2.4,
                 ease: 'easeOut',
@@ -459,6 +469,7 @@ export function Moment360({
                 repeatDelay: 0.4,
                 delay: T_PLAYER_BASE + 0.3,
               }}
+              style={{ transformOrigin: `${origin.x}px ${origin.y}px` }}
             />
             {/* Actor marker — headshot photo clipped to the circle, or the
                 accent dot when no photo is supplied or the photo fails to load. */}

@@ -126,6 +126,8 @@ interface ResolvedNode extends PassNetworkPlayer {
   cy: number;
   /** Node radius in viewBox units. */
   r: number;
+  /** Surname is rendered ABOVE the disc (vs the default below) to dodge a clash. */
+  labelAbove: boolean;
 }
 
 interface ResolvedEdge {
@@ -221,12 +223,37 @@ export function PassNetwork({
     const involvements = visiblePlayers.map((p) => p.involvement);
     const minInv = involvements.length ? Math.min(...involvements) : 0;
     const maxInv = involvements.length ? Math.max(...involvements) : 1;
-    return visiblePlayers.map((p) => ({
+    const placed = visiblePlayers.map((p) => ({
       ...p,
       cx: normX(p.x),
       cy: normY(p.y),
       r: scale(p.involvement, minInv, maxInv, 2.4, 4.6),
     }));
+
+    // Resolve label collisions. The surname normally sits just BELOW the disc;
+    // when another node sits where that label would land (close in x, a little
+    // lower in y) the two names stack on top of each other — the Acuña / Di María
+    // clash. For each node, if a near-horizontal neighbour occupies its
+    // below-label band, flip the label ABOVE instead. A node only flips when its
+    // own slot is contested and the space above is clearer, so isolated nodes
+    // keep the consistent below-disc placement.
+    const LABEL_DROP = 4.2; // ~ r + label offset, the band the name occupies
+    const X_NEAR = 7; // names within this x-gap can physically overlap
+    return placed.map((node, i) => {
+      let belowBlocked = false;
+      let aboveBlocked = false;
+      for (let j = 0; j < placed.length; j++) {
+        if (j === i) continue;
+        const other = placed[j]!;
+        if (Math.abs(other.cx - node.cx) > X_NEAR) continue;
+        const dy = other.cy - node.cy;
+        // A neighbour sitting just below intrudes on the below-label slot…
+        if (dy > 0 && dy < LABEL_DROP + other.r) belowBlocked = true;
+        // …and one just above intrudes on the above-label slot.
+        if (dy < 0 && -dy < LABEL_DROP + other.r) aboveBlocked = true;
+      }
+      return { ...node, labelAbove: belowBlocked && !aboveBlocked };
+    });
   }, [visiblePlayers]);
 
   const nodeById = useMemo(() => {
@@ -312,16 +339,18 @@ export function PassNetwork({
         )}
       </div>
 
-      {/* Square box so the Pitch's square (100×100) viewBox fills it instead of
-          being letterboxed into the centre third of a 3:2 frame — which is what
-          squeezed the whole network into a narrow upright column. With the box
-          squared the XI spreads across the full pitch, attacking left→right. */}
-      <div className="relative aspect-square w-full">
-        <Pitch
-          variant="full"
-          theme="dark"
-          className="absolute inset-0 !aspect-square h-full w-full"
-        >
+      {/* Landscape 3:2 frame — a real pitch aspect. The `Pitch` markings live in
+          a 100×100 viewBox laid out as a LANDSCAPE pitch (goals left/right,
+          penalty boxes at the 0 / 100 ends), so a 3:2 box renders the pitch in
+          its true proportions and the XI — average positions on the StatsBomb
+          120×80 scale, normalised to 0–100 and attacking left→right — spreads
+          legibly across the width. (The previous square box mapped the 100×100
+          viewBox 1:1, which stood the pitch up tall and squeezed the shape into a
+          narrow upright column; this matches the lineup-pitch convention.) The
+          intrinsic `aspect-[3/2]` on `Pitch` drives the box height, so no wrapper
+          aspect/inset is needed. */}
+      <div className="relative w-full">
+        <Pitch variant="full" theme="dark" className="w-full">
           {/* Edges first, beneath the nodes. */}
           <g>
             {edges.map((edge) => {
@@ -404,15 +433,22 @@ export function PassNetwork({
                   fallbackStrokeWidth={0.3}
                 />
 
-                {/* Surname label */}
+                {/* Surname label — below the disc by default, flipped above when
+                    a near neighbour would otherwise collide with it. A faint dark
+                    halo (paint-order: stroke) keeps the name legible where it
+                    crosses a bright edge or another node. */}
                 <text
                   x={node.cx}
-                  y={node.cy + node.r + 2.7}
+                  y={node.labelAbove ? node.cy - node.r - 1.6 : node.cy + node.r + 2.7}
                   textAnchor="middle"
                   fill="white"
                   fontSize="2.4"
                   fontWeight="600"
                   opacity={isHovered ? 1 : 0.9}
+                  stroke="#0a0a0a"
+                  strokeWidth={0.7}
+                  strokeOpacity={0.55}
+                  paintOrder="stroke"
                   style={{ pointerEvents: 'none' }}
                 >
                   {surname(node.name)}
