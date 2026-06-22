@@ -109,15 +109,16 @@ export const EvenContest: Story = {
 };
 
 /**
- * A SPARSE freeze-frame — only a handful of tracked players, clustered on one
- * side. This is the degenerate input a host can emit when its frame selection
- * picks an event with few tracked players (see the block doc-comment). The
- * block must NOT collapse into one solid territory: with the capped-reach
- * influence model, far-from-everyone space stays neutral dark and only the
- * pockets around the players are washed, so the result still reads as a pitch
- * with a few contested zones rather than "one team owns 99%". The fix for the
- * lopsided split itself is host-side (select the frame with the most tracked
- * players, closest to 22).
+ * A SPARSE input — only a handful of players, clustered on one side. This is the
+ * degenerate shape a host produces if it feeds a single clustered moment (e.g.
+ * one shot's 360 freeze-frame, where tracked players bunch in one box) instead
+ * of both sides' AVERAGE positions. The block must NOT collapse into one solid
+ * territory: with the capped-reach influence model, far-from-everyone space
+ * stays neutral dark and only the pockets around the players are washed, so the
+ * result reads as a few contested zones rather than "one team owns 99%". The
+ * real fix for the lopsided split is the INPUT — pass each side's average
+ * position over the match (see {@link EvenContest} / {@link MidBlock}), which
+ * spreads ~22 dots across the pitch and tessellates the whole surface.
  */
 const sparseFrame: PitchControlPlayer[] = [
   { id: 'h-st', x: 96, y: 38, team: 'home', name: 'Jesus' },
@@ -133,5 +134,50 @@ export const SparseFrame: Story = {
     homeCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
     awayCrestUrl: 'https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg',
     players: sparseFrame,
+  },
+};
+
+/**
+ * Both teams' AVERAGE positions from a real match — the canonical input. The
+ * home side (left, attacking right) holds a slightly higher block, the away side
+ * sits a touch deeper, and the line of confrontation falls just past halfway. A
+ * dense spread of 22 dots makes the surface a continuous whole-pitch
+ * tessellation (no black void through midfield) with the share summing across
+ * the full pitch. Mirrors the shape the studio host now bakes for the
+ * StatsBomb-open WC final block (avg x/y per player, both teams, 120×80).
+ */
+const averagePositions: PitchControlPlayer[] = [
+  // HOME — average positions, slightly advanced, attacking right.
+  { id: 'h-gk', x: 14, y: 40, team: 'home', isGoalkeeper: true, name: 'E Martínez' },
+  { id: 'h-rb', x: 52, y: 14, team: 'home', name: 'Molina' },
+  { id: 'h-rcb', x: 38, y: 30, team: 'home', name: 'Romero' },
+  { id: 'h-lcb', x: 38, y: 50, team: 'home', name: 'Otamendi' },
+  { id: 'h-lb', x: 50, y: 66, team: 'home', name: 'Tagliafico' },
+  { id: 'h-rcm', x: 62, y: 30, team: 'home', name: 'De Paul' },
+  { id: 'h-dm', x: 54, y: 42, team: 'home', name: 'Fernández' },
+  { id: 'h-lcm', x: 64, y: 54, team: 'home', name: 'Mac Allister' },
+  { id: 'h-rw', x: 80, y: 22, team: 'home', name: 'Messi' },
+  { id: 'h-st', x: 84, y: 44, team: 'home', name: 'Álvarez' },
+  { id: 'h-lw', x: 78, y: 62, team: 'home', name: 'Di María' },
+
+  // AWAY — average positions, deeper block, defending the right end.
+  { id: 'a-gk', x: 108, y: 40, team: 'away', isGoalkeeper: true, name: 'Lloris' },
+  { id: 'a-rb', x: 78, y: 70, team: 'away', name: 'Koundé' },
+  { id: 'a-rcb', x: 90, y: 50, team: 'away', name: 'Varane' },
+  { id: 'a-lcb', x: 90, y: 30, team: 'away', name: 'Upamecano' },
+  { id: 'a-lb', x: 78, y: 12, team: 'away', name: 'T Hernández' },
+  { id: 'a-rcm', x: 66, y: 52, team: 'away', name: 'Rabiot' },
+  { id: 'a-dm', x: 72, y: 40, team: 'away', name: 'Tchouaméni' },
+  { id: 'a-lcm', x: 66, y: 28, team: 'away', name: 'Griezmann' },
+  { id: 'a-rw', x: 54, y: 60, team: 'away', name: 'Dembélé' },
+  { id: 'a-st', x: 52, y: 40, team: 'away', name: 'Giroud' },
+  { id: 'a-lw', x: 50, y: 20, team: 'away', name: 'Mbappé' },
+];
+
+export const AveragePositions: Story = {
+  args: {
+    homeTeam: 'Argentina',
+    awayTeam: 'France',
+    players: averagePositions,
   },
 };

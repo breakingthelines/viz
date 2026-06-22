@@ -36,7 +36,14 @@ export interface PitchControlProps {
   homeCrestUrl?: string;
   /** Away team crest URL. When set, a small crest sits before the away name. */
   awayCrestUrl?: string;
-  /** Every player on the pitch — both teams, fixed positions. */
+  /**
+   * Every player on the pitch — both teams, at fixed positions. The intended
+   * input is each side's AVERAGE position over the match (one dot per player,
+   * spread across the pitch), which makes the control surface a true whole-pitch
+   * tessellation. A sparse set still renders (as owned pockets), but a single
+   * clustered moment (e.g. one shot's freeze-frame, where tracked players bunch
+   * in one box) produces a degenerate, lopsided surface — feed averages instead.
+   */
   players: PitchControlPlayer[];
   /** Additional CSS classes on the outer panel. */
   className?: string;
@@ -73,11 +80,27 @@ const MIN_DIST_SQ = 2.2;
  * Influence reach, in grid units. Each player's pull decays with a Gaussian
  * envelope of this sigma so cells far from EVERY player stay (near-)unowned and
  * read as neutral space — instead of a single distant player claiming the whole
- * pitch. This is what keeps a SPARSE freeze-frame (a handful of tracked players)
- * from collapsing into one solid territory: empty regions go dark/neutral rather
- * than lopsided. Sized so a full 22-player frame still fills the pitch.
+ * pitch. This is what keeps a SPARSE input (a handful of tracked players) from
+ * collapsing into one solid territory: empty regions go dark/neutral rather than
+ * lopsided.
+ *
+ * Sized so the intended input — both teams' AVERAGE positions over the match
+ * (~22 spread players) — fills the whole pitch as a true control tessellation,
+ * while a sparse handful still reads as owned pockets. (Too small and the gaps
+ * between average positions in midfield read as a black void; too large and a
+ * sparse frame floods one colour. 24 grid-units ≈ a third of the pitch length.)
  */
-const INFLUENCE_SIGMA = 14;
+const INFLUENCE_SIGMA = 24;
+
+/**
+ * Minimum wash intensity for a cell that IS owned (has any net influence), so a
+ * full-pitch tessellation reads as continuous territory rather than fading to
+ * black through midfield. Sparse inputs still fade: cells the influence envelope
+ * never reaches stay unowned (coverage 0) and are skipped entirely, so a handful
+ * of players reads as pockets, not one flat colour. Only cells WITH influence get
+ * this floor.
+ */
+const OWNED_COVERAGE_FLOOR = 0.25;
 
 /** A player resolved to grid-space, with the normalised pitch coords for SVG. */
 interface ResolvedPlayer extends PitchControlPlayer {
@@ -501,8 +524,12 @@ function computeControl(players: ResolvedPlayer[]): {
     }
     margin[idx] = diff;
     // Coverage saturates quickly so well-held zones read fully, but cells the
-    // envelope barely reaches stay dim — sqrt lifts the low end a little.
-    coverage[idx] = Math.sqrt(Math.min(1, total * invMax));
+    // envelope barely reaches stay dim. A gentle gamma (<1) lifts the low end so
+    // the wash carries across the full pitch for dense whole-pitch input; the
+    // OWNED_COVERAGE_FLOOR (applied at paint time) then guarantees owned land
+    // never goes black. Cells with zero influence are handled above (skipped),
+    // so sparse pockets still fade to neutral — only REACHED cells are lifted.
+    coverage[idx] = Math.pow(Math.min(1, total * invMax), 0.35);
     ownedCells++;
   }
 
@@ -610,9 +637,12 @@ function ControlCanvas({ players, hoveredId }: ControlCanvasProps) {
       // Territory wash: a clearly visible base lifted by how decisively the cell
       // is held, then scaled by COVERAGE so cells the influence envelope barely
       // reaches fade toward neutral dark (the key to a sparse frame reading as
-      // owned pockets, not one flat colour). Brighter than before so the wash is
-      // legible through the screen blend over the near-black pitch.
-      let alpha = (0.12 + m * 0.42) * cov;
+      // owned pockets, not one flat colour). For a full-pitch tessellation the
+      // OWNED_COVERAGE_FLOOR keeps owned land continuously washed (no black void
+      // through midfield); sparse inputs are unaffected because unreached cells
+      // never get here (own === 0 above). Bright enough to read through the
+      // screen blend over the near-black pitch.
+      let alpha = (0.14 + m * 0.4) * Math.max(cov, OWNED_COVERAGE_FLOOR);
 
       // Hover emphasis: the hovered player's own cells bloom; everything else
       // settles toward a fainter base.
