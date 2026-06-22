@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { LineBreaking } from '#/football/blocks/line-breaking';
 import type { LineBreakingPass } from '#/football/blocks/line-breaking';
 
@@ -353,6 +354,102 @@ export const Default: Story = {
     crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
     color: '#eb0000',
     passes: ARGENTINA_PASSES,
+  },
+};
+
+// A stable player id from the display name, so the selector filters by id.
+const pid = (name: string): string => `arg-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+
+// Tag the Argentina passes with their team + a stable player id.
+const ARGENTINA_TAGGED: LineBreakingPass[] = ARGENTINA_PASSES.map((p) => ({
+  ...p,
+  team: 'Argentina',
+  playerId: pid(p.player),
+}));
+
+// A few France line-breaking passes (the other side), tagged with their team so
+// the selector splits the passer list into Argentina / France groups.
+const FRANCE_PASSES: LineBreakingPass[] = [
+  {
+    id: 'fr-1',
+    player: 'Antoine Griezmann',
+    playerId: 'fr-griezmann',
+    team: 'France',
+    startX: 60,
+    startY: 42,
+    endX: 94,
+    endY: 36,
+    lineBreaking: true,
+    brokenDefenders: [{ x: 80, y: 39 }],
+  },
+  {
+    id: 'fr-2',
+    player: 'Kylian Mbappé',
+    playerId: 'fr-mbappe',
+    team: 'France',
+    startX: 78,
+    startY: 26,
+    endX: 110,
+    endY: 20,
+    lineBreaking: true,
+    brokenDefenders: [{ x: 95, y: 23 }],
+  },
+  {
+    id: 'fr-3',
+    player: 'Kylian Mbappé',
+    playerId: 'fr-mbappe',
+    team: 'France',
+    startX: 52,
+    startY: 18,
+    endX: 66,
+    endY: 22,
+    lineBreaking: false,
+    brokenDefenders: [],
+  },
+];
+
+const MATCH_PASSES: LineBreakingPass[] = [...ARGENTINA_TAGGED, ...FRANCE_PASSES];
+
+/**
+ * Both teams supplied: the passer selector splits into Argentina / France and
+ * the whole-team default scopes the plot + line-break count to Argentina.
+ */
+export const BothTeams: Story = {
+  args: {
+    team: 'Argentina',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    color: '#eb0000',
+    passes: MATCH_PASSES,
+  },
+};
+
+/**
+ * Exercises the player selector alongside the existing All / Only-line-breaks
+ * view toggle: the whole-team default scopes to Argentina, the dropdown groups
+ * both teams, and selecting a France player narrows the plot to that passer.
+ */
+export const WholeTeamDefaultThenSelect: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Whole-team default: the line-break count equals Argentina's breaks only,
+    // NOT every team's (France adds two, which must be excluded by default).
+    const argBreaks = ARGENTINA_TAGGED.filter((p) => p.lineBreaking).length;
+    await waitFor(() => expect(canvas.getByText(String(argBreaks))).toBeInTheDocument());
+
+    // Open the player dropdown and confirm both team groups are present.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    const list = within(listbox);
+    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByText('Argentina')).toBeInTheDocument();
+    await expect(list.getByText('France')).toBeInTheDocument();
+
+    // Drill into Mbappé (France) → his single line break drives the count to 1.
+    await userEvent.click(list.getByRole('option', { name: 'Kylian Mbappé' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    await expect(canvas.getByText('1')).toBeInTheDocument();
   },
 };
 

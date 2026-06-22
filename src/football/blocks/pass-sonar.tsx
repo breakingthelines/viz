@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -35,6 +36,22 @@ export interface PassSonarPlayer {
   y: number;
   /** Headshot URL for the hover callout (monogram fallback). */
   imageUrl?: string;
+  /**
+   * Team display name (the selector's group heading). Supply both sides'
+   * players — each tagged with its team — to split the player list by team and
+   * scope the whole-team default to this panel's own `team`. Omit (the
+   * single-team case) and players render as one flat list with the default
+   * showing everyone — the original behaviour.
+   */
+  team?: string;
+  /**
+   * Whether this player started the match. When at least one player carries the
+   * flag, the whole-team view defaults to the starting XI (a Starters / Subs
+   * toggle switches the set), because rendering every player at once — subs
+   * included — is cramped. Omit on every player and the toggle is hidden and all
+   * supplied players render (the original behaviour).
+   */
+  starter?: boolean;
   /** Directional passing buckets. */
   wedges: PassWedge[];
 }
@@ -185,7 +202,39 @@ export function PassSonar({
   builderControls,
 }: PassSonarProps) {
   const clipPrefix = useId();
+  // Hover-driven take-over focus (transient).
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Selector state: the chosen player (null = whole team) + the squad scope.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scope, setScope] = useState<SquadScope>('starters');
+
+  // Whether the data carries starter flags / a team split — gates the squad
+  // toggle and the team grouping. Untagged legacy data keeps the old behaviour
+  // (no toggle, one flat list, every supplied player rendered).
+  const hasStarterFlags = useMemo(() => players.some((p) => p.starter !== undefined), [players]);
+  const hasTeamSplit = useMemo(
+    () => new Set(players.map((p) => p.team).filter(Boolean)).size > 1,
+    [players]
+  );
+
+  // Players offered in the selector, split by team.
+  const selectablePlayers = useMemo<SelectablePlayer[]>(
+    () => players.map((p) => ({ id: p.id, name: p.name, team: p.team })),
+    [players]
+  );
+
+  // The players actually drawn on the pitch:
+  //   • a chosen player → just that player (the drill-down);
+  //   • whole team → this panel's side (when split), narrowed to the active
+  //     squad scope when starter flags are present; else every supplied player.
+  const visiblePlayers = useMemo(() => {
+    if (selectedId !== null) return players.filter((p) => p.id === selectedId);
+    let set = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    if (hasStarterFlags) {
+      set = set.filter((p) => (scope === 'subs' ? p.starter === false : p.starter === true));
+    }
+    return set;
+  }, [players, selectedId, hasTeamSplit, team, hasStarterFlags, scope]);
 
   // Colour-intensity ceiling across all wedges. Rather than the raw single max
   // (which let one dominant direction monopolise the saturation and washed the
@@ -196,7 +245,7 @@ export function PassSonar({
     let peak = 0;
     let sum = 0;
     let n = 0;
-    for (const p of players) {
+    for (const p of visiblePlayers) {
       for (const w of p.wedges) {
         if (w.count > peak) peak = w.count;
         sum += w.count;
@@ -207,12 +256,18 @@ export function PassSonar({
     const mean = n > 0 ? sum / n : peak;
     // Pull the ceiling 35% of the way from the peak down toward the mean.
     return Math.max(1, peak - (peak - mean) * 0.35);
-  }, [players]);
+  }, [visiblePlayers]);
 
-  // One length scale shared by every player's resting sonar (a fair comparison).
-  const sharedLengthCeiling = useMemo(() => teamLengthCeiling(players), [players]);
+  // One length scale shared by every rendered sonar (a fair comparison).
+  const sharedLengthCeiling = useMemo(() => teamLengthCeiling(visiblePlayers), [visiblePlayers]);
 
-  const active = useMemo(() => players.find((p) => p.id === activeId) ?? null, [players, activeId]);
+  // Effective take-over: an explicit hover wins; otherwise a single selected
+  // player auto-focuses so a drill-down reads as "this player" without a hover.
+  const focusId = activeId ?? selectedId;
+  const active = useMemo(
+    () => visiblePlayers.find((p) => p.id === focusId) ?? null,
+    [visiblePlayers, focusId]
+  );
 
   return (
     <div
@@ -225,17 +280,36 @@ export function PassSonar({
         className
       )}
     >
-      {/* Header: one plain title + small team key (crest + name). */}
+      {/* Header: one plain title + the player selector (with a Starters/Subs
+          toggle when starter flags are present). */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Pass sonars</span>
-        <span className="flex items-center gap-1.5 text-[11px] text-white/60">
-          {crestUrl ? (
-            <img src={crestUrl} alt="" aria-hidden className="size-4 rounded-full object-contain" />
-          ) : (
-            <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
-          )}
-          <span className="truncate">{team}</span>
-        </span>
+        {selectablePlayers.length > 0 ? (
+          <PlayerSelect
+            players={selectablePlayers}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            scope={hasStarterFlags ? scope : undefined}
+            onScopeChange={hasStarterFlags ? setScope : undefined}
+          />
+        ) : (
+          <span className="flex items-center gap-1.5 text-[11px] text-white/60">
+            {crestUrl ? (
+              <img
+                src={crestUrl}
+                alt=""
+                aria-hidden
+                className="size-4 rounded-full object-contain"
+              />
+            ) : (
+              <span
+                className="inline-block size-2 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+            )}
+            <span className="truncate">{team}</span>
+          </span>
+        )}
       </div>
 
       {/* Pitch + sonars. Leaving the whole pitch clears focus as a backstop, so
@@ -264,9 +338,9 @@ export function PassSonar({
               style={{ pointerEvents: 'none' }}
             />
 
-            {players.map((player, playerIndex) => {
-              const isActive = player.id === activeId;
-              const dimmed = activeId !== null && !isActive;
+            {visiblePlayers.map((player, playerIndex) => {
+              const isActive = player.id === focusId;
+              const dimmed = focusId !== null && !isActive;
               const lengthCeiling = sharedLengthCeiling;
               const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
               // Average position can be missing on sparse data — guard so the hub,
