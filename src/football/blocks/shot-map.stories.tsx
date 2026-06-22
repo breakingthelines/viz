@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, within } from 'storybook/test';
 import { ShotMap } from './shot-map';
 import type { Shot } from './shot-map';
 
@@ -396,5 +397,62 @@ export const WithBuilderControls: Story = {
         </svg>
       </button>
     ),
+  },
+};
+
+// A long extra-time match: many shots so each timeline slot is narrow, with a
+// run of 3-digit extra-time minutes (104'–122') that previously wrapped onto two
+// lines ("10" over "4'") in the cramped per-bar label slot.
+const EXTRA_TIME_SHOTS: Shot[] = [
+  35, 52, 78, 90, 96, 104, 105, 106, 107, 110, 113, 115, 117, 119, 120, 122,
+].map((minute, i) => ({
+  id: `et-${minute}`,
+  team: i % 2 === 0 ? ('home' as const) : ('away' as const),
+  x: 96 + (i % 5) * 4,
+  y: 28 + (i % 6) * 6,
+  xg: 0.08 + (i % 4) * 0.12,
+  outcome: minute % 7 === 0 ? ('goal' as const) : ('saved' as const),
+  player: `Player ${i + 1}`,
+  minute,
+  freezeFrame: frame(96 + (i % 5) * 4, 28 + (i % 6) * 6),
+}));
+
+/**
+ * 3-digit-minute lock (viz #28, item 2). The minute-ordered xG strip cramps each
+ * bar's label slot; a 3-digit extra-time minute (104', 115', 122' …) wrapped to
+ * two lines ("10" over "4'"). The label now sets `whitespace-nowrap` (+ a smaller
+ * font at ≥100'), so every minute renders on ONE line. The lock asserts the
+ * no-wrap contract directly — `white-space: nowrap` on the 3-digit labels (a font
+ * metric never reproduces the wrap deterministically across environments, but
+ * removing `whitespace-nowrap` does) — plus that the label is no taller than a
+ * 2-digit one.
+ */
+export const ExtraTimeMinutesNoWrap: Story = {
+  args: {
+    homeTeam: 'Argentina',
+    awayTeam: 'France',
+    homeCrestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
+    shots: EXTRA_TIME_SHOTS,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // A 2-digit baseline label ("35'") and the 3-digit ET labels in the strip.
+    const twoDigit = canvas.getByText("35'");
+    const singleLineH = twoDigit.getBoundingClientRect().height;
+    for (const minute of [104, 115, 122]) {
+      const label = canvas.getByText(`${minute}'`);
+      // The no-wrap contract: removing `whitespace-nowrap` regresses this.
+      expect(
+        getComputedStyle(label).whiteSpace,
+        `${minute}' must be white-space:nowrap so it never breaks onto two lines`
+      ).toBe('nowrap');
+      // And it stays a single line (height within 1.5px of the 2-digit label).
+      const rect = label.getBoundingClientRect();
+      expect(
+        rect.height,
+        `${minute}' must render on one line (h=${rect.height} vs 2-digit ${singleLineH})`
+      ).toBeLessThanOrEqual(singleLineH + 1.5);
+    }
   },
 };

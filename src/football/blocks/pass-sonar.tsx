@@ -338,7 +338,7 @@ export function PassSonar({
               style={{ pointerEvents: 'none' }}
             />
 
-            {visiblePlayers.map((player, playerIndex) => {
+            {visiblePlayers.map((player) => {
               const isActive = player.id === focusId;
               const dimmed = focusId !== null && !isActive;
               const lengthCeiling = sharedLengthCeiling;
@@ -383,13 +383,9 @@ export function PassSonar({
                           stroke={color}
                           strokeWidth={0.18}
                           strokeOpacity={0.6}
-                          initial={{ opacity: 0 }}
+                          initial={false}
                           animate={{ opacity: fillOpacityFor(wedge.count, maxCount) }}
-                          transition={{
-                            duration: 0.5,
-                            ease: 'easeOut',
-                            delay: 0.04 * playerIndex + 0.012 * wedgeIndex,
-                          }}
+                          transition={{ duration: 0.5, ease: 'easeOut' }}
                         />
                       );
                     })}

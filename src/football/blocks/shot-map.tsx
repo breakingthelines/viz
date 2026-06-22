@@ -399,9 +399,14 @@ export function ShotMap({
                   outline: isActive ? `1px solid ${color}` : 'none',
                 }}
               />
+              {/* Minute label: never wrap (a 3-digit extra-time minute like 104'
+                  otherwise broke onto two lines in the narrow per-bar slot), and
+                  drop a notch in size + tracking at ≥100' so "104'" stays one
+                  tidy line. `leading-none` keeps the single line flush. */}
               <span
                 className={cn(
-                  'text-[8px] tabular-nums transition-colors',
+                  'whitespace-nowrap tabular-nums leading-none transition-colors',
+                  shot.minute >= 100 ? 'text-[7px] tracking-[-0.04em]' : 'text-[8px]',
                   isActive ? 'text-white/80' : 'text-white/30 group-hover:text-white/60'
                 )}
               >

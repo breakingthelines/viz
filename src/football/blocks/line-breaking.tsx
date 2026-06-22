@@ -236,7 +236,7 @@ export function LineBreaking({
             Attacking →
           </text>
 
-          {ordered.map((pass, index) => {
+          {ordered.map((pass) => {
             const visible = mode === 'all' || pass.lineBreaking;
             return (
               <PassLine
@@ -247,7 +247,6 @@ export function LineBreaking({
                 arrowId={arrowId}
                 hoveredId={hoveredId}
                 anyHovered={hovered !== null}
-                drawIndex={index}
                 onHover={setHoveredId}
               />
             );
@@ -366,7 +365,6 @@ interface PassLineProps {
   arrowId: string;
   hoveredId: string | null;
   anyHovered: boolean;
-  drawIndex: number;
   onHover: (id: string | null) => void;
 }
 
@@ -377,7 +375,6 @@ function PassLine({
   arrowId,
   hoveredId,
   anyHovered,
-  drawIndex,
   onHover,
 }: PassLineProps) {
   const x1 = normX(pass.startX);
@@ -402,10 +399,6 @@ function PassLine({
         ? 1
         : baseOpacity;
 
-  // Line-breakers draw in (pathLength 0→1) on reveal, staggered; ordinary
-  // passes just fade so they don't compete with the headline moment.
-  const drawDelay = breaking ? 0.25 + drawIndex * 0.045 : 0;
-
   return (
     <g
       onMouseEnter={() => visible && onHover(pass.id)}
@@ -425,6 +418,12 @@ function PassLine({
         />
       )}
 
+      {/* `initial={false}`: the line renders at its resting opacity (and fully
+          drawn) on first paint — base visibility never depends on an entrance
+          animation firing, which previously left the whole block blank when the
+          mount/hydration animation tick was dropped. Opacity still animates on
+          hover focus/dim (a prop-driven change after mount), so the interaction
+          flourish is intact; only the one-shot draw-in entrance is dropped. */}
       <motion.line
         x1={x1}
         y1={y1}
@@ -434,15 +433,9 @@ function PassLine({
         strokeWidth={breaking ? (isHovered ? 1.15 : 0.9) : 0.4}
         strokeLinecap="round"
         markerEnd={breaking ? `url(#${arrowId})` : undefined}
-        initial={breaking ? { pathLength: 0, opacity: 0 } : { pathLength: 1, opacity: 0 }}
-        animate={{
-          pathLength: 1,
-          opacity: targetOpacity,
-        }}
-        transition={{
-          pathLength: { duration: 0.55, ease: 'easeOut', delay: drawDelay },
-          opacity: { duration: 0.3, ease: 'easeOut', delay: drawDelay },
-        }}
+        initial={false}
+        animate={{ pathLength: 1, opacity: targetOpacity }}
+        transition={{ opacity: { duration: 0.3, ease: 'easeOut' } }}
       />
 
       {/* Origin dot — anchors each pass to where it was played from. */}
@@ -451,9 +444,9 @@ function PassLine({
         cy={y1}
         r={breaking ? 0.9 : 0.6}
         fill={breaking ? color : 'white'}
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: targetOpacity }}
-        transition={{ duration: 0.3, delay: drawDelay }}
+        transition={{ duration: 0.3 }}
       />
     </g>
   );
@@ -502,15 +495,17 @@ function BrokenDefenders({ pass, visible, dim, focused }: BrokenDefendersProps) 
                     }
               }
             />
-            {/* Solid defender dot. */}
+            {/* Solid defender dot. `initial={false}` so the dot is present on
+                first paint (the meaningful "broken here" mark), independent of
+                the entrance tick. The pulsing ring above stays a pure flourish. */}
             <motion.circle
               cx={cx}
               cy={cy}
               r={0.85}
               fill="#ff2a2a"
-              initial={{ opacity: 0, scale: 0.4 }}
+              initial={false}
               animate={{ opacity: targetOpacity, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.45 + i * 0.12 }}
+              transition={{ duration: 0.3 }}
               style={{ transformOrigin: `${cx}px ${cy}px` }}
             />
           </g>

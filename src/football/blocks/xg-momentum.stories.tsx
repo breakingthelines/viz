@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { XgMomentum, type XgMomentumShot } from './xg-momentum';
+import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/XgMomentum',
@@ -112,5 +113,22 @@ export const LowEventOneNil: Story = {
     homeCrestUrl: FLAG_ENGLAND,
     awayCrestUrl: FLAG_PORTUGAL,
     shots: lowEventShots,
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). The cumulative-xG curve (area + line) IS the
+ * chart, and started at `initial={{ opacity: 0 }}` (area) / `pathLength: 0`
+ * (line), so a dropped mount/hydration tick left the chart blank. This renders
+ * with all framer-motion animation disabled and asserts the curve paths are
+ * visible on the first frame without the entrance firing. Locked: the area +
+ * line use `initial={false}`.
+ */
+export const EntranceLock: Story = {
+  args: { ...Final2022.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    // Two teams → ≥2 cumulative-curve fill/line paths must be visible at rest.
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'path', min: 2 });
   },
 };

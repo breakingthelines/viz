@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { SetPiece } from './set-piece';
 import type { SetPiece as SetPieceData } from './set-piece';
+import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/SetPiece',
@@ -98,5 +99,22 @@ export const Default: Story = {
 export const SingleCorner: Story = {
   args: {
     setPieces: [CORNER_73],
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). Every freeze-frame player, the marking lines,
+ * the delivery arc and the arriving ball started at `initial={{ opacity: 0 }}` /
+ * `pathLength: 0` — and the parent REMOUNTS the whole pitch on each scenario
+ * switch (keyed remount) — so a dropped entrance tick left an empty pitch. This
+ * renders with all framer-motion animation disabled and asserts the players
+ * (circles) are visible on the first frame without the entrance firing. Locked:
+ * the delivery + players use `initial={false}`.
+ */
+export const EntranceLock: Story = {
+  args: { ...Default.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 5 });
   },
 };

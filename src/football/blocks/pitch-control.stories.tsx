@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { PitchControl, type PitchControlPlayer } from './pitch-control';
+import {
+  expectCanvasVisibleOnFirstFrame,
+  expectSvgContentVisibleOnFirstFrame,
+  withReducedMotion,
+} from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/PitchControl',
@@ -179,5 +184,22 @@ export const AveragePositions: Story = {
     homeTeam: 'Argentina',
     awayTeam: 'France',
     players: averagePositions,
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). The control-surface canvas IS the visualisation
+ * and the player dots are its key content; both started at
+ * `initial={{ opacity: 0 }}`, so a dropped mount/hydration tick blanked the
+ * block. This renders with all framer-motion animation disabled and asserts both
+ * the canvas and the player dots are visible on the first frame without the
+ * entrance firing. Locked: the canvas + dots use `initial={false}`.
+ */
+export const EntranceLock: Story = {
+  args: { ...MidBlock.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    await expectCanvasVisibleOnFirstFrame(canvasElement);
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 8 });
   },
 };

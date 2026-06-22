@@ -233,9 +233,9 @@ export function SetPiece({
                 stroke="white"
                 strokeWidth={0.3}
                 strokeDasharray="1.1 1"
-                initial={{ opacity: 0 }}
+                initial={false}
                 animate={{ opacity: m.opacity }}
-                transition={{ duration: 0.4, delay: 0.15, ease: 'easeOut' }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
               />
             ))}
           </g>
@@ -245,7 +245,6 @@ export function SetPiece({
             <PlayerNode
               key={`p-${i}`}
               player={player}
-              index={i}
               attackingColor={attackingColor}
               defendingColor={defendingColor}
             />
@@ -258,7 +257,6 @@ export function SetPiece({
             kind={active.kind}
             swing={active.swing ?? 'in'}
             color={attackingColor}
-            delay={0.15 + active.players.length * 0.04 + 0.1}
           />
         </Pitch>
       </div>
@@ -296,12 +294,10 @@ function Key({ color, label }: { color: string; label: string }) {
  */
 function PlayerNode({
   player,
-  index,
   attackingColor,
   defendingColor,
 }: {
   player: SetPiecePlayer;
-  index: number;
   attackingColor: string;
   defendingColor: string;
 }) {
@@ -315,9 +311,9 @@ function PlayerNode({
     <motion.g
       role="img"
       aria-label={player.name ?? (player.team === 'attacking' ? 'Attacker' : 'Defender')}
-      initial={{ opacity: 0, scale: 0.6 }}
+      initial={false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.32, delay: index * 0.04, ease: 'backOut' }}
+      transition={{ duration: 0.32, ease: 'backOut' }}
       style={{ transformOrigin: `${p.x}px ${p.y}px`, pointerEvents: 'none' }}
     >
       {/* Target highlight bloom. */}
@@ -409,14 +405,12 @@ function DeliveryArc({
   kind,
   swing,
   color,
-  delay,
 }: {
   from: Pt;
   to: Pt;
   kind: SetPieceKind;
   swing: SetPieceSwing;
   color: string;
-  delay: number;
 }) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -443,6 +437,10 @@ function DeliveryArc({
   const my = Math.max(0, Math.min(100, ctrl.y));
   const d = `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;
 
+  // `initial={false}` throughout: the delivery (spot, arc, arriving ball) is the
+  // core data of the panel, so it renders fully drawn + visible on first paint —
+  // a dropped entrance tick can no longer leave the pitch blank. The arc keeps a
+  // dasharray for its dashed look; the one-shot draw-in flourish is dropped.
   return (
     <g style={{ pointerEvents: 'none' }}>
       {/* Spot marker at the flag / dead-ball point. */}
@@ -451,11 +449,13 @@ function DeliveryArc({
         cy={from.y}
         r={0.8}
         fill={color}
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: 0.9 }}
-        transition={{ duration: 0.2, delay: delay - 0.1 }}
+        transition={{ duration: 0.2 }}
       />
-      {/* The drawn arc. */}
+      {/* The arc. No `pathLength` animation — framer-motion drives pathLength via
+          strokeDasharray, which would clobber this literal dashed pattern. The
+          arc just fades to its resting opacity from a visible first paint. */}
       <motion.path
         d={d}
         fill="none"
@@ -463,12 +463,9 @@ function DeliveryArc({
         strokeWidth={0.6}
         strokeLinecap="round"
         strokeDasharray="1.6 1.3"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 0.95 }}
-        transition={{
-          pathLength: { duration: 0.7, delay, ease: 'easeInOut' },
-          opacity: { duration: 0.2, delay },
-        }}
+        initial={false}
+        animate={{ opacity: 0.95 }}
+        transition={{ duration: 0.2 }}
       />
       {/* Ball arriving at the target zone. */}
       <motion.circle
@@ -478,9 +475,9 @@ function DeliveryArc({
         fill="white"
         stroke={color}
         strokeWidth={0.4}
-        initial={{ opacity: 0, scale: 0 }}
+        initial={false}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.25, delay: delay + 0.6, ease: 'backOut' }}
+        transition={{ duration: 0.25, ease: 'backOut' }}
         style={{ transformOrigin: `${to.x}px ${to.y}px` }}
       />
     </g>

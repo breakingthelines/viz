@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { LineBreaking } from '#/football/blocks/line-breaking';
 import type { LineBreakingPass } from '#/football/blocks/line-breaking';
+import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/LineBreaking',
@@ -481,6 +482,27 @@ export const TooltipClearsOnLeave: Story = {
     const title = canvas.getByText('Line breaks');
     await userEvent.pointer([{ target: passGroup }, { target: title }]);
     await waitFor(() => expect(calloutNode()).toBeNull());
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). The whole block intermittently rendered blank —
+ * on BOTH view modes, so not the filter — because every pass line/dot started at
+ * `initial={{ opacity: 0 }}` / `pathLength: 0` and only appeared once the mount
+ * animation ran; a dropped entrance tick (hydration/timing race, React #419)
+ * left it stuck hidden. This renders with ALL framer-motion animation disabled
+ * (`reducedMotion="always"`) and asserts the pass lines + origin dots are
+ * visible on the FIRST frame — i.e. without any entrance animation firing. Now
+ * locked: core marks use `initial={false}`. Re-introducing an opacity-0 entrance
+ * gate on the lines/dots reads ~0 on the first frame and fails this test.
+ */
+export const EntranceLock: Story = {
+  args: { ...Default.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    // Pass lines (drawn marks) and origin dots must both be visible at rest.
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'line', min: 3 });
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 3 });
   },
 };
 

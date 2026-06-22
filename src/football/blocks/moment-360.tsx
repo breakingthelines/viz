@@ -115,12 +115,13 @@ function toPolygon(points: { x: number; y: number }[]): string {
   return points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
 }
 
-// Reveal choreography (seconds): the lit area fades up, the world settles in,
-// players stagger, then the lanes draw. Calm and filmic.
+// Settle choreography (seconds): the lit area + world ease to their resting
+// opacity, the actor settles, and the in-space halo blooms. These are now pure
+// enhancement on top of an already-visible first paint (initial={false}); no
+// element's base visibility depends on the choreography running.
 const T_AREA = 0.9;
 const T_FIELD = 0.5;
 const T_PLAYER_BASE = 0.95;
-const T_PLAYER_STEP = 0.045;
 const T_LANES = 1.7;
 
 /**
@@ -241,7 +242,7 @@ export function Moment360({
               desaturated. */}
           <motion.g
             filter={`url(#${desatId})`}
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 0.16 }}
             transition={{ duration: T_FIELD, ease: 'easeOut' }}
             style={{ pointerEvents: 'none' }}
@@ -255,9 +256,9 @@ export function Moment360({
           </motion.g>
 
           {/* (2) The lit zone: a faint warm wash + crisp edge marking the
-              camera's tracked area. Fades up first. */}
+              camera's tracked area. Visible on first paint (no entrance gate). */}
           <motion.g
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: T_AREA, ease: 'easeOut' }}
             style={{ pointerEvents: 'none' }}
@@ -278,15 +279,14 @@ export function Moment360({
           <g clipPath={`url(#${maskId})`}>
             {players.map((pl, i) => {
               const p = toPitch(pl, event.team);
-              const delay = T_PLAYER_BASE + i * T_PLAYER_STEP;
 
               if (pl.keeper) {
                 return (
                   <motion.g
                     key={`lit-${i}`}
-                    initial={{ opacity: 0, scale: 0.6 }}
+                    initial={false}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.45, ease: 'backOut', delay }}
+                    transition={{ duration: 0.45, ease: 'backOut' }}
                     style={{ transformOrigin: `${p.x}px ${p.y}px`, pointerEvents: 'none' }}
                   >
                     <circle
@@ -315,9 +315,9 @@ export function Moment360({
                   stroke={pl.teammate ? 'white' : 'none'}
                   strokeWidth={pl.teammate ? 0.3 : 0}
                   strokeOpacity={0.6}
-                  initial={{ opacity: 0, scale: 0.5 }}
+                  initial={false}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, ease: 'backOut', delay }}
+                  transition={{ duration: 0.4, ease: 'backOut' }}
                   style={{ transformOrigin: `${p.x}px ${p.y}px`, pointerEvents: 'none' }}
                 />
               );
@@ -347,13 +347,9 @@ export function Moment360({
                   onMouseLeave={() => setHoverLane(null)}
                   onFocus={() => setHoverLane(i)}
                   onBlur={() => setHoverLane(null)}
-                  initial={{ opacity: 0 }}
+                  initial={false}
                   animate={{ opacity }}
-                  transition={{
-                    duration: 0.5,
-                    ease: 'easeOut',
-                    delay: dimmedByHover || isHover ? 0 : T_LANES + i * 0.12,
-                  }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
                 >
                   {/* Invisible continuous hit area: a fat band the length of the
                       lane plus the receiver, so the pointer never drops into the
@@ -398,8 +394,12 @@ export function Moment360({
                     />
                   )}
 
-                  {/* The lane itself — dashed, drawn from actor to receiver. */}
-                  <motion.line
+                  {/* The lane itself — dashed, from actor to receiver. No
+                      `pathLength` animation: framer-motion drives pathLength via
+                      strokeDasharray, which would clobber this literal dash. The
+                      lane is present on first paint (the receiver + lane are the
+                      core "passing option" content). */}
+                  <line
                     x1={origin.x}
                     y1={origin.y}
                     x2={target.x}
@@ -409,13 +409,6 @@ export function Moment360({
                     strokeOpacity={0.95}
                     strokeLinecap="round"
                     strokeDasharray="1.4 1.3"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{
-                      duration: 0.55,
-                      ease: 'easeOut',
-                      delay: T_LANES + i * 0.12,
-                    }}
                   />
 
                   {/* Receiver node at the lane's end. */}
@@ -438,9 +431,9 @@ export function Moment360({
               the ball at their feet. A circular headshot when a photo is
               supplied, otherwise the accent dot. Sits above everything. */}
           <motion.g
-            initial={{ opacity: 0, scale: 0.5 }}
+            initial={false}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: 'backOut', delay: T_PLAYER_BASE - 0.1 }}
+            transition={{ duration: 0.5, ease: 'backOut' }}
             style={{ transformOrigin: `${origin.x}px ${origin.y}px`, pointerEvents: 'none' }}
           >
             {/* Slow breathing pulse ring. Animates `scale` (a transform), NOT the
