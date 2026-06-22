@@ -591,9 +591,12 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
     // 1/√n peak holds the hottest point at a roughly constant, *un-clipped*
     // brightness whatever the match's action count — which is what keeps the
     // bloom a legible gradient (hot vs warm vs cold) instead of one saturated
-    // smear. The old code pinned this at a 0.16 ceiling, so any real match
-    // (≳ 50 actions) clipped to a flat blob. Floor keeps a lone action visible.
-    const peak = clamp(0.55 / Math.sqrt(Math.max(events.length, 1)), 0.03, 0.16);
+    // smear. The numerator + ceiling are lifted hard from the old 0.55/0.16
+    // (which left a real ~226-action match sitting at a muddy ~0.04 per blob,
+    // so even the busiest zone barely glowed): a higher per-blob alpha makes the
+    // pressing cores genuinely vivid and the high/low contrast pronounced, while
+    // the 1/√n falloff and the ceiling still stop the densest map clipping flat.
+    const peak = clamp(1.15 / Math.sqrt(Math.max(events.length, 1)), 0.05, 0.34);
 
     ctx.globalCompositeOperation = 'lighter';
     for (const e of events) {
@@ -601,13 +604,15 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
       // SB x maps straight across; SB y already runs left→right like the Pitch.
       const cx = (e.x / SB_LENGTH) * size;
       const cy = (e.y / SB_WIDTH) * size;
-      // Recoveries are pointier + a touch hotter; pressures are softer/wider.
+      // Recoveries are pointier + markedly hotter cores; pressures are softer and
+      // wider — so a mixed plot reads as bright recovery points inside a broader,
+      // cooler pressure haze (which is what the legend promises).
       const recovery = e.kind === 'recovery';
-      const radius = recovery ? baseRadius * 0.8 : baseRadius;
-      const core = recovery ? peak * 1.25 : peak;
+      const radius = recovery ? baseRadius * 0.72 : baseRadius;
+      const core = recovery ? peak * 1.7 : peak;
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
       grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${core})`);
-      grad.addColorStop(recovery ? 0.4 : 0.5, `rgba(${r}, ${g}, ${b}, ${core * 0.4})`);
+      grad.addColorStop(recovery ? 0.4 : 0.5, `rgba(${r}, ${g}, ${b}, ${core * 0.42})`);
       grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
       ctx.fillStyle = grad;
       ctx.beginPath();

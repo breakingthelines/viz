@@ -119,15 +119,29 @@ interface ResolvedEdge {
   count: number;
   /** Stroke width in viewBox units (tracks pass volume). */
   width: number;
+  /** Resting opacity (tracks pass volume), so weight reads without a hover. */
+  restOpacity: number;
 }
 
-// At rest the whole network sits at one calm, uniform strength; only volume
-// drives edge *width*, never opacity, so no node or edge reads as dimmed until
-// the reader hovers. Hover then lifts the focused player's web and fades the rest.
-const EDGE_REST_OPACITY = 0.5;
-const EDGE_DIM_OPACITY = 0.08;
-const EDGE_LIFT_OPACITY = 0.85;
+// Edge weight reads off BOTH width and opacity at rest, so the heavy build-up
+// channels (full-back ↔ midfield, the midfield triangle) stand out as thick,
+// solid lines while incidental connections recede to thin and faint — the
+// passing shape, not an undifferentiated tangle. Hover then lifts the focused
+// player's web to full strength and fades the rest right back.
+const EDGE_DIM_OPACITY = 0.07;
+const EDGE_LIFT_OPACITY = 0.92;
 const NODE_DIM_OPACITY = 0.24;
+
+// Resting per-edge opacity ramps with pass volume across [floor, ceil] so a
+// low-volume edge is visibly fainter than a heavy one even before any hover.
+const EDGE_REST_OPACITY_MIN = 0.22;
+const EDGE_REST_OPACITY_MAX = 0.82;
+
+// Resting edge stroke width (viewBox units) across the volume range. A wide
+// band (vs the old 0.4–2.2) so the thickest channels clearly out-weigh the
+// thinnest, making the team's main passing lanes legible at a glance.
+const EDGE_WIDTH_MIN = 0.45;
+const EDGE_WIDTH_MAX = 3.4;
 
 /**
  * Pass network — a weighted graph of an XI's average positions on the dark BTL
@@ -178,13 +192,19 @@ export function PassNetwork({
       const from = nodeById.get(link.from);
       const to = nodeById.get(link.to);
       if (!from || !to) return [];
+      // A mild sqrt-eased volume fraction lifts mid-volume edges off the floor
+      // so the gradient from incidental → heavy reads across the whole range,
+      // not just at the extremes.
+      const frac = Math.sqrt(scale(link.count, minC, maxC, 0, 1));
       return [
         {
           key: `${link.from}->${link.to}`,
           from,
           to,
           count: link.count,
-          width: scale(link.count, minC, maxC, 0.4, 2.2),
+          width: EDGE_WIDTH_MIN + frac * (EDGE_WIDTH_MAX - EDGE_WIDTH_MIN),
+          restOpacity:
+            EDGE_REST_OPACITY_MIN + frac * (EDGE_REST_OPACITY_MAX - EDGE_REST_OPACITY_MIN),
         },
       ];
     });
@@ -233,8 +253,16 @@ export function PassNetwork({
         </span>
       </div>
 
-      <div className="relative">
-        <Pitch variant="full" theme="dark">
+      {/* Square box so the Pitch's square (100×100) viewBox fills it instead of
+          being letterboxed into the centre third of a 3:2 frame — which is what
+          squeezed the whole network into a narrow upright column. With the box
+          squared the XI spreads across the full pitch, attacking left→right. */}
+      <div className="relative aspect-square w-full">
+        <Pitch
+          variant="full"
+          theme="dark"
+          className="absolute inset-0 !aspect-square h-full w-full"
+        >
           {/* Edges first, beneath the nodes. */}
           <g>
             {edges.map((edge) => {
@@ -257,7 +285,7 @@ export function PassNetwork({
                       ? EDGE_DIM_OPACITY
                       : lifted
                         ? EDGE_LIFT_OPACITY
-                        : EDGE_REST_OPACITY,
+                        : edge.restOpacity,
                   }}
                   transition={{ duration: 0.3, ease: 'easeOut' }}
                   style={{ pointerEvents: 'none' }}

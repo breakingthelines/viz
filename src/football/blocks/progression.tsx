@@ -101,9 +101,11 @@ function toPitch(x: number, y: number): { x: number; y: number } {
   return { x: finite((x * 100) / SB_X), y: finite((y * 100) / SB_Y) };
 }
 
-/** Stroke width in viewBox units. Wide dynamic range so xT reads off thickness. */
+/** Stroke width in viewBox units. Wide dynamic range so xT reads off thickness.
+ * Floor + range both lifted so even low-xT build-up has body (a visible mesh,
+ * not hairlines) while the top of the range still clearly out-weighs it. */
 function widthForXt(xt: number): number {
-  return 0.45 + emphasis(xtFraction(xt)) * 1.85;
+  return 0.7 + emphasis(xtFraction(xt)) * 2.0;
 }
 
 /** Head pip radius — a magnitude cue at the arrow head, sized by xT. */
@@ -112,14 +114,20 @@ function headRadiusForXt(xt: number): number {
 }
 
 /**
- * Two-stop hot ramp from a dim base toward an incandescent head, driven by xT.
- * Low threat stays muted and recedes; high threat brightens and warms toward
- * white-hot so the eye lands on it first. `base` is the team accent.
+ * Two-stop hot ramp from a live base toward an incandescent head, driven by xT.
+ * Low threat is muted but still clearly coloured (not a near-grey ghost); high
+ * threat brightens and warms toward white-hot so the eye lands on it first.
+ * `base` is the team accent.
+ *
+ * The cold end was previously dragged 55% toward a dark slate, which sank the
+ * whole low/mid mass into a faint, barely-visible mesh. It now keeps far more of
+ * the accent (a gentle dim only), so the build-up reads as a vivid web while the
+ * high-xT balls still pull decisively ahead via the warm/glow top of the ramp.
  */
 function rampColor(xt: number, base: RGB): string {
   const t = emphasis(xtFraction(xt));
-  // Cold end: a dimmed, desaturated version of the accent that sinks back.
-  const cold = mix(base, { r: 40, g: 44, b: 52 }, 0.55);
+  // Cold end: the accent only lightly dimmed — saturated, not slate-grey.
+  const cold = mix(base, { r: 92, g: 70, b: 78 }, 0.32);
   // Warm midpoint: the accent at full strength.
   // Hot end: the accent lifted toward a bright amber/white so it glows.
   const hot = mix(base, { r: 255, g: 224, b: 130 }, 0.72);
@@ -315,7 +323,10 @@ export function Progression({
                 onBlur={() => setActiveId(null)}
                 onClick={() => setActiveId((cur) => (cur === action.id ? null : action.id))}
                 initial={false}
-                animate={{ opacity: dimmed ? 0.14 : 1 }}
+                // Dimmed (a sibling is hovered) stays legible context rather than
+                // near-invisible: the hovered arrow still pops via its width bump,
+                // glow and the relative fade of the rest.
+                animate={{ opacity: dimmed ? 0.3 : 1 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
               >
                 {/* Per-arrow arrowhead, tinted to this action's ramp colour so the

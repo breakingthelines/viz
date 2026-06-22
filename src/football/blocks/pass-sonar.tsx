@@ -73,11 +73,14 @@ const MIN_WEDGE = 0.6; // floor so a short-pass wedge stays visible
 // Pass length (m) that maps to a full-radius wedge; longer passes clamp here.
 const MAX_PASS_LENGTH = 45;
 
-// Take-over focus: a freshly-drawn large sonar is rendered as a separate
-// overlay (not the small in-place sonar growing), centred in a clean slot.
-const FOCUS_CX = 50;
-const FOCUS_CY = 54;
-const FOCUS_RADIUS = 26; // outer reach of the longest wedge in the focus overlay
+// Take-over focus: a freshly-drawn, enlarged sonar is rendered as a separate
+// overlay (not the small in-place sonar growing). It is anchored at the
+// player's OWN pitch position — not a fixed centre slot — so the reader keeps
+// the spatial context of where on the pitch that passing shape happened. The
+// radius is enough to read every wedge but small enough to sit on the field;
+// the anchor is clamped so the disc never spills past the touchlines.
+const FOCUS_RADIUS = 13; // outer reach of the longest wedge in the focus overlay
+const FOCUS_MARGIN = 1.5; // keep the focus disc this far inside the pitch edge
 
 /** Clamp helper. A non-finite input collapses to the low bound. */
 function clamp(v: number, lo: number, hi: number): number {
@@ -129,16 +132,32 @@ function avgPassLength(p: PassSonarPlayer): number {
   return n > 0 ? lenSum / n : 0;
 }
 
-/** Per-player length scale: own longest reach, floored so short passers still read. */
-function lengthCeilingFor(p: PassSonarPlayer): number {
-  const longest = p.wedges.reduce((m, w) => Math.max(m, w.avgLength), 0) || 1;
-  return Math.max(longest, MAX_PASS_LENGTH * 0.5);
+/**
+ * SHARED length scale across the whole XI, so the small multiples are a fair
+ * comparison: a long-range passer's wedges genuinely out-reach a short passer's
+ * rather than every player's longest wedge filling its own disc (which made all
+ * 11 sonars look the same size). Taken as the team's longest wedge, but capped
+ * at {@link MAX_PASS_LENGTH} so a single freak long ball can't shrink everyone
+ * else into a dot, and floored so a low-volume team still spans the disc.
+ */
+function teamLengthCeiling(players: PassSonarPlayer[]): number {
+  let longest = 0;
+  for (const p of players) {
+    for (const w of p.wedges) if (w.avgLength > longest) longest = w.avgLength;
+  }
+  return clamp(longest, MAX_PASS_LENGTH * 0.6, MAX_PASS_LENGTH);
 }
 
-/** Volume → fill opacity, on a gentle curve so mid-volume directions register. */
+/**
+ * Volume → fill opacity. The count is taken as a fraction of a SOFTENED ceiling
+ * (`maxCount` eased down toward the mean) and pushed through a sqrt, so the one
+ * busiest direction no longer hogs all the saturation — mid-volume wedges read
+ * as genuinely coloured rather than washed-out, and even the quietest stays
+ * above the floor. The single most-used direction still tops the ramp.
+ */
 function fillOpacityFor(count: number, maxCount: number): number {
-  const volFrac = maxCount > 0 ? count / maxCount : 0;
-  return 0.16 + Math.sqrt(volFrac) * 0.72;
+  const volFrac = maxCount > 0 ? Math.min(1, count / maxCount) : 0;
+  return 0.26 + Math.sqrt(volFrac) * 0.66;
 }
 
 /**
@@ -168,15 +187,30 @@ export function PassSonar({
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Volume ceiling across all wedges drives the shared colour-intensity scale,
-  // so a busy hub reads denser than a quiet one within the same team.
+  // Colour-intensity ceiling across all wedges. Rather than the raw single max
+  // (which let one dominant direction monopolise the saturation and washed the
+  // rest out), this is the busiest direction eased toward the mean — a "soft
+  // max" — so mid-volume wedges read as properly coloured while the top
+  // direction still sits at the ceiling. Floored at 1 to avoid /0.
   const maxCount = useMemo(() => {
-    let m = 0;
+    let peak = 0;
+    let sum = 0;
+    let n = 0;
     for (const p of players) {
-      for (const w of p.wedges) if (w.count > m) m = w.count;
+      for (const w of p.wedges) {
+        if (w.count > peak) peak = w.count;
+        sum += w.count;
+        n += 1;
+      }
     }
-    return m;
+    if (peak <= 0) return 1;
+    const mean = n > 0 ? sum / n : peak;
+    // Pull the ceiling 35% of the way from the peak down toward the mean.
+    return Math.max(1, peak - (peak - mean) * 0.35);
   }, [players]);
+
+  // One length scale shared by every player's resting sonar (a fair comparison).
+  const sharedLengthCeiling = useMemo(() => teamLengthCeiling(players), [players]);
 
   const active = useMemo(() => players.find((p) => p.id === activeId) ?? null, [players, activeId]);
 
@@ -205,9 +239,16 @@ export function PassSonar({
       </div>
 
       {/* Pitch + sonars. Leaving the whole pitch clears focus as a backstop, so
-          the take-over can never persist once the cursor is off the field. */}
-      <div className="relative">
-        <Pitch variant="full" theme="dark">
+          the take-over can never persist once the cursor is off the field.
+          Square box so the 100×100 Pitch viewBox fills it rather than being
+          letterboxed into the centre third of a 3:2 frame — which is what
+          crammed the sonars together and detached them from their real spots. */}
+      <div className="relative aspect-square w-full">
+        <Pitch
+          variant="full"
+          theme="dark"
+          className="absolute inset-0 !aspect-square h-full w-full"
+        >
           <g onPointerLeave={() => setActiveId(null)}>
             {/* Whole-pitch scrim: dims pitch + resting sonars behind the focus.
                 Pointer-transparent so it can never swallow a leave event. */}
@@ -226,7 +267,7 @@ export function PassSonar({
             {players.map((player, playerIndex) => {
               const isActive = player.id === activeId;
               const dimmed = activeId !== null && !isActive;
-              const lengthCeiling = lengthCeilingFor(player);
+              const lengthCeiling = sharedLengthCeiling;
               const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
               // Average position can be missing on sparse data — guard so the hub,
               // wedges, hit-area and label never get NaN coordinates.
@@ -331,6 +372,7 @@ export function PassSonar({
                 avgLength={avgPassLength(active)}
                 color={color}
                 maxCount={maxCount}
+                lengthCeiling={sharedLengthCeiling}
                 crestUrl={crestUrl}
                 clipId={`${clipPrefix}-focus`}
               />
@@ -359,6 +401,7 @@ function FocusOverlay({
   avgLength,
   color,
   maxCount,
+  lengthCeiling,
   crestUrl,
   clipId,
 }: {
@@ -367,10 +410,11 @@ function FocusOverlay({
   avgLength: number;
   color: string;
   maxCount: number;
+  lengthCeiling: number;
   crestUrl?: string;
   clipId: string;
 }) {
-  // Header sits along the top of the pitch, clear of the centred sonar.
+  // Header sits along the top of the pitch, clear of the sonar.
   const avatarR = 4.2;
   const avatarCx = 10 + avatarR;
   const avatarCy = 10;
@@ -378,7 +422,13 @@ function FocusOverlay({
   const crestR = 2.6;
 
   const span = player.wedges.length > 0 ? 360 / player.wedges.length : 360;
-  const lengthCeiling = lengthCeilingFor(player);
+
+  // Anchor the enlarged sonar at the player's OWN position, clamped so the
+  // FOCUS_RADIUS disc never spills past the touchlines (a wide player would
+  // otherwise have half his sonar clipped off the pitch).
+  const bound = FOCUS_RADIUS + FOCUS_MARGIN;
+  const focusCx = clamp(finite(player.x, 50), bound, 100 - bound);
+  const focusCy = clamp(finite(player.y, 50), bound, 100 - bound);
 
   return (
     <motion.g
@@ -388,11 +438,11 @@ function FocusOverlay({
       transition={{ duration: 0.22, ease: 'easeOut' }}
       style={{ pointerEvents: 'none' }}
     >
-      {/* The large sonar itself. Scales up from its own centre via transform.
-          The hub disc (radius FOCUS_RADIUS, centred on the focus point) makes
-          the group's bbox centre the focus point, so `center` is the focus
-          centre — and `fill-box` keeps the origin local to this group, never
-          animating `d`. */}
+      {/* The enlarged sonar itself, anchored at the player's pitch position.
+          Scales up from its own centre via transform. The hub disc (radius
+          FOCUS_RADIUS, centred on the focus point) makes the group's bbox
+          centre the focus point, so `center` is the focus centre — and
+          `fill-box` keeps the origin local to this group, never animating `d`. */}
       <motion.g
         initial={{ scale: 0.82, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -402,8 +452,8 @@ function FocusOverlay({
       >
         {/* Faint hub disc + subtle range ring for the big sonar. */}
         <circle
-          cx={FOCUS_CX}
-          cy={FOCUS_CY}
+          cx={focusCx}
+          cy={focusCy}
           r={FOCUS_RADIUS}
           fill="white"
           fillOpacity={0.04}
@@ -415,7 +465,7 @@ function FocusOverlay({
         {player.wedges.map((wedge, wedgeIndex) => {
           const lengthFrac = clamp(wedge.avgLength / lengthCeiling, 0, 1);
           const r = MIN_WEDGE + lengthFrac * (FOCUS_RADIUS - MIN_WEDGE);
-          const d = wedgePath(FOCUS_CX, FOCUS_CY, r, wedge.angleDeg, span);
+          const d = wedgePath(focusCx, focusCy, r, wedge.angleDeg, span);
           return (
             <path
               key={`focus-w${wedgeIndex}`}
@@ -430,7 +480,7 @@ function FocusOverlay({
         })}
 
         {/* Hub dot. */}
-        <circle cx={FOCUS_CX} cy={FOCUS_CY} r={1.4} fill="white" fillOpacity={0.85} />
+        <circle cx={focusCx} cy={focusCy} r={1.4} fill="white" fillOpacity={0.85} />
       </motion.g>
 
       {/* Circular headshot, or a monogram chip when no photo is supplied — or
