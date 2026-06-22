@@ -351,16 +351,12 @@ export function ShotMap({
       </div>
 
       {/* Team key — small data dots + names. A freeze-frame key appears while a
-          shot is active so the faint dots that pop up read as player positions. */}
-      <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
+          shot is active so the grey dots that pop up read as the other players'
+          positions, distinguishing team-mates, opponents and the keeper. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/90">
         <TeamKey color={homeColor} name={homeTeam} crestUrl={homeCrestUrl} />
         <TeamKey color={awayColor} name={awayTeam} crestUrl={awayCrestUrl} />
-        {active && (
-          <span className="flex items-center gap-1.5 text-white/45">
-            <span className="inline-block size-1.5 rounded-full bg-white/55" />
-            <span>positions at this shot</span>
-          </span>
-        )}
+        {active && <FreezeFrameKey hasFreezeFrame={active.freezeFrame.length > 0} />}
       </div>
 
       {/* Timeline strip — shots in minute order; click to step through. */}
@@ -527,6 +523,48 @@ function TeamKey({ color, name, crestUrl }: { color: string; name: string; crest
       <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
       <Crest url={crestUrl} name={name} />
       <span className="truncate">{name}</span>
+    </span>
+  );
+}
+
+/**
+ * Legend for the freeze-frame that appears while a shot is active. Without it the
+ * grey dots the {@link FreezeFrameLayer} pops up read as mystery markers; this
+ * names them and mirrors their exact encoding — opponents a brighter grey,
+ * team-mates fainter, the keeper a ringed dot. The swatch opacities match the
+ * layer (0.55 / 0.28 / ringed) so the key reads as the real thing. When the
+ * active shot carries no freeze-frame, a single quiet "positions at this shot"
+ * line stands in (nothing to distinguish).
+ */
+function FreezeFrameKey({ hasFreezeFrame }: { hasFreezeFrame: boolean }) {
+  if (!hasFreezeFrame) {
+    return (
+      <span className="flex items-center gap-1.5 text-white/45">
+        <span className="inline-block size-1.5 rounded-full bg-white/55" />
+        <span>positions at this shot</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-3 text-white/45">
+      <span className="text-white/35">At this shot:</span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block size-1.5 rounded-full bg-white" style={{ opacity: 0.55 }} />
+        <span>opponents</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block size-1.5 rounded-full bg-white" style={{ opacity: 0.28 }} />
+        <span>team-mates</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        {/* Ringed dot — matches the keeper marker in the freeze-frame. */}
+        <span
+          aria-hidden
+          className="inline-block size-2 rounded-full border border-white/85"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(10,10,10,0.9)' }}
+        />
+        <span>keeper</span>
+      </span>
     </span>
   );
 }

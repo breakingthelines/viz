@@ -454,6 +454,37 @@ export const WholeTeamDefaultThenSelect: Story = {
 };
 
 /**
+ * Tooltip-clear lock (viz #27, item 4): the passer callout must close once the
+ * pointer leaves the pitch. Hovers a pass to open the callout, then moves the
+ * pointer off the pitch and asserts the callout is gone — guarding the
+ * container-level pointer-leave backstop against a regression where a stuck
+ * tooltip lingers after the pointer has left.
+ */
+export const TooltipClearsOnLeave: Story = {
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const calloutNode = () => canvasElement.querySelector('.rounded-full.bg-\\[\\#161616\\]\\/95');
+
+    // Hover a pass group to open the passer callout. The hit-lines carry no
+    // label, so hover the pass <g> directly via the rendered SVG. (The pitch is
+    // the 100×100 viewBox SVG — the page also has small glyph SVGs.)
+    const pitch = canvasElement.querySelector('svg[viewBox="0 0 100 100"]')!;
+    const passGroup = pitch.querySelector('g > line[stroke="transparent"]')!.closest('g')!;
+    await userEvent.hover(passGroup);
+    await waitFor(() => expect(calloutNode()).not.toBeNull());
+
+    // Move the pointer OFF the pitch, onto the block title (outside the pitch
+    // container). The container's pointer-leave backstop — plus each pass's own
+    // mouseleave — must close the callout; it never lingers once the pointer has
+    // left the pitch.
+    const title = canvas.getByText('Line breaks');
+    await userEvent.pointer([{ target: passGroup }, { target: title }]);
+    await waitFor(() => expect(calloutNode()).toBeNull());
+  },
+};
+
+/**
  * A quieter game: fewer line breaks against a deep, compact block. Proves the
  * count read-out and the "Only line breaks" filter scale down gracefully.
  */

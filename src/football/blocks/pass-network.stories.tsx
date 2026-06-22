@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { PassNetwork } from '#/football/blocks/pass-network';
 import type { PassNetworkLink, PassNetworkPlayer } from '#/football/blocks/pass-network';
+import { collectBadCirclesDuring } from '#/test/console-spy';
 
 /**
  * Argentina's average positions / pass volumes, WC2022 final-ish shape
@@ -129,6 +130,57 @@ export const Argentina: Story = {
     crestUrl: FLAG_ARGENTINA,
     players: ARGENTINA_PLAYERS,
     links: ARGENTINA_LINKS,
+  },
+};
+
+// Two nodes stacked almost on top of each other (the Acuña / Di María clash):
+// same column, a hair apart in y. Their surnames would print over one another
+// unless one label flips to the opposite side.
+const STACKED_PLAYERS: PassNetworkPlayer[] = [
+  { id: 'gk', name: 'Emiliano Martínez', x: 10, y: 40, involvement: 38 },
+  { id: 'lb', name: 'Marcos Acuña', x: 86, y: 18, involvement: 49 },
+  { id: 'lw', name: 'Ángel Di María', x: 92, y: 22, involvement: 58 },
+  { id: 'st', name: 'Lionel Messi', x: 92, y: 50, involvement: 84 },
+];
+const STACKED_LINKS: PassNetworkLink[] = [
+  { from: 'gk', to: 'lb', count: 8 },
+  { from: 'lb', to: 'lw', count: 18 },
+  { from: 'lw', to: 'st', count: 22 },
+];
+
+/**
+ * Label-collision lock (viz #27, item 2): when two nodes stack in the same
+ * column, their surnames must not render at the same y — one flips to the
+ * opposite side of its disc. Asserts the two contested names sit on opposite
+ * sides (one above its centre, one below).
+ */
+export const StackedLabelsDoNotCollide: Story = {
+  args: {
+    team: 'Argentina',
+    crestUrl: FLAG_ARGENTINA,
+    players: STACKED_PLAYERS,
+    links: STACKED_LINKS,
+  },
+  play: async ({ canvasElement }) => {
+    const acuna = await within(canvasElement).findByText('Acuña');
+    // "Di María" — the particle "Di" is part of the surname.
+    const diMaria = await within(canvasElement).findByText('Di María');
+    // Resolve each label's disc centre (the node's headshot <image> or monogram
+    // <circle>) and compare to the label's own y: above-centre vs below-centre.
+    const sideOf = (label: Element): 'above' | 'below' => {
+      const group = label.closest('g')!;
+      const circ = group.querySelector('circle');
+      const img = group.querySelector('image');
+      const cy =
+        circ != null
+          ? Number.parseFloat(circ.getAttribute('cy')!)
+          : // <image> has no cy — derive from y + height/2.
+            Number.parseFloat(img!.getAttribute('y')!) +
+            Number.parseFloat(img!.getAttribute('height')!) / 2;
+      return Number.parseFloat(label.getAttribute('y')!) < cy ? 'above' : 'below';
+    };
+    // The two stacked names end up on opposite sides — they never share a y.
+    expect(sideOf(acuna)).not.toBe(sideOf(diMaria));
   },
 };
 
@@ -261,5 +313,47 @@ export const StartersSubsAndSelect: Story = {
     await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
+  },
+};
+
+/**
+ * Regression lock for the transient `<circle r="undefined">` warning (viz #27,
+ * item 7). Swapping the selected player re-keys the animated nodes as the
+ * filtered set changes; a `motion.circle` whose `r` is read mid-transition must
+ * always resolve to a finite, positive number. React DROPS an `r` that resolves
+ * to `undefined` (rendering `r=null`) and warns in a dev build — that warning is
+ * suppressed in the vitest browser build, so this lock instead polls the DOM
+ * every animation frame across the swap and asserts no `<circle>` ever loses a
+ * finite `r` (see {@link collectBadCirclesDuring}).
+ */
+export const SelectorSwapNoCircleWarning: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const openAndPick = async (name: string) => {
+      await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+      const listbox = await canvas.findByRole('listbox');
+      await userEvent.click(within(listbox).getByRole('option', { name }));
+    };
+
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    // Hover a node so its halo motion.circle is mounted, then swap the selection
+    // out from under it while polling every frame — the realistic "hover a
+    // player, then change the selector" path that re-keys the node set and runs
+    // node + halo enter/exit transitions.
+    const bad = await collectBadCirclesDuring(canvasElement, async () => {
+      await userEvent.hover(canvas.getByLabelText(/Lionel Messi, involvement/i));
+      await openAndPick('Lionel Messi');
+      await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+      await openAndPick('Rodrigo De Paul');
+      await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+      await openAndPick('Kylian Mbappé');
+      await openAndPick('Whole team');
+      await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+    });
+
+    expect(bad).toEqual([]);
   },
 };

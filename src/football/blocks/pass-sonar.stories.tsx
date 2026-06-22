@@ -3,6 +3,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { PassSonar } from './pass-sonar';
 import type { PassSonarPlayer, PassWedge } from './pass-sonar';
+import { collectBadCirclesDuring } from '#/test/console-spy';
 
 const meta = {
   title: 'Football/Blocks/PassSonar',
@@ -258,6 +259,47 @@ export const SelectsPlayerAcrossTeams: Story = {
     // large focus sonar + name read-out render on the pitch).
     await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
     await expect(canvas.getAllByText('Mbappé').length).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * Regression lock for the transient `<circle r="undefined">` warning (viz #27,
+ * item 7). Selecting a player mounts the enlarged focus sonar; swapping straight
+ * to another player makes AnimatePresence run the previous overlay's EXIT while
+ * the next one ENTERS, and the filtered visible set changes underneath. Any
+ * animated geometry read mid-transition must resolve to a finite number. Spies
+ * on `console.error` across the whole swap sequence and asserts no SVG-attribute
+ * warning is emitted.
+ */
+export const SelectorSwapNoCircleWarning: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const pick = async (name: string) => {
+      await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+      const listbox = await canvas.findByRole('listbox');
+      await userEvent.click(within(listbox).getByRole('option', { name }));
+      await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    };
+
+    await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+
+    // Swap directly between single players (the enlarged focus sonar enter/exit
+    // overlap), across team groups, then back to the whole team — polling every
+    // animation frame so a transient undefined `r` is caught. React drops an `r`
+    // that resolves to undefined (rendering `r=null`) and warns only in a dev
+    // build; the vitest browser build suppresses that warning, so this DOM poll
+    // is the reliable signal (see {@link collectBadCirclesDuring}).
+    const bad = await collectBadCirclesDuring(canvasElement, async () => {
+      await pick('Messi');
+      await pick('De Paul');
+      await pick('Mbappé');
+      await pick('Whole team');
+      await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+    });
+
+    expect(bad).toEqual([]);
   },
 };
 

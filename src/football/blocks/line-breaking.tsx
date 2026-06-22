@@ -195,8 +195,19 @@ export function LineBreaking({
         </div>
       </div>
 
-      {/* Pitch */}
-      <div className="relative">
+      {/* Pitch. A container-level pointer-leave clears the hover as a backstop:
+          each pass clears its own hover on `mouseleave`, but moving the pointer
+          quickly between two overlapping pass lines (or off a thin line into a
+          gap) can drop the per-line leave event, leaving the callout stuck open
+          after the pointer is gone. Clearing on leave of the whole pitch — and
+          on blur leaving it — guarantees the tooltip never persists. */}
+      <div
+        className="relative"
+        onPointerLeave={() => setHoveredId(null)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setHoveredId(null);
+        }}
+      >
         <Pitch variant="full" theme="dark">
           <defs>
             <marker

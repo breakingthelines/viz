@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, waitFor, within } from 'storybook/test';
 import { GoalSequence } from './goal-sequence';
 import type { Goal } from './goal-sequence';
 
@@ -78,6 +79,44 @@ export const SingleGoal: Story = {
     team: 'Argentina',
     crestUrl: ARG_CREST,
     goals: [ARG_TEAM_GOAL],
+  },
+};
+
+/**
+ * Static first-frame lock (viz #27, item 6): the full move must be drawn at
+ * rest, WITHOUT pressing Replay — the static base renders every connecting
+ * segment, numbered touch node and surname so the block is meaningful the
+ * instant it mounts (the old behaviour left a near-empty pitch with a single
+ * marker until the reveal animation played). Asserts, with no interaction, that
+ * every step's surname and a connecting line per step are present.
+ */
+export const StaticFirstFrameShowsFullMove: Story = {
+  args: { ...SingleGoal.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const steps = ARG_TEAM_GOAL.steps;
+
+    // Every player on the move is labelled at rest (no Replay click). Di María
+    // appears as both a build-up touch and the finish — its label shows twice.
+    for (const name of new Set(steps.map((s) => s.player.replace(/^[A-Z]\.\s/, '')))) {
+      // Match the surname token rendered under each node (e.g. "Mac Allister").
+      const tokenForName = name.includes('Mac Allister')
+        ? 'Mac Allister'
+        : name.split(' ').slice(-1)[0]!;
+      await waitFor(() =>
+        expect(canvas.getAllByText(new RegExp(tokenForName)).length).toBeGreaterThan(0)
+      );
+    }
+
+    // One static connecting segment per step (solid/dashed) is present from the
+    // first frame — the move's full shape, not a single stub.
+    const pitch = canvasElement.querySelector('svg[viewBox="0 0 100 100"]')!;
+    const solidLines = [...pitch.querySelectorAll('line')].filter(
+      (l) => l.getAttribute('stroke') !== 'transparent' && l.getAttribute('stroke') !== 'white'
+    );
+    // ≥ steps.length lines: the static base draws one per step (the animated
+    // reveal adds its own twins on top, so this is a safe lower bound).
+    expect(solidLines.length).toBeGreaterThanOrEqual(steps.length);
   },
 };
 

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import { Moment360 } from './moment-360';
 import type { MomentPlayer, MomentPassingOption, MomentPoint } from './moment-360';
+import { observeCircleRadii } from '#/test/console-spy';
 
 const meta = {
   title: 'Football/Blocks/Moment360',
@@ -187,5 +189,34 @@ export const AwayCounter: Story = {
       { x: 82, y: 66, player: 'O. Dembélé' },
       { x: 50, y: 48, player: 'A. Tchouaméni' },
     ],
+  },
+};
+
+/**
+ * Regression lock for the transient `<circle r="undefined">` warning (viz #27,
+ * item 7). "The Moment" actor's pulse ring is the only animated circle in the
+ * package whose radius changes — it MUST animate `scale` (a transform), never
+ * the `r` attribute. Animating `r` directly made framer-motion drive the
+ * attribute and emit `r="undefined"` for a frame on setup (a React dev warning,
+ * verified separately in a dev build).
+ *
+ * The vitest browser build runs React without dev warnings, so this lock instead
+ * watches the pulse ring's `r` attribute every frame across a full pulse cycle:
+ * with the correct `scale` animation `r` stays fixed (one distinct value); if a
+ * future edit reintroduces an animated `r`, framer would drive the attribute
+ * through its keyframes and this set would grow — failing the lock.
+ */
+export const PulseRingScalesNotRadius: Story = {
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    // The pulse ring is the lone hairline (stroke-width 0.4) hollow circle.
+    const selector = 'circle[fill="none"][stroke-width="0.4"]';
+    // Sample > one full pulse cycle (2.4s duration + 0.4s repeatDelay + 0.3s
+    // start delay) so any attribute-level radius animation would be caught.
+    const radii = await observeCircleRadii(canvasElement, selector, 3400);
+    // Exactly one distinct, finite, positive `r` — `scale` drives the swell, not
+    // the attribute (and it is never undefined/null).
+    expect(radii.length).toBe(1);
+    expect(Number.parseFloat(radii[0]!)).toBeGreaterThan(0);
   },
 };
