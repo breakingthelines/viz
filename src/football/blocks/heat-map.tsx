@@ -69,25 +69,38 @@ const DENSITY_H = 40;
  * Per-touch kernel radius in GRID cells. It scales DOWN with touch count so a
  * dense team map concentrates into hot zones instead of smearing into a flood:
  * few touches → a broad, soft bloom; many touches → tighter contributions that
- * pile up only where play actually clustered. The band keeps even a busy map's
- * kernel wide enough (≥4 cells) that overlapping touches fuse into zones.
+ * pile up only where play actually clustered. Tightened (smaller constant +
+ * lower ceiling) versus the old 4–11 band, which over a 300-touch map fused
+ * everything into one uniform dark-red wash — the kernels overlapped so heavily
+ * that no zone stood out. A tighter kernel keeps the cores separable so the busy
+ * areas read as distinct hot zones over mostly-dark grass.
  */
-const KERNEL_MIN = 4;
-const KERNEL_MAX = 11;
+const KERNEL_MIN = 2.4;
+const KERNEL_MAX = 7;
 
 /**
  * Ceiling alpha for the very hottest zone. The normalised field tops out here so
- * even a team's busiest area reads as a strong warm region, never a fully
- * saturated lava blob — the dark pitch and its markings stay readable beneath.
+ * a team's busiest area reads as a vivid, saturated core while the dark pitch and
+ * its markings still show through everywhere the field is cool. Lifted from 0.8
+ * so the hottest zones genuinely punch rather than sitting at a muted maroon.
  */
-const HEAT_CEILING = 0.8;
+const HEAT_CEILING = 0.94;
 
 /**
- * Gamma applied to the normalised field before mapping to alpha. >1 lifts the
- * mid/low density so warm regions spread legibly rather than collapsing to a few
- * pinpoints, while the peak stays bounded by {@link HEAT_CEILING}.
+ * Contrast gamma applied to the normalised field before mapping to alpha. >1
+ * SUPPRESSES the low/mid density and lets only genuine clusters climb toward the
+ * ceiling — the opposite of the old 0.72 (which lifted the mids and flattened
+ * the whole pitch into a wash). This is what turns the field into discrete hot
+ * zones instead of a uniform gradient.
  */
-const HEAT_GAMMA = 0.72;
+const HEAT_GAMMA = 1.55;
+
+/**
+ * Floor below which a normalised cell is left fully transparent. A small dead
+ * zone keeps the cold majority of the pitch dark (so zones read against grass)
+ * rather than tinting the entire field a faint red.
+ */
+const HEAT_FLOOR = 0.06;
 
 /**
  * Heat map — a restrained density "bloom" of a team's touches on the
@@ -180,6 +193,10 @@ export function HeatMap({
           key={activePlayer ?? '__all__'}
         />
       </div>
+
+      {/* Intensity legend — decodes the faint→vivid ramp so the reader knows
+          brighter = more touches clustered there. */}
+      <IntensityLegend color={color} />
 
       {/* Footer: team + a small plain touch count. */}
       <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/90">
@@ -297,6 +314,36 @@ function Check() {
   );
 }
 
+/**
+ * Compact density legend under the pitch. A faint→vivid team-colour ramp
+ * labelled Low / High, built from the SAME ceiling + gamma the canvas uses so
+ * the swatch reads as the real encoding (more touches clustered → hotter).
+ */
+function IntensityLegend({ color }: { color: string }) {
+  const { r, g, b } = hexToRgb(color);
+  // A handful of stops along the contrast ramp → a representative gradient.
+  const stops = [0, 0.25, 0.5, 0.75, 1]
+    .map((t) => {
+      const a = Math.min(HEAT_CEILING, t ** HEAT_GAMMA * HEAT_CEILING);
+      return `rgba(${r},${g},${b},${a.toFixed(3)}) ${Math.round(t * 100)}%`;
+    })
+    .join(', ');
+  return (
+    <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-white/45">
+      <span className="text-white/35">Touch density</span>
+      <span
+        aria-hidden
+        className="h-1.5 w-16 rounded-full ring-1 ring-inset ring-white/10"
+        style={{ background: `linear-gradient(to right, ${stops})` }}
+      />
+      <span className="flex w-16 justify-between text-white/35">
+        <span>Low</span>
+        <span>High</span>
+      </span>
+    </div>
+  );
+}
+
 /** Small ~16px team crest rendered before a team name. Nothing when absent. */
 function Crest({ url, name }: { url?: string; name: string }) {
   if (!url) return null;
@@ -370,7 +417,7 @@ function DensityCanvas({ touches, color }: DensityCanvasProps) {
     const field = new Float32Array(DENSITY_W * DENSITY_H);
     // Count-aware kernel: broad for a sparse player map, tighter for a dense
     // team map (but never so tight that touches stop fusing — see KERNEL_MIN).
-    const kernel = clamp(95 / Math.sqrt(touches.length), KERNEL_MIN, KERNEL_MAX);
+    const kernel = clamp(58 / Math.sqrt(touches.length), KERNEL_MIN, KERNEL_MAX);
     const kr = Math.ceil(kernel);
     const krSq = kernel * kernel;
 
@@ -414,9 +461,11 @@ function DensityCanvas({ touches, color }: DensityCanvasProps) {
 
     for (let i = 0; i < field.length; i++) {
       const norm = field[i]! / peak; // 0..1
-      if (norm <= 0.001) continue; // leave cold cells fully transparent
-      // Gamma-lift the mids so warm regions spread, then cap at the ceiling.
-      const a = Math.min(HEAT_CEILING, norm ** HEAT_GAMMA * HEAT_CEILING);
+      if (norm <= HEAT_FLOOR) continue; // keep the cold majority of the pitch dark
+      // Rescale above the floor so the ramp uses its full range, push through the
+      // contrast gamma (suppresses lows, keeps clusters), then cap at the ceiling.
+      const t = (norm - HEAT_FLOOR) / (1 - HEAT_FLOOR);
+      const a = Math.min(HEAT_CEILING, t ** HEAT_GAMMA * HEAT_CEILING);
       const o = i * 4;
       img.data[o] = r;
       img.data[o + 1] = g;
