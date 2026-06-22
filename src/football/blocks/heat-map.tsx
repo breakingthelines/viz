@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
@@ -290,8 +290,9 @@ interface DensityCanvasProps {
  * then maps it through a transparent→colour ramp and up-scales it with smoothing
  * for a soft gradient — so the result reads as positional HOT ZONES over a
  * mostly-dark pitch, not a saturated flood. Because the parent keys this
- * component on the active filter, React remounts it on each filter change —
- * `AnimatePresence` cross-fades the old cloud out as the new one blooms in.
+ * component on the active filter, React remounts it on each filter change — and
+ * the new cloud renders opaque immediately (no entrance gate), so a dropped
+ * mount animation can never leave the map blank after a filter switch.
  *
  * Why a field (not additive blobs painted straight to the canvas): additive
  * `lighter` painting has no ceiling — more touches just pile up to solid colour.
@@ -404,16 +405,17 @@ function DensityCanvas({ touches, color }: DensityCanvasProps) {
 
   return (
     <div ref={wrapRef} className="pointer-events-none absolute inset-0">
-      <AnimatePresence>
-        <motion.canvas
-          ref={canvasRef}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0 h-full w-full"
-        />
-      </AnimatePresence>
+      {/* `initial={false}`: the heat canvas IS the whole visualisation, so its
+          visibility must never hinge on an entrance tick — a dropped mount/
+          hydration animation previously left the entire block blank. It renders
+          opaque on first paint; the fade is enhancement only. */}
+      <motion.canvas
+        ref={canvasRef}
+        initial={false}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute inset-0 h-full w-full"
+      />
     </div>
   );
 }

@@ -547,11 +547,12 @@ interface DensityCanvasProps {
 
 /**
  * The bloom layer. Renders accumulated soft radial gradients (additive) onto a
- * DPR-scaled canvas sized to its container, then fades in on mount. Because the
- * parent keys this component on the active metric, React remounts it on each
- * metric change — `AnimatePresence` cross-fades the old cloud out as the new
- * one blooms in. Recoveries get a slightly tighter, brighter core than the
- * broader pressure haze, so a mixed plot still reads as two textures.
+ * DPR-scaled canvas sized to its container. Because the parent keys this
+ * component on the active metric, React remounts it on each metric change — and
+ * the new cloud renders opaque immediately (no entrance gate), so a dropped
+ * mount animation can never leave the plot blank after a metric switch.
+ * Recoveries get a slightly tighter, brighter core than the broader pressure
+ * haze, so a mixed plot still reads as two textures.
  */
 function DensityCanvas({ events, color }: DensityCanvasProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -630,16 +631,16 @@ function DensityCanvas({ events, color }: DensityCanvasProps) {
 
   return (
     <div ref={wrapRef} className="pointer-events-none absolute inset-0">
-      <AnimatePresence>
-        <motion.canvas
-          ref={canvasRef}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0 h-full w-full"
-        />
-      </AnimatePresence>
+      {/* `initial={false}`: the density canvas is the spatial heart of the block,
+          so it paints on first render regardless of the entrance tick — a dropped
+          mount/hydration animation can no longer blank it. Fade is enhancement. */}
+      <motion.canvas
+        ref={canvasRef}
+        initial={false}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute inset-0 h-full w-full"
+      />
     </div>
   );
 }

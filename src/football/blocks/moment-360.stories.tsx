@@ -3,6 +3,7 @@ import { expect } from 'storybook/test';
 import { Moment360 } from './moment-360';
 import type { MomentPlayer, MomentPassingOption, MomentPoint } from './moment-360';
 import { observeCircleRadii } from '#/test/console-spy';
+import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/Moment360',
@@ -218,5 +219,22 @@ export const PulseRingScalesNotRadius: Story = {
     // the attribute (and it is never undefined/null).
     expect(radii.length).toBe(1);
     expect(Number.parseFloat(radii[0]!)).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). Every layer of the freeze-frame — the dim
+ * world, the lit zone, the lit players, the passing lanes and the actor — opened
+ * from `initial={{ opacity: 0 }}` / `pathLength: 0`, so a dropped mount/hydration
+ * tick left the whole moment blank. This renders with all framer-motion
+ * animation disabled and asserts the lit players (circles) are visible on the
+ * first frame without any entrance firing. Locked: every layer uses
+ * `initial={false}`.
+ */
+export const EntranceLock: Story = {
+  args: { ...Default.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 6 });
   },
 };

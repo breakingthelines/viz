@@ -532,15 +532,13 @@ function TeamPath({
     2
   )} L ${start.toFixed(2)} ${baselineY.toFixed(2)} Z`;
 
+  // `initial={false}` on the area + line: the cumulative-xG curve IS the chart,
+  // so it must paint on first render regardless of the entrance tick — a dropped
+  // mount/hydration animation previously left the chart blank. The fill-fade and
+  // line draw-in flourishes are dropped; the curve is present immediately.
   return (
     <g>
-      <motion.path
-        d={area}
-        fill={`url(#${fillId})`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.5, ease: 'easeOut' }}
-      />
+      <motion.path d={area} fill={`url(#${fillId})`} initial={false} animate={{ opacity: 1 }} />
       <motion.path
         d={line}
         fill="none"
@@ -548,9 +546,8 @@ function TeamPath({
         strokeWidth={2.5}
         strokeLinejoin="round"
         strokeLinecap="round"
-        initial={{ pathLength: 0 }}
+        initial={false}
         animate={{ pathLength: 1 }}
-        transition={{ duration: 1.15, ease: [0.22, 0.61, 0.36, 1] }}
       />
     </g>
   );
@@ -579,9 +576,9 @@ function GoalNode({
   const headR = 7;
   return (
     <motion.g
-      initial={{ opacity: 0, scale: 0.4 }}
+      initial={false}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, delay: 1.0, ease: 'backOut' }}
+      transition={{ duration: 0.4, ease: 'backOut' }}
       style={{ transformOrigin: `${step.x}px ${step.y}px` }}
     >
       {hasImage ? (

@@ -345,7 +345,7 @@ export function Progression({
         }}
       >
         <Pitch variant="full" theme="dark">
-          {ordered.map((action, i) => {
+          {ordered.map((action) => {
             const start = toPitch(action.startX, action.startY);
             const end = toPitch(action.endX, action.endY);
             const { d, ctrl } = arcPath(start, end);
@@ -413,9 +413,9 @@ export function Progression({
                   strokeLinecap="round"
                   strokeDasharray={isCarry ? '2 1.7' : undefined}
                   markerEnd={`url(#${markerId})`}
-                  initial={{ opacity: 0 }}
+                  initial={false}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 + i * 0.035 }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
                   style={{
                     filter: isActive
                       ? `drop-shadow(0 0 2px ${stroke})`
@@ -431,9 +431,9 @@ export function Progression({
                   cy={end.y}
                   r={isActive ? headR + 0.3 : headR}
                   fill={stroke}
-                  initial={{ opacity: 0, scale: 0.4 }}
+                  initial={false}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.25, delay: 0.2 + i * 0.035, ease: 'backOut' }}
+                  transition={{ duration: 0.25, ease: 'backOut' }}
                   style={{
                     transformOrigin: `${end.x}px ${end.y}px`,
                     filter: hot > 0.55 ? `drop-shadow(0 0 ${0.5 + hot}px ${stroke})` : undefined,

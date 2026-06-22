@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { expect, userEvent, within } from 'storybook/test';
 import { HeatMap } from '#/football/blocks/heat-map';
 import type { HeatMapPlayer, HeatMapTouch } from '#/football/blocks/heat-map';
+import { expectCanvasVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
 const meta = {
   title: 'Football/Blocks/HeatMap',
@@ -196,5 +197,22 @@ export const WholeTeamDefaultThenSelect: Story = {
     const mbappeTouches = MATCH_TOUCHES.filter((t) => t.player === 'fra-mbappe').length;
     await expect(canvas.getByText(String(mbappeTouches))).toBeInTheDocument();
     await expect(canvas.getByRole('button', { name: /Mbappé/ })).toBeInTheDocument();
+  },
+};
+
+/**
+ * Entrance-blank lock (viz #28). The heat canvas IS the whole visualisation, and
+ * it lived inside `<AnimatePresence>` with `initial={{ opacity: 0 }}`, so a
+ * dropped mount/hydration tick (the parent also REMOUNTS it on every filter
+ * change via a keyed remount) left the entire map blank. This renders with all
+ * framer-motion animation disabled and asserts the canvas is opaque on the first
+ * frame — without the entrance fade firing. Locked: the canvas uses
+ * `initial={false}`.
+ */
+export const EntranceLock: Story = {
+  args: { ...Default.args },
+  decorators: [withReducedMotion],
+  play: async ({ canvasElement }) => {
+    await expectCanvasVisibleOnFirstFrame(canvasElement);
   },
 };

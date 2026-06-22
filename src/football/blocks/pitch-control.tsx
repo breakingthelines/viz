@@ -195,7 +195,7 @@ export function PitchControl({
             <motion.span
               className="h-full flex-1"
               style={{ backgroundColor: AWAY_COLOR }}
-              initial={{ opacity: 0 }}
+              initial={false}
               animate={{ opacity: 0.85 }}
               transition={{ duration: 0.7 }}
             />
@@ -233,7 +233,7 @@ export function PitchControl({
                 key={p.id}
                 onMouseEnter={() => setHoveredId(p.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                initial={{ opacity: 0 }}
+                initial={false}
                 animate={{ opacity: dimmed ? 0.5 : 1 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
                 style={{ cursor: 'pointer' }}
@@ -665,9 +665,12 @@ function ControlCanvas({ players, hoveredId }: ControlCanvasProps) {
 
   return (
     <div ref={wrapRef} className="pointer-events-none absolute inset-0">
+      {/* `initial={false}`: the control surface IS the visualisation — it must
+          paint on first render regardless of the entrance tick, or a dropped
+          mount/hydration animation leaves the block blank. Fade is enhancement. */}
       <motion.canvas
         ref={canvasRef}
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="absolute inset-0 h-full w-full"

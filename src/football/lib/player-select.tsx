@@ -79,6 +79,14 @@ export function PlayerSelect({
   // Group only when more than one team is present; otherwise a flat list reads
   // cleaner (and matches the old single-team dropdown).
   const grouped = teams.length > 1;
+  // Players with no `team` (or a team not in `teams`, which can't happen but is
+  // cheap to guard) must still appear when grouping — they previously dropped
+  // out entirely, silently hiding rows whenever the data mixed tagged and
+  // untagged players. They render in a trailing un-headed section.
+  const unteamed = useMemo(
+    () => (grouped ? players.filter((p) => !p.team || !teams.includes(p.team)) : []),
+    [players, teams, grouped]
+  );
 
   const selected = selectedId !== null ? players.find((p) => p.id === selectedId) : undefined;
   const valueLabel = selected?.name ?? allLabel;
@@ -100,8 +108,9 @@ export function PlayerSelect({
             >
               {allLabel}
             </DropdownItem>
-            {grouped
-              ? teams.map((team) => (
+            {grouped ? (
+              <>
+                {teams.map((team) => (
                   <div key={team}>
                     <DropdownGroupLabel>{team}</DropdownGroupLabel>
                     {players
@@ -119,8 +128,9 @@ export function PlayerSelect({
                         </DropdownItem>
                       ))}
                   </div>
-                ))
-              : players.map((p) => (
+                ))}
+                {/* Any players without a recognised team — never dropped. */}
+                {unteamed.map((p) => (
                   <DropdownItem
                     key={p.id}
                     selected={p.id === selectedId}
@@ -132,6 +142,21 @@ export function PlayerSelect({
                     {p.name}
                   </DropdownItem>
                 ))}
+              </>
+            ) : (
+              players.map((p) => (
+                <DropdownItem
+                  key={p.id}
+                  selected={p.id === selectedId}
+                  onSelect={() => {
+                    onSelect(p.id);
+                    close();
+                  }}
+                >
+                  {p.name}
+                </DropdownItem>
+              ))
+            )}
           </>
         )}
       </ControlDropdown>
