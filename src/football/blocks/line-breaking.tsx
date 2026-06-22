@@ -6,6 +6,8 @@ import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
+import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
 export interface LineBreakingPass {
@@ -26,6 +28,19 @@ export interface LineBreakingPass {
   lineBreaking: boolean;
   /** Passer's display name, shown in the hover callout. */
   player: string;
+  /**
+   * Stable passer id, used by the player selector to filter to one player. Omit
+   * and the selector falls back to matching on {@link LineBreakingPass.player}
+   * (the display name).
+   */
+  playerId?: string;
+  /**
+   * Passer's team display name (the selector's group heading). Supply both
+   * sides' passes — each tagged with its team — to split the player list by team
+   * and scope the whole-team default to this panel's own `team`. Omit and the
+   * default shows every pass (the original single-team behaviour).
+   */
+  team?: string;
   /** Passer headshot URL. When set, the hover callout shows the photo (monogram fallback). */
   imageUrl?: string;
   /** Defenders the pass cut through, in StatsBomb units. Flash as the line draws. */
@@ -92,18 +107,50 @@ export function LineBreaking({
   const uid = useId();
   const arrowId = `${uid}-arrow`;
   const [mode, setMode] = useState<ViewMode>('all');
+  const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const breakCount = useMemo(() => passes.filter((p) => p.lineBreaking).length, [passes]);
+  // A pass's selector key: a stable id when present, else the display name.
+  const playerKey = (p: LineBreakingPass): string => p.playerId ?? p.player;
+
+  // Distinct passers for the selector, in first-seen order, split by team.
+  const selectablePlayers = useMemo<SelectablePlayer[]>(() => {
+    const seen = new Map<string, SelectablePlayer>();
+    for (const p of passes) {
+      const id = playerKey(p);
+      if (!seen.has(id)) seen.set(id, { id, name: p.player, team: p.team });
+    }
+    return [...seen.values()];
+  }, [passes]);
+
+  // True only when passes are split across teams (so the whole-team default
+  // scopes to this panel's side). Single-team / legacy data shows every pass.
+  const hasTeamSplit = useMemo(
+    () => new Set(passes.map((p) => p.team).filter(Boolean)).size > 1,
+    [passes]
+  );
+
+  // Passes after the player filter (independent of the all/breaks view mode).
+  // Whole-team default scopes to the home side when both teams are present.
+  const playerFiltered = useMemo(() => {
+    if (activePlayer !== null) return passes.filter((p) => playerKey(p) === activePlayer);
+    if (!hasTeamSplit) return passes;
+    return passes.filter((p) => p.team === team);
+  }, [passes, activePlayer, hasTeamSplit, team]);
+
+  const breakCount = useMemo(
+    () => playerFiltered.filter((p) => p.lineBreaking).length,
+    [playerFiltered]
+  );
 
   // Ordinary passes draw first (underneath), line-breakers on top so their
   // colour and the defender pulses are never occluded by quiet lines.
   const ordered = useMemo(
-    () => [...passes].sort((a, b) => Number(a.lineBreaking) - Number(b.lineBreaking)),
-    [passes]
+    () => [...playerFiltered].sort((a, b) => Number(a.lineBreaking) - Number(b.lineBreaking)),
+    [playerFiltered]
   );
 
-  const hovered = hoveredId ? (passes.find((p) => p.id === hoveredId) ?? null) : null;
+  const hovered = hoveredId ? (playerFiltered.find((p) => p.id === hoveredId) ?? null) : null;
 
   const modeValueLabel = MODE_OPTIONS.find((o) => o.value === mode)?.label ?? 'All passes';
 
@@ -118,25 +165,34 @@ export function LineBreaking({
         className
       )}
     >
-      {/* Header: one plain title + clean view dropdown. */}
+      {/* Header: one plain title + the player selector alongside the view toggle. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Line breaks</span>
-        <ControlDropdown label="Showing" valueLabel={modeValueLabel}>
-          {(close) =>
-            MODE_OPTIONS.map((o) => (
-              <DropdownItem
-                key={o.value}
-                selected={o.value === mode}
-                onSelect={() => {
-                  setMode(o.value);
-                  close();
-                }}
-              >
-                {o.label}
-              </DropdownItem>
-            ))
-          }
-        </ControlDropdown>
+        <div className="flex items-center gap-1.5">
+          {selectablePlayers.length > 0 && (
+            <PlayerSelect
+              players={selectablePlayers}
+              selectedId={activePlayer}
+              onSelect={setActivePlayer}
+            />
+          )}
+          <ControlDropdown label="Showing" valueLabel={modeValueLabel}>
+            {(close) =>
+              MODE_OPTIONS.map((o) => (
+                <DropdownItem
+                  key={o.value}
+                  selected={o.value === mode}
+                  onSelect={() => {
+                    setMode(o.value);
+                    close();
+                  }}
+                >
+                  {o.label}
+                </DropdownItem>
+              ))
+            }
+          </ControlDropdown>
+        </div>
       </div>
 
       {/* Pitch */}
@@ -289,105 +345,6 @@ function PasserAvatar({
         </span>
       )}
     </span>
-  );
-}
-
-// ── Share-menu-style dropdown ────────────────────────────────────────────────
-// Mirrors the Shot-map block's ControlDropdown (the anchored share-menu trigger
-// + glass content). Self-contained here because viz is a standalone AGPL
-// package with no design-system dependency; the classes match the kit.
-const TRIGGER_CLS =
-  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
-const CONTENT_CLS =
-  'absolute right-0 top-[calc(100%+6px)] z-50 flex min-w-[170px] flex-col gap-0.5 rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
-
-function ControlDropdown({
-  label,
-  valueLabel,
-  children,
-}: {
-  label: string;
-  valueLabel: ReactNode;
-  children: (close: () => void) => ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className={TRIGGER_CLS}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onBlur={(e) => {
-          // Close when focus leaves the dropdown entirely.
-          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
-        }}
-      >
-        <span className="text-white/50">{label}</span>
-        <span className="font-semibold">{valueLabel}</span>
-        <Caret />
-      </button>
-      {open && (
-        <div role="listbox" className={CONTENT_CLS}>
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DropdownItem({
-  selected,
-  onSelect,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={selected}
-      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
-      onClick={onSelect}
-      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
-    >
-      <span className="truncate">{children}</span>
-      {selected && <Check />}
-    </button>
-  );
-}
-
-/** Tiny caret glyph (no icon dependency in this package). */
-function Caret() {
-  return (
-    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
-      <path
-        d="M4 6l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Tiny check glyph for the selected dropdown row. */
-function Check() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
-      <path
-        d="M3.5 8.5l3 3 6-7"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

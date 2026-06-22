@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
 
 /** A single on-ball touch in StatsBomb pitch coordinates (120 × 80). */
 export interface HeatMapTouch {
@@ -21,6 +22,15 @@ export interface HeatMapPlayer {
   id: string;
   /** Display name shown in the filter. */
   name: string;
+  /**
+   * Team display name (the selector's group heading, e.g. "Argentina"). When
+   * BOTH teams' players are supplied, the selector splits them by team and the
+   * default "Whole team" view shows only the panel's own `team`; the other
+   * side's players stay available to drill into. Omit (the single-team case) and
+   * the players render as one flat list with the default showing every touch —
+   * the original behaviour.
+   */
+  team?: string;
 }
 
 export interface HeatMapProps {
@@ -123,24 +133,44 @@ export function HeatMap({
   wordmark,
   builderControls,
 }: HeatMapProps) {
-  // `null` = the "All" option; otherwise a player id.
+  // `null` = the "Whole team" option; otherwise a player id.
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
   const titleId = useId();
 
-  const options = useMemo<{ id: string | null; label: string }[]>(
-    () => [
-      { id: null, label: 'All players' },
-      ...(players ?? []).map((p) => ({ id: p.id, label: p.name })),
-    ],
-    [players]
+  const allPlayers = players ?? [];
+
+  // The selector splits players by team when both sides are supplied. When no
+  // player carries a team, `team` is undefined throughout and the control falls
+  // back to one flat list (the original single-team behaviour).
+  const selectablePlayers = useMemo<SelectablePlayer[]>(
+    () => allPlayers.map((p) => ({ id: p.id, name: p.name, team: p.team })),
+    [allPlayers]
+  );
+
+  // Ids belonging to THIS panel's team (matched on the team display name). Used
+  // for the whole-team default so it shows only the home side's territory even
+  // when the away players are present for drill-down.
+  const homePlayerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of allPlayers) if (p.team === team) ids.add(p.id);
+    return ids;
+  }, [allPlayers, team]);
+
+  // True only when players are split across teams (so a whole-team default must
+  // scope to the home side). With a single team — or untagged legacy data — the
+  // default keeps showing every touch, exactly as before.
+  const hasTeamSplit = useMemo(
+    () => new Set(allPlayers.map((p) => p.team).filter(Boolean)).size > 1,
+    [allPlayers]
   );
 
   const visibleTouches = useMemo(() => {
-    if (activePlayer === null) return touches;
-    return touches.filter((t) => t.player === activePlayer);
-  }, [touches, activePlayer]);
-
-  const activeLabel = options.find((o) => o.id === activePlayer)?.label ?? 'All players';
+    if (activePlayer !== null) return touches.filter((t) => t.player === activePlayer);
+    // Whole-team view: scope to the home side when both teams are present, else
+    // every touch (single-team / legacy data).
+    if (!hasTeamSplit) return touches;
+    return touches.filter((t) => t.player !== undefined && homePlayerIds.has(t.player));
+  }, [touches, activePlayer, hasTeamSplit, homePlayerIds]);
 
   return (
     <figure
@@ -159,23 +189,12 @@ export function HeatMap({
         <span id={titleId} className="text-[13px] font-semibold tracking-tight text-white">
           Heat Map
         </span>
-        {options.length > 1 && (
-          <ControlDropdown label="Player" valueLabel={activeLabel}>
-            {(close) =>
-              options.map((o) => (
-                <DropdownItem
-                  key={o.id ?? '__all__'}
-                  selected={o.id === activePlayer}
-                  onSelect={() => {
-                    setActivePlayer(o.id);
-                    close();
-                  }}
-                >
-                  {o.label}
-                </DropdownItem>
-              ))
-            }
-          </ControlDropdown>
+        {selectablePlayers.length > 0 && (
+          <PlayerSelect
+            players={selectablePlayers}
+            selectedId={activePlayer}
+            onSelect={setActivePlayer}
+          />
         )}
       </div>
 
@@ -212,105 +231,6 @@ export function HeatMap({
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </figure>
-  );
-}
-
-// ── Share-menu-style dropdown ────────────────────────────────────────────────
-// Mirrors the editor's game-block ControlDropdown look (the anchored share-menu
-// trigger + glass content). Self-contained here because viz is a standalone
-// AGPL package with no design-system dependency; the classes match the kit.
-const TRIGGER_CLS =
-  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
-const CONTENT_CLS =
-  'absolute right-0 top-[calc(100%+6px)] z-50 flex min-w-[150px] flex-col gap-0.5 rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
-
-function ControlDropdown({
-  label,
-  valueLabel,
-  children,
-}: {
-  label: string;
-  valueLabel: ReactNode;
-  children: (close: () => void) => ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className={TRIGGER_CLS}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onBlur={(e) => {
-          // Close when focus leaves the dropdown entirely.
-          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
-        }}
-      >
-        <span className="text-white/50">{label}</span>
-        <span className="font-semibold">{valueLabel}</span>
-        <Caret />
-      </button>
-      {open && (
-        <div role="listbox" className={CONTENT_CLS}>
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DropdownItem({
-  selected,
-  onSelect,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={selected}
-      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
-      onClick={onSelect}
-      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
-    >
-      <span className="truncate">{children}</span>
-      {selected && <Check />}
-    </button>
-  );
-}
-
-/** Tiny caret glyph (no icon dependency in this package). */
-function Caret() {
-  return (
-    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
-      <path
-        d="M4 6l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Tiny check glyph for the selected dropdown row. */
-function Check() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
-      <path
-        d="M3.5 8.5l3 3 6-7"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

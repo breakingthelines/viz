@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Progression } from './progression';
 import type { ProgressionAction } from './progression';
 
@@ -419,5 +420,58 @@ export const FranceLeftSide: Story = {
     crestUrl:
       'https://upload.wikimedia.org/wikipedia/en/thumb/0/01/France_national_football_team_seal.svg/180px-France_national_football_team_seal.svg.png',
     actions: FRA_PROGRESSION,
+  },
+};
+
+// Both sides' actions, each tagged with its team so the selector splits the
+// player list into Argentina / France groups. The whole-team default scopes the
+// plot + total-xT read-out to this panel's side (Argentina).
+const MATCH_PROGRESSION: ProgressionAction[] = [
+  ...ARG_PROGRESSION.map((a) => ({ ...a, team: 'Argentina', playerId: `arg-${a.player}` })),
+  ...FRA_PROGRESSION.map((a) => ({ ...a, team: 'France', playerId: `fra-${a.player}` })),
+];
+
+/**
+ * Both teams supplied: the player selector splits into Argentina / France
+ * alongside the existing type (All / Carries / Passes) filter, and the
+ * whole-team default scopes to Argentina.
+ */
+export const BothTeams: Story = {
+  args: {
+    team: 'Argentina',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    actions: MATCH_PROGRESSION,
+  },
+};
+
+/**
+ * Exercises the player selector + the whole-team default: the default total xT
+ * equals Argentina's sum only, the dropdown groups both teams, and selecting a
+ * France player narrows to that player's contribution.
+ */
+export const WholeTeamDefaultThenSelect: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Whole-team default scopes the total-xT read-out to Argentina only.
+    const argXt = ARG_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
+    await waitFor(() => expect(canvas.getByText(argXt)).toBeInTheDocument());
+
+    // Open the player dropdown — a "Whole team" default + both team groups.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    const list = within(listbox);
+    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByText('Argentina')).toBeInTheDocument();
+    await expect(list.getByText('France')).toBeInTheDocument();
+
+    // Drill into Mbappé (France) → the total xT becomes his contribution only.
+    await userEvent.click(list.getByRole('option', { name: 'K. Mbappé' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    const mbappeXt = FRA_PROGRESSION.filter((a) => a.player === 'K. Mbappé')
+      .reduce((s, a) => s + a.xt, 0)
+      .toFixed(2);
+    await expect(canvas.getByText(mbappeXt)).toBeInTheDocument();
   },
 };

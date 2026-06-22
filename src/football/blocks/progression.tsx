@@ -5,6 +5,8 @@ import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
+import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
 
 /** A progressive action: a carry or a pass that advances the ball. */
 export type ProgressionType = 'carry' | 'pass';
@@ -33,13 +35,23 @@ export interface ProgressionAction {
   xt: number;
   /** Player who made the action. */
   player: string;
+  /**
+   * Stable player id, used by the player selector to filter to one player. Omit
+   * and the selector falls back to matching on {@link ProgressionAction.player}
+   * (the display name).
+   */
+  playerId?: string;
+  /**
+   * Player's team display name (the selector's group heading). Supply both
+   * sides' actions — each tagged with its team — to split the player list by
+   * team and scope the whole-team default to this panel's own `team`. Omit and
+   * the default shows every action (the original single-team behaviour).
+   */
+  team?: string;
 }
 
-/** Which actions are shown: everything, by type, or a single player. */
-export type ProgressionFilter =
-  | { kind: 'all' }
-  | { kind: 'type'; type: ProgressionType }
-  | { kind: 'player'; player: string };
+/** Which actions are shown by TYPE: everything, carries only, or passes only. */
+export type ProgressionFilter = { kind: 'all' } | { kind: 'type'; type: ProgressionType };
 
 export interface ProgressionProps {
   /** Team display name. */
@@ -169,11 +181,10 @@ const TYPE_LABEL: Record<ProgressionType, string> = {
   pass: 'Pass',
 };
 
-/** True when two filters are the same selection. */
+/** True when two type-filters are the same selection. */
 function filterEq(a: ProgressionFilter, b: ProgressionFilter): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === 'type' && b.kind === 'type') return a.type === b.type;
-  if (a.kind === 'player' && b.kind === 'player') return a.player === b.player;
   return true;
 }
 
@@ -224,16 +235,33 @@ export function Progression({
   const idPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ProgressionFilter>({ kind: 'all' });
+  const [activePlayer, setActivePlayer] = useState<string | null>(null);
 
   const baseRgb = useMemo(() => parseHex(color), [color]);
 
+  // An action's selector key: a stable id when present, else the display name.
+  const playerKey = (a: ProgressionAction): string => a.playerId ?? a.player;
+
+  // True only when actions are split across teams (so the whole-team default
+  // scopes to this panel's side). Single-team / legacy data shows every action.
+  const hasTeamSplit = useMemo(
+    () => new Set(actions.map((a) => a.team).filter(Boolean)).size > 1,
+    [actions]
+  );
+
+  // Compose the player selection with the type filter. The whole-team default
+  // scopes to the home side when both teams are present.
   const matches = (a: ProgressionAction): boolean => {
-    if (filter.kind === 'all') return true;
-    if (filter.kind === 'type') return a.type === filter.type;
-    return a.player === filter.player;
+    if (filter.kind === 'type' && a.type !== filter.type) return false;
+    if (activePlayer !== null) return playerKey(a) === activePlayer;
+    if (hasTeamSplit) return a.team === team;
+    return true;
   };
 
-  const shown = useMemo(() => actions.filter(matches), [actions, filter]);
+  const shown = useMemo(
+    () => actions.filter(matches),
+    [actions, filter, activePlayer, hasTeamSplit, team]
+  );
 
   // Draw the brightest (highest-xT) arrows last so they sit on top of the mass.
   const ordered = useMemo(() => [...shown].sort((a, b) => a.xt - b.xt), [shown]);
@@ -242,18 +270,22 @@ export function Progression({
 
   const totalXt = useMemo(() => shown.reduce((sum, a) => sum + a.xt, 0), [shown]);
 
-  // Players in xT-contribution order for the filter menu.
-  const players = useMemo(() => {
-    const byPlayer = new Map<string, number>();
-    for (const a of actions) byPlayer.set(a.player, (byPlayer.get(a.player) ?? 0) + a.xt);
-    return [...byPlayer.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  // Distinct players for the selector, in xT-contribution order, split by team.
+  const selectablePlayers = useMemo<SelectablePlayer[]>(() => {
+    const agg = new Map<string, { player: SelectablePlayer; xt: number }>();
+    for (const a of actions) {
+      const id = playerKey(a);
+      const cur = agg.get(id);
+      if (cur) cur.xt += a.xt;
+      else agg.set(id, { player: { id, name: a.player, team: a.team }, xt: a.xt });
+    }
+    return [...agg.values()].sort((x, y) => y.xt - x.xt).map((e) => e.player);
   }, [actions]);
 
   const filterOptions: { value: ProgressionFilter; label: string }[] = [
     { value: { kind: 'all' }, label: 'All actions' },
     { value: { kind: 'type', type: 'carry' }, label: 'Carries' },
     { value: { kind: 'type', type: 'pass' }, label: 'Passes' },
-    ...players.map((p) => ({ value: { kind: 'player' as const, player: p }, label: p })),
   ];
   const filterValueLabel =
     filterOptions.find((o) => filterEq(o.value, filter))?.label ?? 'All actions';
@@ -269,25 +301,34 @@ export function Progression({
         className
       )}
     >
-      {/* Header: one plain title + clean filter dropdown. */}
+      {/* Header: one plain title + the player selector alongside the type filter. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Progression</span>
-        <ControlDropdown label="Showing" valueLabel={filterValueLabel}>
-          {(close) =>
-            filterOptions.map((o) => (
-              <DropdownItem
-                key={o.label}
-                selected={filterEq(o.value, filter)}
-                onSelect={() => {
-                  setFilter(o.value);
-                  close();
-                }}
-              >
-                {o.label}
-              </DropdownItem>
-            ))
-          }
-        </ControlDropdown>
+        <div className="flex items-center gap-1.5">
+          {selectablePlayers.length > 0 && (
+            <PlayerSelect
+              players={selectablePlayers}
+              selectedId={activePlayer}
+              onSelect={setActivePlayer}
+            />
+          )}
+          <ControlDropdown label="Showing" valueLabel={filterValueLabel}>
+            {(close) =>
+              filterOptions.map((o) => (
+                <DropdownItem
+                  key={o.label}
+                  selected={filterEq(o.value, filter)}
+                  onSelect={() => {
+                    setFilter(o.value);
+                    close();
+                  }}
+                >
+                  {o.label}
+                </DropdownItem>
+              ))
+            }
+          </ControlDropdown>
+        </div>
       </div>
 
       {/* Pitch + progressive actions */}
@@ -486,105 +527,6 @@ function TypeKey({ color, type }: { color: string; type: ProgressionType }) {
       </svg>
       <span>{isCarry ? 'Carry' : 'Pass'}</span>
     </span>
-  );
-}
-
-// ── Share-menu-style dropdown ────────────────────────────────────────────────
-// Mirrors the editor's game-block ControlDropdown look (the anchored share-menu
-// trigger + glass content). Self-contained here because viz is a standalone
-// AGPL package with no design-system dependency; the classes match the kit.
-const TRIGGER_CLS =
-  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
-const CONTENT_CLS =
-  'absolute right-0 top-[calc(100%+6px)] z-50 flex max-h-[280px] min-w-[160px] flex-col gap-0.5 overflow-y-auto rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
-
-function ControlDropdown({
-  label,
-  valueLabel,
-  children,
-}: {
-  label: string;
-  valueLabel: ReactNode;
-  children: (close: () => void) => ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className={TRIGGER_CLS}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onBlur={(e) => {
-          // Close when focus leaves the dropdown entirely.
-          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
-        }}
-      >
-        <span className="text-white/50">{label}</span>
-        <span className="font-semibold">{valueLabel}</span>
-        <Caret />
-      </button>
-      {open && (
-        <div role="listbox" className={CONTENT_CLS}>
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DropdownItem({
-  selected,
-  onSelect,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={selected}
-      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
-      onClick={onSelect}
-      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
-    >
-      <span className="truncate">{children}</span>
-      {selected && <Check />}
-    </button>
-  );
-}
-
-/** Tiny caret glyph (no icon dependency in this package). */
-function Caret() {
-  return (
-    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
-      <path
-        d="M4 6l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Tiny check glyph for the selected dropdown row. */
-function Check() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
-      <path
-        d="M3.5 8.5l3 3 6-7"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

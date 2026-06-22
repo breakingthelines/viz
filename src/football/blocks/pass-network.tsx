@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -37,6 +38,21 @@ export interface PassNetworkPlayer {
    * disc (monogram is not used); when absent, the node shows initials.
    */
   imageUrl?: string;
+  /**
+   * Team display name (the selector's group heading). Supply both sides' players
+   * — each tagged with its team — to split the selector list by team and scope
+   * the whole-team view to this panel's own `team`. Omit (the single-team case)
+   * and players render as one flat list — the original behaviour.
+   */
+  team?: string;
+  /**
+   * Whether this player started the match. When at least one node carries the
+   * flag, the whole-team view defaults to the starting XI (a Starters / Subs
+   * toggle switches the set), because a full graph including subs is cramped.
+   * Omit on every node and the toggle is hidden and all supplied nodes render
+   * (the original behaviour).
+   */
+  starter?: boolean;
 }
 
 /** A weighted, directed pass volume between two players. */
@@ -165,18 +181,53 @@ export function PassNetwork({
   builderControls,
 }: PassNetworkProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // Selector state: the chosen player (null = whole team) + the squad scope.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scope, setScope] = useState<SquadScope>('starters');
+
+  // Whether the data carries starter flags / a team split — gates the squad
+  // toggle and the team grouping. Untagged legacy data keeps the old behaviour.
+  const hasStarterFlags = useMemo(() => players.some((p) => p.starter !== undefined), [players]);
+  const hasTeamSplit = useMemo(
+    () => new Set(players.map((p) => p.team).filter(Boolean)).size > 1,
+    [players]
+  );
+
+  // Players offered in the selector, split by team.
+  const selectablePlayers = useMemo<SelectablePlayer[]>(
+    () => players.map((p) => ({ id: p.id, name: p.name, team: p.team })),
+    [players]
+  );
+
+  // The nodes actually drawn: this panel's side (when split), narrowed to the
+  // active squad scope when starter flags are present; else every supplied node.
+  // A chosen player is NOT removed from the graph — a single isolated node loses
+  // the network's meaning — but drives a persistent ego-highlight (below).
+  const visiblePlayers = useMemo(() => {
+    let set = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    if (hasStarterFlags) {
+      set = set.filter((p) => (scope === 'subs' ? p.starter === false : p.starter === true));
+    }
+    // Keep a selected player visible even if the active scope would hide it (e.g.
+    // a sub selected while the toggle is on Starters), so the drill-down holds.
+    if (selectedId !== null && !set.some((p) => p.id === selectedId)) {
+      const sel = players.find((p) => p.id === selectedId);
+      if (sel) set = [...set, sel];
+    }
+    return set;
+  }, [players, hasTeamSplit, team, hasStarterFlags, scope, selectedId]);
 
   const nodes = useMemo<ResolvedNode[]>(() => {
-    const involvements = players.map((p) => p.involvement);
+    const involvements = visiblePlayers.map((p) => p.involvement);
     const minInv = involvements.length ? Math.min(...involvements) : 0;
     const maxInv = involvements.length ? Math.max(...involvements) : 1;
-    return players.map((p) => ({
+    return visiblePlayers.map((p) => ({
       ...p,
       cx: normX(p.x),
       cy: normY(p.y),
       r: scale(p.involvement, minInv, maxInv, 2.4, 4.6),
     }));
-  }, [players]);
+  }, [visiblePlayers]);
 
   const nodeById = useMemo(() => {
     const map = new Map<string, ResolvedNode>();
@@ -210,18 +261,23 @@ export function PassNetwork({
     });
   }, [links, nodeById]);
 
-  /** Player ids one hop from the hovered node (incl. itself). */
+  // Effective focus: an explicit hover wins; otherwise a selected player drives
+  // a persistent ego-highlight so a drill-down reads as "this player's web"
+  // without a hover. (The node set isn't reduced — see `visiblePlayers`.)
+  const focusId = hoveredId ?? selectedId;
+
+  /** Player ids one hop from the focused node (incl. itself). */
   const connectedIds = useMemo(() => {
-    if (!hoveredId) return null;
-    const set = new Set<string>([hoveredId]);
+    if (!focusId) return null;
+    const set = new Set<string>([focusId]);
     for (const e of edges) {
-      if (e.from.id === hoveredId) set.add(e.to.id);
-      if (e.to.id === hoveredId) set.add(e.from.id);
+      if (e.from.id === focusId) set.add(e.to.id);
+      if (e.to.id === focusId) set.add(e.from.id);
     }
     return set;
-  }, [edges, hoveredId]);
+  }, [edges, focusId]);
 
-  const hoveredNode = hoveredId ? (nodeById.get(hoveredId) ?? null) : null;
+  const focusedNode = focusId ? (nodeById.get(focusId) ?? null) : null;
 
   return (
     <div
@@ -234,23 +290,26 @@ export function PassNetwork({
         className
       )}
     >
-      {/* Header: one plain title + small legend read-out. */}
+      {/* Header: one plain title + the player selector (with a Starters/Subs
+          toggle when starter flags are present). */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold tracking-tight text-white">Pass network</span>
-        <span className="text-[11px] tabular-nums text-white/55">
-          {hoveredNode ? (
-            <>
-              <span style={{ color }}>{hoveredNode.name}</span>
-              <span className="text-white/30"> · </span>
-              <span className="text-white/70">{hoveredNode.involvement} involvements</span>
-            </>
-          ) : (
+        {selectablePlayers.length > 0 ? (
+          <PlayerSelect
+            players={selectablePlayers}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            scope={hasStarterFlags ? scope : undefined}
+            onScopeChange={hasStarterFlags ? setScope : undefined}
+          />
+        ) : (
+          <span className="text-[11px] tabular-nums text-white/55">
             <span className="inline-flex items-center gap-1.5 text-white/40">
               <Crest url={crestUrl} name={team} />
               {team}
             </span>
-          )}
-        </span>
+          </span>
+        )}
       </div>
 
       {/* Square box so the Pitch's square (100×100) viewBox fills it instead of
@@ -267,8 +326,8 @@ export function PassNetwork({
           <g>
             {edges.map((edge) => {
               const lifted =
-                hoveredId !== null && (edge.from.id === hoveredId || edge.to.id === hoveredId);
-              const dimmed = hoveredId !== null && !lifted;
+                focusId !== null && (edge.from.id === focusId || edge.to.id === focusId);
+              const dimmed = focusId !== null && !lifted;
               return (
                 <motion.line
                   key={edge.key}
@@ -296,7 +355,7 @@ export function PassNetwork({
 
           {/* Nodes. */}
           {nodes.map((node) => {
-            const isHovered = node.id === hoveredId;
+            const isHovered = node.id === focusId;
             const dimmed = connectedIds !== null && !connectedIds.has(node.id);
             return (
               <motion.g
@@ -364,16 +423,29 @@ export function PassNetwork({
         </Pitch>
       </div>
 
-      {/* Legend — small data dot + counts. */}
+      {/* Legend — the focused player's read-out, else team + visible counts. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
-          <Crest url={crestUrl} name={team} />
-          <span className="truncate">{team}</span>
-        </span>
-        <span className="tabular-nums text-white/90">
-          {players.length} players · {links.length} links
-        </span>
+        {focusedNode ? (
+          <span className="tabular-nums">
+            <span style={{ color }}>{focusedNode.name}</span>
+            <span className="text-white/30"> · </span>
+            <span className="text-white/70">{focusedNode.involvement} involvements</span>
+          </span>
+        ) : (
+          <>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block size-2 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <Crest url={crestUrl} name={team} />
+              <span className="truncate">{team}</span>
+            </span>
+            <span className="tabular-nums text-white/90">
+              {nodes.length} players · {edges.length} links
+            </span>
+          </>
+        )}
       </div>
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />

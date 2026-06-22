@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { expect, userEvent, within } from 'storybook/test';
 import { HeatMap } from '#/football/blocks/heat-map';
 import type { HeatMapPlayer, HeatMapTouch } from '#/football/blocks/heat-map';
 
@@ -69,17 +70,17 @@ function blob(
   return out;
 }
 
-const PLAYERS: HeatMapPlayer[] = [
-  { id: 'busquets', name: 'Busquets' }, // holding mid — heavy central, deep-middle
-  { id: 'pedri', name: 'Pedri' }, // left-side interior
-  { id: 'gavi', name: 'Gavi' }, // right-side interior
-  { id: 'olmo', name: 'Olmo' }, // left winger — hugs left touchline, advanced
-  { id: 'azpi', name: 'Azpilicueta' }, // right-back — overlaps high right
+// Single-team Spain XI (no team tag) — proves the original flat-list,
+// show-everything behaviour still holds for legacy data.
+const SPAIN_PLAYERS: HeatMapPlayer[] = [
+  { id: 'busquets', name: 'Busquets' },
+  { id: 'pedri', name: 'Pedri' },
+  { id: 'gavi', name: 'Gavi' },
+  { id: 'olmo', name: 'Olmo' },
+  { id: 'azpi', name: 'Azpilicueta' },
 ];
 
-// Each player's signature region. Together they make a possession side: deep
-// + middle thirds dense and central, fanning wide on both flanks.
-const TOUCHES: HeatMapTouch[] = [
+const SPAIN_TOUCHES: HeatMapTouch[] = [
   ...blob(78, 52, 40, 13, 11, 'busquets'),
   ...blob(70, 66, 27, 14, 12, 'pedri'),
   ...blob(66, 64, 54, 13, 12, 'gavi'),
@@ -87,17 +88,45 @@ const TOUCHES: HeatMapTouch[] = [
   ...blob(54, 74, 12, 18, 8, 'azpi'),
 ];
 
+// Two-team match: Argentina (this panel's side) + France, each player tagged
+// with its team so the selector splits the list. The whole-team default still
+// blooms only Argentina's touches; France players are there to drill into.
+const ARG_PLAYERS: HeatMapPlayer[] = [
+  { id: 'arg-fernandez', name: 'Fernández', team: 'Argentina' },
+  { id: 'arg-depaul', name: 'De Paul', team: 'Argentina' },
+  { id: 'arg-messi', name: 'Messi', team: 'Argentina' },
+  { id: 'arg-molina', name: 'Molina', team: 'Argentina' },
+];
+const FRA_PLAYERS: HeatMapPlayer[] = [
+  { id: 'fra-mbappe', name: 'Mbappé', team: 'France' },
+  { id: 'fra-griezmann', name: 'Griezmann', team: 'France' },
+  { id: 'fra-tchouameni', name: 'Tchouaméni', team: 'France' },
+];
+const MATCH_PLAYERS: HeatMapPlayer[] = [...ARG_PLAYERS, ...FRA_PLAYERS];
+
+const MATCH_TOUCHES: HeatMapTouch[] = [
+  ...blob(74, 50, 40, 13, 11, 'arg-fernandez'),
+  ...blob(68, 64, 30, 14, 12, 'arg-depaul'),
+  ...blob(62, 74, 60, 14, 12, 'arg-messi'),
+  ...blob(56, 70, 74, 16, 8, 'arg-molina'),
+  // France touches sit in their own (mirrored) territory; only shown on drill-in.
+  ...blob(60, 70, 24, 15, 11, 'fra-mbappe'),
+  ...blob(64, 52, 44, 14, 12, 'fra-griezmann'),
+  ...blob(66, 44, 56, 13, 12, 'fra-tchouameni'),
+];
+
 // Wikimedia national flags, used as team crests.
 const FLAG_SPAIN = 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Spain.svg';
 const FLAG_ITALY = 'https://upload.wikimedia.org/wikipedia/commons/0/03/Flag_of_Italy.svg';
+const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
 
 export const Default: Story = {
   args: {
     team: 'Spain',
     crestUrl: FLAG_SPAIN,
     color: '#eb0000',
-    touches: TOUCHES,
-    players: PLAYERS,
+    touches: SPAIN_TOUCHES,
+    players: SPAIN_PLAYERS,
   },
 };
 
@@ -107,7 +136,7 @@ export const NoFilter: Story = {
     team: 'Spain',
     crestUrl: FLAG_SPAIN,
     color: '#eb0000',
-    touches: TOUCHES,
+    touches: SPAIN_TOUCHES,
   },
 };
 
@@ -117,7 +146,55 @@ export const BlueAccent: Story = {
     team: 'Italy',
     crestUrl: FLAG_ITALY,
     color: '#3b6fe0',
-    touches: TOUCHES,
-    players: PLAYERS,
+    touches: SPAIN_TOUCHES,
+    players: SPAIN_PLAYERS,
+  },
+};
+
+/**
+ * Both teams supplied: the selector splits players into Argentina / France and
+ * the whole-team default blooms only Argentina's touches.
+ */
+export const BothTeams: Story = {
+  args: {
+    team: 'Argentina',
+    crestUrl: FLAG_ARGENTINA,
+    color: '#6db4ff',
+    touches: MATCH_TOUCHES,
+    players: MATCH_PLAYERS,
+  },
+};
+
+/**
+ * Exercises the selector on a two-team match: the whole-team default scopes to
+ * Argentina's touches, the dropdown shows both team groups, and selecting a
+ * France player narrows the bloom to just that player.
+ */
+export const WholeTeamDefaultThenSelect: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Whole-team default scopes to Argentina only (4 ARG players' touches), NOT
+    // every supplied touch — so the count is below the full set.
+    const total = MATCH_TOUCHES.length;
+    const argTotal = MATCH_TOUCHES.filter((t) => (t.player ?? '').startsWith('arg-')).length;
+    const countCell = canvas.getByText(String(argTotal));
+    await expect(countCell).toBeInTheDocument();
+    await expect(argTotal).toBeLessThan(total);
+
+    // Open the dropdown: a "Whole team" default + both team groups.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    const list = within(listbox);
+    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByText('Argentina')).toBeInTheDocument();
+    await expect(list.getByText('France')).toBeInTheDocument();
+
+    // Select a France player → the bloom narrows to that player's touches.
+    await userEvent.click(list.getByRole('option', { name: 'Mbappé' }));
+    const mbappeTouches = MATCH_TOUCHES.filter((t) => t.player === 'fra-mbappe').length;
+    await expect(canvas.getByText(String(mbappeTouches))).toBeInTheDocument();
+    await expect(canvas.getByRole('button', { name: /Mbappé/ })).toBeInTheDocument();
   },
 };
