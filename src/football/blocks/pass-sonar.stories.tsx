@@ -262,6 +262,57 @@ export const SelectsPlayerAcrossTeams: Story = {
   },
 };
 
+// The home crest used by the team-aware stories. Pinned here so the focus-card
+// crest assertion below can match the exact `<image href>` regardless of which
+// players carry headshots.
+const ARGENTINA_CREST = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+
+/** True when an SVG `<image>` with this exact href is rendered anywhere. */
+function hasImageHref(root: HTMLElement, href: string): boolean {
+  return [...root.querySelectorAll('image')].some(
+    (img) => img.getAttribute('href') === href || img.getAttributeNS(null, 'href') === href
+  );
+}
+
+/**
+ * Per-player focus-card crest is the SELECTED player's side, never hard-keyed to
+ * the home crest (viz #31). The block carries only the HOME crest, so:
+ *   • selecting a HOME player (Messi, Argentina) → the focus card wears the home
+ *     crest;
+ *   • selecting an AWAY player (Mbappé, France) → the focus card shows the name
+ *     alone, NOT the home (Argentina) crest — the bug was the away card wearing
+ *     the Argentina flag.
+ * Asserts the crest `<image href>` is present for the home pick and absent for
+ * the away pick (matching on the crest URL specifically, since home headshots
+ * also render `<image>` elements).
+ */
+export const FocusCardCrestFollowsSelectedTeam: Story = {
+  args: { ...BothTeamsWithSubs.args, crestUrl: ARGENTINA_CREST },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const pick = async (name: string) => {
+      await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+      const listbox = await canvas.findByRole('listbox');
+      await userEvent.click(within(listbox).getByRole('option', { name }));
+      await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    };
+
+    await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+
+    // HOME player: the focus card surfaces the home (Argentina) crest.
+    await pick('Messi');
+    await waitFor(() => expect(canvas.getAllByText('Messi').length).toBeGreaterThan(0));
+    await waitFor(() => expect(hasImageHref(canvasElement, ARGENTINA_CREST)).toBe(true));
+
+    // AWAY player: switching to a France player must DROP the home crest — the
+    // away card never wears the Argentina flag (the regression under test).
+    await pick('Mbappé');
+    await waitFor(() => expect(canvas.getAllByText('Mbappé').length).toBeGreaterThan(0));
+    await waitFor(() => expect(hasImageHref(canvasElement, ARGENTINA_CREST)).toBe(false));
+  },
+};
+
 /**
  * "{Team} — whole team" switch. The per-side whole-team rows let the panel show
  * France's whole XI (not only one player). Picks "France — whole team" and
