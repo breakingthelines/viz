@@ -184,6 +184,24 @@ function fillOpacityFor(count: number, maxCount: number): number {
 }
 
 /**
+ * Whether a player belongs to the side the panel's home crest represents. The
+ * block carries only the HOME crest (the team-aware split supplies both sides'
+ * players but a single crest), so the per-player focus card may only wear the
+ * crest when the focused player is on the home team. When the data is NOT
+ * team-split (the single-team / legacy case), every player is the home side and
+ * the crest always applies — including untagged players, which can only be the
+ * one team present.
+ */
+function isHomeSide(
+  playerTeam: string | undefined,
+  homeTeam: string,
+  hasTeamSplit: boolean
+): boolean {
+  if (!hasTeamSplit) return true;
+  return playerTeam === homeTeam;
+}
+
+/**
  * Pass sonars — the iconic StatsBomb radial passing diagram on the BTL dark
  * surface, styled to sit quietly next to the Shot map and Lineup builder. Each
  * player gets a small polar diagram at their average position: the circle is
@@ -465,7 +483,14 @@ export function PassSonar({
                 color={color}
                 maxCount={maxCount}
                 lengthCeiling={sharedLengthCeiling}
-                crestUrl={crestUrl}
+                // Crest belongs to the HOME side only (the block carries the home
+                // crest, per the team-aware split). Pass it through only when the
+                // focused player is on the home team — otherwise an away player's
+                // card would wear the home crest (e.g. a France player showing the
+                // Argentina flag). When the data isn't team-split, every player is
+                // the home team, so the crest always applies. The away card shows
+                // the name alone, matching the whole-team readouts.
+                crestUrl={isHomeSide(active.team, team, hasTeamSplit) ? crestUrl : undefined}
                 clipId={`${clipPrefix}-focus`}
               />
             )}
