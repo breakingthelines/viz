@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
 import {
+  activeCrest,
   PlayerSelect,
   resolveActiveTeam,
   type SelectablePlayer,
@@ -55,8 +56,15 @@ export interface LineBreakingPass {
 export interface LineBreakingProps {
   /** Team display name. */
   team: string;
-  /** Team crest URL. When set, a small crest sits before the team name. */
+  /** Home team crest URL. When set, a small crest sits before the team name. */
   crestUrl?: string;
+  /**
+   * Away team crest URL. When the data is team-split (both sides' passes are
+   * supplied), switching the panel to the OTHER side — "{Away} — whole team" or
+   * any away player — badges the read-out with this crest. Omit it (legacy /
+   * home-only data) and the away view shows the name alone, never the home badge.
+   */
+  awayCrestUrl?: string;
   /** Team accent colour for line-breaking passes. Defaults to the home red. */
   color?: string;
   /** Completed passes to plot. */
@@ -103,6 +111,7 @@ const MODE_OPTIONS: { value: ViewMode; label: string }[] = [
 export function LineBreaking({
   team,
   crestUrl,
+  awayCrestUrl,
   color = '#eb0000',
   passes,
   className,
@@ -144,6 +153,10 @@ export function LineBreaking({
   // The ACTIVE side: a selected passer's team, else a chosen whole-team side,
   // else the home `team`. Picking a France passer therefore renders France.
   const activeTeam = resolveActiveTeam(team, activePlayer, activeTeamSel, playerTeamOf);
+
+  // Crest for the active side — home crest for the home side, away crest for the
+  // other side (when supplied); name-only when the away crest isn't baked.
+  const crestForActive = activeCrest(activeTeam, team, crestUrl, awayCrestUrl);
 
   // Passes after the player filter (independent of the all/breaks view mode).
   // Whole-team view scopes to the ACTIVE side when both teams are present.
@@ -319,14 +332,15 @@ export function LineBreaking({
       </div>
 
       {/* Team key + count read-out — small + plain, mirrors the shot-map team key row.
-          Labels the ACTIVE side; the crest only shows for the home side (the
-          block carries the home crest only), so the away view never shows the
-          wrong badge. */}
+          Labels the ACTIVE side, badged with that side's crest: the home crest
+          for the home side, the away crest for the other side (when supplied).
+          An away view with no away crest baked shows the name alone — never the
+          wrong (home) badge. */}
       <div className="mt-3 flex items-center gap-3 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
-          {crestUrl && activeTeam === team && (
+          {crestForActive && (
             <img
-              src={crestUrl}
+              src={crestForActive}
               alt=""
               aria-hidden
               width={16}

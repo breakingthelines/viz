@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 import {
+  activeCrest,
   PlayerSelect,
   resolveActiveTeam,
   type SelectablePlayer,
@@ -74,8 +75,15 @@ export interface PassNetworkLink {
 export interface PassNetworkProps {
   /** Team display name, shown as the panel title's subject. */
   team: string;
-  /** Team crest URL. Rendered as a small badge before the team name. */
+  /** Home team crest URL. Rendered as a small badge before the team name. */
   crestUrl?: string;
+  /**
+   * Away team crest URL. When the data is team-split (both sides' players are
+   * supplied), switching the panel to the OTHER side — "{Away} — whole team" or
+   * any away player — badges it with this crest. Omit it (legacy / home-only
+   * data) and the away view shows the name alone, never the home badge.
+   */
+  awayCrestUrl?: string;
   /** Accent colour for edges + nodes. Defaults to BTL home red. */
   color?: string;
   /** The XI as network nodes at their average locations. */
@@ -181,6 +189,7 @@ const EDGE_WIDTH_MAX = 3.4;
 export function PassNetwork({
   team,
   crestUrl,
+  awayCrestUrl,
   color = DEFAULT_TEAM_COLOR,
   players,
   links,
@@ -220,6 +229,11 @@ export function PassNetwork({
     activeTeamSel,
     (id) => players.find((p) => p.id === id)?.team
   );
+
+  // Crest for whichever side is active — the home crest for the home side, the
+  // away crest for the other side (when supplied). An away view with no away
+  // crest baked falls back to a name-only label rather than the home badge.
+  const crestForActive = activeCrest(activeTeam, team, crestUrl, awayCrestUrl);
 
   // The nodes actually drawn: the ACTIVE side (when split), narrowed to the
   // active squad scope when starter flags are present; else every supplied node.
@@ -397,8 +411,8 @@ export function PassNetwork({
         ) : (
           <span className="text-[11px] tabular-nums text-white/55">
             <span className="inline-flex items-center gap-1.5 text-white/40">
-              <Crest url={crestUrl} name={team} />
-              {team}
+              <Crest url={crestForActive} name={activeTeam} />
+              {activeTeam}
             </span>
           </span>
         )}
@@ -539,15 +553,16 @@ export function PassNetwork({
           </span>
         ) : (
           <>
-            {/* Labels the ACTIVE side; the crest only shows for the home side (the
-                block carries the home crest only), so an away whole-team view
-                never shows the wrong badge. */}
+            {/* Labels the ACTIVE side, badged with that side's crest: the home
+                crest for the home side, the away crest for the other side (when
+                supplied). An away view with no away crest baked shows the name
+                alone — never the wrong (home) badge. */}
             <span className="flex items-center gap-1.5">
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              {activeTeam === team && <Crest url={crestUrl} name={team} />}
+              <Crest url={crestForActive} name={activeTeam} />
               <span className="truncate">{activeTeam}</span>
             </span>
             <span className="tabular-nums text-white/90">

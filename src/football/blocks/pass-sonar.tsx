@@ -65,8 +65,15 @@ export interface PassSonarPlayer {
 export interface PassSonarProps {
   /** Team display name. */
   team: string;
-  /** Optional team crest/flag URL, rendered small beside the team name. */
+  /** Optional home team crest/flag URL, rendered small beside the team name. */
   crestUrl?: string;
+  /**
+   * Optional away team crest/flag URL. When the data is team-split (both sides'
+   * players are supplied), focusing an away player surfaces this crest on the
+   * focus card. Omit it (legacy / home-only data) and an away player's card shows
+   * the name alone, never the home badge.
+   */
+  awayCrestUrl?: string;
   /** Team accent. Defaults to BTL home red. */
   color?: string;
   /** Players to plot, each with an average position and directional wedges. */
@@ -184,21 +191,26 @@ function fillOpacityFor(count: number, maxCount: number): number {
 }
 
 /**
- * Whether a player belongs to the side the panel's home crest represents. The
- * block carries only the HOME crest (the team-aware split supplies both sides'
- * players but a single crest), so the per-player focus card may only wear the
- * crest when the focused player is on the home team. When the data is NOT
- * team-split (the single-team / legacy case), every player is the home side and
- * the crest always applies — including untagged players, which can only be the
- * one team present.
+ * The crest the per-player focus card should wear, for a player on `playerTeam`.
+ * The block now carries BOTH sides' crests (the team-aware split supplies both
+ * sides' players), so the focus card follows the focused player's own side:
+ *
+ *   • a HOME player → the home crest;
+ *   • an AWAY player → the away crest, when supplied (else the name alone — never
+ *     the home badge);
+ *   • not team-split (single-team / legacy): every player is the home side, so
+ *     the home crest always applies — including untagged players, which can only
+ *     be the one team present.
  */
-function isHomeSide(
+function crestForPlayer(
   playerTeam: string | undefined,
   homeTeam: string,
+  homeCrest: string | undefined,
+  awayCrest: string | undefined,
   hasTeamSplit: boolean
-): boolean {
-  if (!hasTeamSplit) return true;
-  return playerTeam === homeTeam;
+): string | undefined {
+  if (!hasTeamSplit) return homeCrest;
+  return playerTeam === homeTeam ? homeCrest : awayCrest;
 }
 
 /**
@@ -219,6 +231,7 @@ function isHomeSide(
 export function PassSonar({
   team,
   crestUrl,
+  awayCrestUrl,
   color = TEAM_COLOR,
   players,
   className,
@@ -483,14 +496,13 @@ export function PassSonar({
                 color={color}
                 maxCount={maxCount}
                 lengthCeiling={sharedLengthCeiling}
-                // Crest belongs to the HOME side only (the block carries the home
-                // crest, per the team-aware split). Pass it through only when the
-                // focused player is on the home team — otherwise an away player's
-                // card would wear the home crest (e.g. a France player showing the
-                // Argentina flag). When the data isn't team-split, every player is
-                // the home team, so the crest always applies. The away card shows
-                // the name alone, matching the whole-team readouts.
-                crestUrl={isHomeSide(active.team, team, hasTeamSplit) ? crestUrl : undefined}
+                // Crest follows the focused player's own side: the home crest for
+                // a home player, the away crest for an away player (e.g. a France
+                // player wears France's flag, not Argentina's). An away player
+                // with no away crest baked shows the name alone — never the home
+                // badge. When the data isn't team-split, every player is the home
+                // team, so the home crest always applies.
+                crestUrl={crestForPlayer(active.team, team, crestUrl, awayCrestUrl, hasTeamSplit)}
                 clipId={`${clipPrefix}-focus`}
               />
             )}

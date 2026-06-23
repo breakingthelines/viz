@@ -112,6 +112,31 @@ export function resolveActiveTeam(
   return selectedTeam ?? homeTeam;
 }
 
+/**
+ * Pick the crest to show for whichever side is currently active. The team-aware
+ * blocks carry BOTH sides' crests now — the home crest (`homeCrest`) and,
+ * optionally, the away crest (`awayCrest`) — so the panel can badge France's
+ * whole-team view (or a France player's read-out) with France's flag rather than
+ * dropping to a name-only label.
+ *
+ *   • active side IS the home `team` → the home crest;
+ *   • active side is the OTHER side  → the away crest, when supplied;
+ *   • away crest absent (legacy / single-team data, or only the home crest was
+ *     baked) → `undefined`, so the away view shows the name alone — the prior
+ *     behaviour, never a wrong (home) badge.
+ *
+ * The single-team / legacy case stays correct: `activeTeam` then always equals
+ * the home `team`, so the home crest applies as before.
+ */
+export function activeCrest(
+  activeTeam: string,
+  homeTeam: string,
+  homeCrest: string | undefined,
+  awayCrest: string | undefined
+): string | undefined {
+  return activeTeam === homeTeam ? homeCrest : awayCrest;
+}
+
 export function PlayerSelect({
   players,
   selectedId,
