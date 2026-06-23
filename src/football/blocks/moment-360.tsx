@@ -6,6 +6,7 @@ import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
@@ -55,7 +56,17 @@ export interface MomentPassingOption extends MomentPoint {
   player?: string;
 }
 
-export interface Moment360Props {
+/**
+ * One self-contained 360 freeze-frame: a single on-ball moment and everything
+ * needed to render it — the event, the ball-carrier, every tracked player, the
+ * camera's lit polygon and the actor's passing options. A {@link Moment360} is
+ * given a list of these and a picker chooses which one to show.
+ */
+export interface Moment {
+  /** Stable identifier (matched against {@link Moment360Selection.momentId}). */
+  id: string;
+  /** Short label for the picker, e.g. "Messi · 62'". */
+  label: string;
   /** The on-ball event being frozen. */
   event: MomentEvent;
   /** The ball-carrier's position. */
@@ -74,10 +85,28 @@ export interface Moment360Props {
    * covering a receiver, when coverage is computed. Defaults to 6.5.
    */
   coverRadius?: number;
+}
+
+/**
+ * The Moment ("The Moment") block's full user-selectable state: which freeze-
+ * frame is shown. Keyed on the stable {@link Moment.id}; `null` opens on the
+ * first moment (the default). Seed it via {@link Moment360Props.initialSelection}
+ * and observe changes via {@link Moment360Props.onSelectionChange}.
+ */
+export interface Moment360Selection {
+  /** Selected moment id (matches a {@link Moment.id}), or `null` for the first moment. */
+  momentId: string | null;
+}
+
+export interface Moment360Props {
+  /** One or more freeze-frames to step through; the first is shown by default. */
+  moments: Moment[];
   /** Home accent. Defaults to BTL home red. */
   homeColor?: string;
   /** Away accent. Defaults to BTL away blue. */
   awayColor?: string;
+  /** Optional team crest URL, shown ~16px next to the title. */
+  crestUrl?: string;
   /** Additional CSS classes on the outer panel. */
   className?: string;
   /**
@@ -93,10 +122,27 @@ export interface Moment360Props {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds which moment is shown on mount (e.g. the author's saved choice). When
+   * omitted, opens on the first moment — exactly as before. Read once on mount;
+   * later changes don't re-seed.
+   */
+  initialSelection?: Moment360Selection;
+  /**
+   * Fires whenever the user picks a different moment, with the full new
+   * selection object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: Moment360Selection) => void;
 }
 
 const HOME_COLOR = '#eb0000';
 const AWAY_COLOR = '#0091eb';
+
+// Stable empty fallbacks for the no-moment case — referencing the same array
+// identity each render keeps the freeze-frame `useMemo` deps from churning.
+const EMPTY_PLAYERS: MomentPlayer[] = [];
+const EMPTY_AREA: MomentPoint[] = [];
+const EMPTY_OPTIONS: MomentPassingOption[] = [];
 
 // StatsBomb pitch is 120 (x) × 80 (y); the Pitch primitive is 100 × 100.
 const SB_X = 120;
@@ -137,17 +183,15 @@ const T_LANES = 1.7;
  * lane emphasises it.
  */
 export function Moment360({
-  event,
-  actor,
-  players,
-  visibleArea,
-  passingOptions = [],
-  coverRadius = 6.5,
+  moments,
   homeColor = HOME_COLOR,
   awayColor = AWAY_COLOR,
+  crestUrl,
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: Moment360Props) {
   const maskId = useId();
   const desatId = useId();
@@ -157,13 +201,42 @@ export function Moment360({
   // Flips when the actor headshot 404s, so it falls back to the accent dot.
   const [actorPhotoFailed, setActorPhotoFailed] = useState(false);
 
-  const accent = event.team === 'home' ? homeColor : awayColor;
+  // Consolidated selection (seeded by the host, emits every change): which
+  // freeze-frame is shown. `null` = the first moment (the default).
+  const [selection, setSelection] = usePersistedSelection<Moment360Selection>(
+    initialSelection,
+    { momentId: null },
+    onSelectionChange
+  );
+  const { momentId } = selection;
 
-  const origin = useMemo(() => toPitch(actor, event.team), [actor, event.team]);
+  // Resolve the selected moment (fall back to the first); everything below
+  // renders this single frame. `moment` can be undefined when `moments` is empty
+  // — guarded after the hooks so hook order stays stable.
+  const moment = useMemo(
+    () => moments.find((m) => m.id === momentId) ?? moments[0],
+    [moments, momentId]
+  );
+
+  // Pull the selected frame's fields out (with safe fallbacks) so the hooks
+  // below run unconditionally — the empty-`moments` case is guarded after them,
+  // keeping hook order stable. When a frame is present these are exactly the
+  // values the single-moment props used to carry.
+  const event = moment?.event;
+  const team: MomentTeam = event?.team ?? 'home';
+  const actor = moment?.actor;
+  const players = moment?.players ?? EMPTY_PLAYERS;
+  const visibleArea = moment?.visibleArea ?? EMPTY_AREA;
+  const passingOptions = moment?.passingOptions ?? EMPTY_OPTIONS;
+  const coverRadius = moment?.coverRadius ?? 6.5;
+
+  const accent = team === 'home' ? homeColor : awayColor;
+
+  const origin = useMemo(() => (actor ? toPitch(actor, team) : { x: 50, y: 50 }), [actor, team]);
 
   const litPolygon = useMemo(
-    () => toPolygon(visibleArea.map((p) => toPitch(p, event.team))),
-    [visibleArea, event.team]
+    () => toPolygon(visibleArea.map((p) => toPitch(p, team))),
+    [visibleArea, team]
   );
 
   // Opponents in the freeze-frame (outfield, not the keeper) — used to decide
@@ -181,12 +254,20 @@ export function Moment360({
           Infinity
         );
         const inSpace = opt.inSpace ?? nearest >= coverRadius;
-        return { opt, target: toPitch(opt, event.team), inSpace };
+        return { opt, target: toPitch(opt, team), inSpace };
       }),
-    [passingOptions, event.team, opponents, coverRadius]
+    [passingOptions, team, opponents, coverRadius]
   );
 
   const spaceCount = useMemo(() => lanes.filter((l) => l.inSpace).length, [lanes]);
+
+  // Picker options + the selected frame's label (mirrors the goal-sequence
+  // header dropdown). The picker only renders when there's more than one frame.
+  const momentOptions = moments.map((m) => ({ value: m.id, label: m.label }));
+
+  // Nothing to render without a moment (empty list) — render nothing, like the
+  // other selectable blocks guard their empty case. All hooks have run above.
+  if (!moment || !event || !actor) return null;
 
   // Quiet caption under the title: who, when, what they were doing.
   const caption = `${event.player} · ${event.minute}' · ${event.type}`;
@@ -206,10 +287,41 @@ export function Moment360({
         className
       )}
     >
-      {/* Header: one plain title + a quiet caption. */}
-      <figcaption className="mb-3">
-        <span className="text-[13px] font-semibold tracking-tight text-white">The Moment</span>
-        <span className="ml-2 text-[11px] tabular-nums text-white/45">{caption}</span>
+      {/* Header: title (+ optional crest) and a quiet caption on the left, an
+          optional moment picker on the right (shown only with >1 moment). */}
+      <figcaption className="mb-3 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {crestUrl && (
+            <img
+              src={crestUrl}
+              alt=""
+              width={16}
+              height={16}
+              className="size-4 shrink-0 object-contain"
+            />
+          )}
+          <span className="text-[13px] font-semibold tracking-tight text-white">The Moment</span>
+          <span className="truncate text-[11px] tabular-nums text-white/45">{caption}</span>
+        </span>
+
+        {momentOptions.length > 1 && (
+          <ControlDropdown label="Moment" valueLabel={moment.label}>
+            {(close) =>
+              momentOptions.map((o) => (
+                <DropdownItem
+                  key={o.value}
+                  selected={o.value === moment.id}
+                  onSelect={() => {
+                    setSelection({ momentId: o.value });
+                    close();
+                  }}
+                >
+                  {o.label}
+                </DropdownItem>
+              ))
+            }
+          </ControlDropdown>
+        )}
       </figcaption>
 
       {/* The freeze-frame still. `padding` insets the pitch inside the frame so
@@ -659,5 +771,103 @@ function LaneCallout({
         {sub}
       </text>
     </motion.g>
+  );
+}
+
+// ── Share-menu-style dropdown ────────────────────────────────────────────────
+// Mirrors the goal-sequence / shot-map blocks' self-contained ControlDropdown
+// (viz is a standalone AGPL package with no design-system dependency; the
+// classes match the editor's game-block kit).
+const TRIGGER_CLS =
+  'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white transition-colors hover:border-white/25';
+const CONTENT_CLS =
+  'absolute right-0 top-[calc(100%+6px)] z-50 flex min-w-[150px] flex-col gap-0.5 rounded-[8px] border border-white/10 bg-[#161616]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.5)] backdrop-blur-xl';
+
+function ControlDropdown({
+  label,
+  valueLabel,
+  children,
+}: {
+  label: string;
+  valueLabel: ReactNode;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        className={TRIGGER_CLS}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={(e) => {
+          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) setOpen(false);
+        }}
+      >
+        <span className="text-white/50">{label}</span>
+        <span className="font-semibold">{valueLabel}</span>
+        <Caret />
+      </button>
+      {open && (
+        <div role="listbox" className={CONTENT_CLS}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({
+  selected,
+  onSelect,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
+      onClick={onSelect}
+      className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
+    >
+      <span className="truncate">{children}</span>
+      {selected && <Check />}
+    </button>
+  );
+}
+
+/** Tiny caret glyph (no icon dependency in this package). */
+function Caret() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 16 16" fill="none" className="text-white/40">
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Tiny check glyph for the selected dropdown row. */
+function Check() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="text-[#eb0000]">
+      <path
+        d="M3.5 8.5l3 3 6-7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
