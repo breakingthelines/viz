@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect } from 'storybook/test';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { Moment360 } from './moment-360';
-import type { MomentPlayer, MomentPassingOption, MomentPoint } from './moment-360';
+import type { Moment, MomentPlayer, MomentPassingOption, MomentPoint } from './moment-360';
 import { observeCircleRadii } from '#/test/console-spy';
 import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
@@ -96,50 +96,8 @@ const MESSI_HEADSHOT =
   'https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg';
 const MBAPPE_HEADSHOT =
   'https://upload.wikimedia.org/wikipedia/commons/e/e5/Kylian_Mbapp%C3%A9_2018.jpg';
-
-/** Argentina build-up, 62': Messi between the lines with two runners free. */
-export const Default: Story = {
-  args: {
-    event: {
-      type: 'Carry',
-      player: 'L. Messi',
-      team: 'home',
-      minute: 62,
-      imageUrl: MESSI_HEADSHOT,
-    },
-    actor: MESSI_ACTOR,
-    players: ALL_PLAYERS,
-    visibleArea: VISIBLE_AREA,
-    passingOptions: PASSING_OPTIONS,
-  },
-};
-
-/** Same instant, a through ball threaded between the lines. */
-export const ThroughBall: Story = {
-  args: {
-    ...Default.args,
-    event: {
-      type: 'Through Ball',
-      player: 'L. Messi',
-      team: 'home',
-      minute: 62,
-      imageUrl: MESSI_HEADSHOT,
-    },
-  },
-};
-
-/** Actor with no headshot supplied — falls back to the accent dot. */
-export const NoHeadshot: Story = {
-  args: {
-    ...Default.args,
-    event: {
-      type: 'Carry',
-      player: 'L. Messi',
-      team: 'home',
-      minute: 62,
-    },
-  },
-};
+const ARG_CREST =
+  'https://upload.wikimedia.org/wikipedia/commons/1/1b/Argentina_national_football_team_logo.svg';
 
 // --- An away-team moment (mirrored): Mbappé receiving in the left half-space
 // on the counter, France attacking right→left from the component's view. ---
@@ -169,27 +127,133 @@ const FRANCE_BREAK: MomentPlayer[] = [
   { x: 20, y: 44, teammate: true, keeper: false },
 ];
 
+// --- Each entry is a self-contained freeze-frame the picker can switch to. ---
+
+/** Argentina build-up, 62': Messi between the lines, carrying, two runners free. */
+const MESSI_CARRY: Moment = {
+  id: 'messi-carry-62',
+  label: "Messi · 62' carry",
+  event: {
+    type: 'Carry',
+    player: 'L. Messi',
+    team: 'home',
+    minute: 62,
+    imageUrl: MESSI_HEADSHOT,
+  },
+  actor: MESSI_ACTOR,
+  players: ALL_PLAYERS,
+  visibleArea: VISIBLE_AREA,
+  passingOptions: PASSING_OPTIONS,
+};
+
+/** Same instant, reframed as the through ball threaded between the lines. */
+const MESSI_THROUGH_BALL: Moment = {
+  id: 'messi-through-62',
+  label: "Messi · 62' through ball",
+  event: {
+    type: 'Through Ball',
+    player: 'L. Messi',
+    team: 'home',
+    minute: 62,
+    imageUrl: MESSI_HEADSHOT,
+  },
+  actor: MESSI_ACTOR,
+  players: ALL_PLAYERS,
+  visibleArea: VISIBLE_AREA,
+  passingOptions: PASSING_OPTIONS,
+};
+
 /** Mirrored away moment: Mbappé on the counter, two runners breaking free. */
-export const AwayCounter: Story = {
+const MBAPPE_COUNTER: Moment = {
+  id: 'mbappe-counter-71',
+  label: "Mbappé · 71' counter",
+  event: {
+    type: 'Carry',
+    player: 'K. Mbappé',
+    team: 'away',
+    minute: 71,
+    imageUrl: MBAPPE_HEADSHOT,
+  },
+  actor: { x: 58, y: 42 },
+  players: [...ARG_LOW_BLOCK, ...FRANCE_BREAK],
+  visibleArea: VISIBLE_AREA,
+  passingOptions: [
+    // Thuram is in behind the line — explicitly in-space (a pure distance check
+    // would read the chasing defender as cover). The rest compute.
+    { x: 94, y: 18, inSpace: true, player: 'M. Thuram' },
+    { x: 90, y: 44, player: 'K. Coman' },
+    { x: 82, y: 66, player: 'O. Dembélé' },
+    { x: 50, y: 48, player: 'A. Tchouaméni' },
+  ],
+};
+
+/** The headline: three moments, opening on Messi's carry, with the moment picker. */
+export const Default: Story = {
   args: {
-    event: {
-      type: 'Carry',
-      player: 'K. Mbappé',
-      team: 'away',
-      minute: 71,
-      imageUrl: MBAPPE_HEADSHOT,
-    },
-    actor: { x: 58, y: 42 },
-    players: [...ARG_LOW_BLOCK, ...FRANCE_BREAK],
-    visibleArea: VISIBLE_AREA,
-    passingOptions: [
-      // Thuram is in behind the line — explicitly in-space (a pure distance
-      // check would read the chasing defender as cover). The rest compute.
-      { x: 94, y: 18, inSpace: true, player: 'M. Thuram' },
-      { x: 90, y: 44, player: 'K. Coman' },
-      { x: 82, y: 66, player: 'O. Dembélé' },
-      { x: 50, y: 48, player: 'A. Tchouaméni' },
+    crestUrl: ARG_CREST,
+    moments: [MESSI_CARRY, MESSI_THROUGH_BALL, MBAPPE_COUNTER],
+  },
+};
+
+/** A single moment — no picker, just the one freeze-frame. */
+export const SingleMoment: Story = {
+  args: {
+    crestUrl: ARG_CREST,
+    moments: [MESSI_CARRY],
+  },
+};
+
+/** Actor with no headshot supplied — falls back to the accent dot. */
+export const NoHeadshot: Story = {
+  args: {
+    moments: [
+      {
+        ...MESSI_CARRY,
+        id: 'messi-no-photo-62',
+        event: { type: 'Carry', player: 'L. Messi', team: 'home', minute: 62 },
+      },
     ],
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host passes `initialSelection` to open "The
+ * Moment" on an author's saved frame rather than the first. Here it opens on the
+ * THIRD moment (Mbappé's counter): the picker trigger and the caption reflect
+ * the seeded frame on first paint, with no interaction.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...Default.args,
+    initialSelection: { momentId: 'mbappe-counter-71' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The picker trigger shows the seeded frame's label, not the first frame's.
+    await expect(
+      canvas.getByRole('button', { name: /Moment.*Mbappé.*counter/ })
+    ).toBeInTheDocument();
+    // The caption matches the seeded frame's actor.
+    await expect(canvas.getByText(/K\. Mbappé/)).toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the full
+ * new selection object (the chosen moment id) whenever the user picks a different
+ * frame. Picking the third moment emits `{ momentId: 'mbappe-counter-71' }`.
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...Default.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /Moment/ }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: /Mbappé.*counter/ }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({ momentId: 'mbappe-counter-71' });
   },
 };
 
@@ -208,7 +272,7 @@ export const AwayCounter: Story = {
  * through its keyframes and this set would grow — failing the lock.
  */
 export const PulseRingScalesNotRadius: Story = {
-  args: { ...Default.args },
+  args: { ...SingleMoment.args },
   play: async ({ canvasElement }) => {
     // The pulse ring is the lone hairline (stroke-width 0.4) hollow circle.
     const selector = 'circle[fill="none"][stroke-width="0.4"]';
@@ -232,7 +296,7 @@ export const PulseRingScalesNotRadius: Story = {
  * `initial={false}`.
  */
 export const EntranceLock: Story = {
-  args: { ...Default.args },
+  args: { ...SingleMoment.args },
   decorators: [withReducedMotion],
   play: async ({ canvasElement }) => {
     await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 6 });
