@@ -293,6 +293,257 @@ export const XtColourRampApplied: Story = {
   },
 };
 
+// A REALISTIC progressive-action set: per-action xT clustered low (the bulk
+// between ~0.005 and ~0.05, the everyday build-up that makes up most of a real
+// match) with only a few line-breaking balls reaching ~0.08–0.15. This is what
+// live data actually looks like — unlike the headline ARG set above, the high
+// end is sparse and the mass sits low. Against the OLD fixed 0→0.16 colour
+// domain this whole set collapses to a near-uniform dim red (every build-up
+// action maps into the cold bottom of the ramp); the data-relative scale instead
+// fits the gradient to THIS set's own range so the mesh reads dim→amber.
+const REALISTIC_LOW_XT: ProgressionAction[] = [
+  {
+    id: 'r1',
+    type: 'pass',
+    startX: 18,
+    startY: 40,
+    endX: 34,
+    endY: 36,
+    xt: 0.006,
+    player: 'C. Romero',
+  },
+  {
+    id: 'r2',
+    type: 'carry',
+    startX: 30,
+    startY: 24,
+    endX: 46,
+    endY: 20,
+    xt: 0.009,
+    player: 'N. Molina',
+  },
+  {
+    id: 'r3',
+    type: 'pass',
+    startX: 26,
+    startY: 56,
+    endX: 42,
+    endY: 52,
+    xt: 0.011,
+    player: 'N. Otamendi',
+  },
+  {
+    id: 'r4',
+    type: 'carry',
+    startX: 40,
+    startY: 44,
+    endX: 56,
+    endY: 42,
+    xt: 0.013,
+    player: 'R. De Paul',
+  },
+  {
+    id: 'r5',
+    type: 'pass',
+    startX: 44,
+    startY: 30,
+    endX: 60,
+    endY: 26,
+    xt: 0.016,
+    player: 'E. Fernández',
+  },
+  {
+    id: 'r6',
+    type: 'carry',
+    startX: 48,
+    startY: 60,
+    endX: 64,
+    endY: 64,
+    xt: 0.019,
+    player: 'M. Acuña',
+  },
+  {
+    id: 'r7',
+    type: 'pass',
+    startX: 52,
+    startY: 46,
+    endX: 68,
+    endY: 44,
+    xt: 0.022,
+    player: 'A. Mac Allister',
+  },
+  {
+    id: 'r8',
+    type: 'carry',
+    startX: 56,
+    startY: 34,
+    endX: 72,
+    endY: 30,
+    xt: 0.025,
+    player: 'R. De Paul',
+  },
+  {
+    id: 'r9',
+    type: 'pass',
+    startX: 60,
+    startY: 52,
+    endX: 76,
+    endY: 50,
+    xt: 0.028,
+    player: 'E. Fernández',
+  },
+  {
+    id: 'r10',
+    type: 'carry',
+    startX: 64,
+    startY: 40,
+    endX: 80,
+    endY: 38,
+    xt: 0.032,
+    player: 'A. Mac Allister',
+  },
+  {
+    id: 'r11',
+    type: 'pass',
+    startX: 68,
+    startY: 26,
+    endX: 84,
+    endY: 24,
+    xt: 0.037,
+    player: 'R. De Paul',
+  },
+  {
+    id: 'r12',
+    type: 'carry',
+    startX: 72,
+    startY: 58,
+    endX: 88,
+    endY: 60,
+    xt: 0.043,
+    player: 'Á. Di María',
+  },
+  {
+    id: 'r13',
+    type: 'pass',
+    startX: 76,
+    startY: 44,
+    endX: 92,
+    endY: 42,
+    xt: 0.048,
+    player: 'L. Messi',
+  },
+  {
+    id: 'r14',
+    type: 'carry',
+    startX: 80,
+    startY: 36,
+    endX: 96,
+    endY: 34,
+    xt: 0.052,
+    player: 'Á. Di María',
+  },
+  // The few line-breaking / into-the-box balls — sparse, clearly higher xT.
+  {
+    id: 'r15',
+    type: 'pass',
+    startX: 90,
+    startY: 30,
+    endX: 106,
+    endY: 38,
+    xt: 0.083,
+    player: 'L. Messi',
+  },
+  {
+    id: 'r16',
+    type: 'carry',
+    startX: 94,
+    startY: 62,
+    endX: 110,
+    endY: 50,
+    xt: 0.097,
+    player: 'Á. Di María',
+  },
+  {
+    id: 'r17',
+    type: 'pass',
+    startX: 98,
+    startY: 46,
+    endX: 112,
+    endY: 44,
+    xt: 0.118,
+    player: 'L. Messi',
+  },
+  {
+    id: 'r18',
+    type: 'carry',
+    startX: 100,
+    startY: 38,
+    endX: 113,
+    endY: 42,
+    xt: 0.142,
+    player: 'J. Álvarez',
+  },
+];
+
+/**
+ * Data-relative xT colour ramp on REALISTIC low-clustered data (viz #35). The
+ * earlier {@link XtColourRampApplied} lock passed only because its headline data
+ * happened to spread wide; real progressive xT is clustered low (here most balls
+ * are 0.006–0.052, a few 0.083–0.142). Against the OLD fixed 0→0.16 domain the
+ * whole build-up mass mapped into the cold bottom of the ramp and rendered as one
+ * near-uniform dim red.
+ *
+ * This reads every drawn arrow's stroke and asserts the gradient is genuinely
+ * visible across THIS set: the strokes span a wide range from dim red to amber,
+ * many distinct hues are in play, AND — the real regression guard — even the
+ * BUILD-UP mass (the lower-xT three-quarters, sorted by warmth) is itself spread,
+ * not crushed flat. With the old fixed domain that lower-mass green range is ~18;
+ * the data-relative scale lifts it past 28. The threshold sits between the two.
+ */
+export const XtColourRampDataRelative: Story = {
+  args: {
+    team: 'Argentina',
+    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    actions: REALISTIC_LOW_XT,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Progression')).toBeInTheDocument());
+
+    const parseRgb = (s: string | null): [number, number, number] | null => {
+      const m = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(s ?? '');
+      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+    };
+
+    await waitFor(() => {
+      const colours = [...canvasElement.querySelectorAll('svg path[stroke]')]
+        .map((p) => parseRgb(p.getAttribute('stroke')))
+        .filter((c): c is [number, number, number] => c !== null);
+
+      // One coloured arrow per action (plus, possibly, the active callout's).
+      expect(colours.length).toBeGreaterThanOrEqual(REALISTIC_LOW_XT.length);
+
+      // Many distinct hues — not a flat wash of one or two colours.
+      const distinct = new Set(colours.map((c) => c.join(',')));
+      expect(distinct.size).toBeGreaterThan(10);
+
+      // Full ramp reached: the brightest (amber → high green) clearly out-shines
+      // the dimmest dim red.
+      const greens = colours.map((c) => c[1]).sort((a, b) => a - b);
+      expect(greens[greens.length - 1]! - greens[0]!).toBeGreaterThan(40);
+
+      // THE regression guard: the BUILD-UP mass is spread, not crushed flat. Take
+      // the lower three-quarters by warmth (the everyday low-xT actions) and check
+      // their own green range. Fixed-domain colouring squashes this to ~18; the
+      // data-relative scale opens it past 28.
+      const lowerCount = Math.ceil(greens.length * 0.75);
+      const lower = greens.slice(0, lowerCount);
+      const lowerRange = lower[lower.length - 1]! - lower[0]!;
+      expect(lowerRange).toBeGreaterThan(28);
+    });
+  },
+};
+
 /**
  * Tooltip-clear lock (viz #27, item 4): the action callout must close once the
  * pointer leaves the pitch. Hovers an arrow to open the callout, then moves the
