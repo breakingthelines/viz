@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A defensive ball-hunting action, in StatsBomb pitch coordinates (120 × 80). */
 export interface PressEvent {
@@ -230,8 +231,11 @@ export function PressMap({
         </div>
       </div>
 
-      {/* Pitch + density canvas + interactive thirds overlay (square box). */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-[8px]">
+      {/* Pitch + density canvas + interactive thirds overlay (square box).
+          RevealOnScroll plays the entrance on scroll-in (pure enhancement — the
+          bloom + thirds are always visible regardless; the canvas keeps its own
+          `initial={false}`). */}
+      <RevealOnScroll className="relative aspect-square w-full overflow-hidden rounded-[8px]">
         <Pitch
           variant="full"
           theme="dark"
@@ -250,7 +254,7 @@ export function PressMap({
           hover={hoverThird}
           onHover={setHoverThird}
         />
-      </div>
+      </RevealOnScroll>
 
       {/* Legend: what the bloom means + which way the side attacks. Anchors the
           encoding so the density ramp and left→right orientation read at a glance. */}

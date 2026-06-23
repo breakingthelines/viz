@@ -6,6 +6,7 @@ import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
 export type MomentTeam = 'home' | 'away';
@@ -211,9 +212,15 @@ export function Moment360({
         <span className="ml-2 text-[11px] tabular-nums text-white/45">{caption}</span>
       </figcaption>
 
-      {/* The freeze-frame still */}
-      <div className="relative">
-        <Pitch variant="full" theme="dark">
+      {/* The freeze-frame still. `padding` insets the pitch inside the frame so
+          an actor headshot or a player marker sitting ON the goal line / touchline
+          (e.g. a shooter right on the byline, the lone bottom-corner dot) renders
+          fully instead of being clipped at the block edge. ~6 units clears the
+          actor's headshot bubble (r 2.4) and its breathing pulse ring.
+          RevealOnScroll plays the entrance when the block scrolls into view (pure
+          enhancement — the freeze-frame is always visible regardless). */}
+      <RevealOnScroll className="relative">
+        <Pitch variant="full" theme="dark" padding={6}>
           <defs>
             {/* Clip: the lit zone the camera tracked. */}
             <clipPath id={maskId}>
@@ -519,7 +526,7 @@ export function Moment360({
             />
           )}
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       {/* Legend — small data dots + plain words. */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/90">

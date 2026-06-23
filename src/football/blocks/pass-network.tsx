@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -205,10 +206,38 @@ export function PassNetwork({
   // active squad scope when starter flags are present; else every supplied node.
   // A chosen player is NOT removed from the graph — a single isolated node loses
   // the network's meaning — but drives a persistent ego-highlight (below).
+  //
+  // Subs scope is special. A sub-to-sub-only graph is almost always near-empty
+  // (substitutes rarely pass to each other), so Subs instead shows each sub's
+  // passes to ANYONE — their involvement across the whole side. The drawn set is
+  // therefore the subs PLUS every team-mate they connected to over a link; the
+  // sub nodes are the subject and their pass partners are drawn as context so the
+  // edges have somewhere to land. (Starters scope is unchanged: just the XI.)
   const visiblePlayers = useMemo(() => {
-    let set = hasTeamSplit ? players.filter((p) => p.team === team) : players;
-    if (hasStarterFlags) {
-      set = set.filter((p) => (scope === 'subs' ? p.starter === false : p.starter === true));
+    const sideSet = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    if (!hasStarterFlags) {
+      let set = sideSet;
+      if (selectedId !== null && !set.some((p) => p.id === selectedId)) {
+        const sel = players.find((p) => p.id === selectedId);
+        if (sel) set = [...set, sel];
+      }
+      return set;
+    }
+
+    let set: PassNetworkPlayer[];
+    if (scope === 'subs') {
+      const sideIds = new Set(sideSet.map((p) => p.id));
+      const subIds = new Set(sideSet.filter((p) => p.starter === false).map((p) => p.id));
+      // Pull in the on-side team-mates each sub passed to / received from, so a
+      // sub's web reaches the whole team rather than only other subs.
+      const partnerIds = new Set<string>();
+      for (const l of links) {
+        if (subIds.has(l.from) && sideIds.has(l.to)) partnerIds.add(l.to);
+        if (subIds.has(l.to) && sideIds.has(l.from)) partnerIds.add(l.from);
+      }
+      set = sideSet.filter((p) => subIds.has(p.id) || partnerIds.has(p.id));
+    } else {
+      set = sideSet.filter((p) => p.starter === true);
     }
     // Keep a selected player visible even if the active scope would hide it (e.g.
     // a sub selected while the toggle is on Starters), so the drill-down holds.
@@ -217,7 +246,16 @@ export function PassNetwork({
       if (sel) set = [...set, sel];
     }
     return set;
-  }, [players, hasTeamSplit, team, hasStarterFlags, scope, selectedId]);
+  }, [players, links, hasTeamSplit, team, hasStarterFlags, scope, selectedId]);
+
+  // In Subs scope, the subs are the SUBJECT and their pass partners are drawn as
+  // context — only edges that TOUCH a sub are shown, so the panel reads as "the
+  // subs' involvement" rather than the full starter web reappearing.
+  const subIdSet = useMemo(() => {
+    if (!hasStarterFlags || scope !== 'subs') return null;
+    const sideSet = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    return new Set(sideSet.filter((p) => p.starter === false).map((p) => p.id));
+  }, [players, hasStarterFlags, scope, hasTeamSplit, team]);
 
   const nodes = useMemo<ResolvedNode[]>(() => {
     const involvements = visiblePlayers.map((p) => p.involvement);
@@ -270,6 +308,10 @@ export function PassNetwork({
       const from = nodeById.get(link.from);
       const to = nodeById.get(link.to);
       if (!from || !to) return [];
+      // Subs scope: only keep edges that TOUCH a sub, so the panel shows the subs'
+      // passes to anyone (their involvement) rather than redrawing the full
+      // starter web among the pass partners we pulled in as context.
+      if (subIdSet && !subIdSet.has(link.from) && !subIdSet.has(link.to)) return [];
       // A mild sqrt-eased volume fraction lifts mid-volume edges off the floor
       // so the gradient from incidental → heavy reads across the whole range,
       // not just at the extremes.
@@ -286,7 +328,7 @@ export function PassNetwork({
         },
       ];
     });
-  }, [links, nodeById]);
+  }, [links, nodeById, subIdSet]);
 
   // Effective focus: an explicit hover wins; otherwise a selected player drives
   // a persistent ego-highlight so a drill-down reads as "this player's web"
@@ -349,8 +391,13 @@ export function PassNetwork({
           narrow upright column; this matches the lineup-pitch convention.) The
           intrinsic `aspect-[3/2]` on `Pitch` drives the box height, so no wrapper
           aspect/inset is needed. */}
-      <div className="relative w-full">
-        <Pitch variant="full" theme="dark" className="w-full">
+      <RevealOnScroll className="relative w-full">
+        {/* `padding` insets the pitch inside the frame so a node whose average
+            position sits near a touchline / byline — its headshot disc (r up to
+            ~4.6) plus the surname label above/below it — renders fully instead of
+            being clipped at the block edge. The reveal plays on scroll-in (pure
+            enhancement — the network is always visible regardless). */}
+        <Pitch variant="full" theme="dark" padding={6} className="w-full">
           {/* Edges first, beneath the nodes. */}
           <g>
             {edges.map((edge) => {
@@ -457,7 +504,7 @@ export function PassNetwork({
             );
           })}
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       {/* Legend — the focused player's read-out, else team + visible counts. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">

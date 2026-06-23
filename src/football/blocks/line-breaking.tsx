@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
 import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
 export interface LineBreakingPass {
@@ -208,67 +209,74 @@ export function LineBreaking({
           if (!e.currentTarget.contains(e.relatedTarget as Node)) setHoveredId(null);
         }}
       >
-        <Pitch variant="full" theme="dark">
-          <defs>
-            <marker
-              id={arrowId}
-              viewBox="0 0 10 10"
-              refX="7"
-              refY="5"
-              markerWidth="4.5"
-              markerHeight="4.5"
-              orient="auto-start-reverse"
+        {/* `padding` insets the pitch inside the frame so a pass that starts or
+            ends right on the byline / touchline — its origin dot, arrowhead and a
+            broken-defender pulse on the line — renders fully instead of being
+            clipped at the block edge. RevealOnScroll plays the entrance on
+            scroll-in (pure enhancement — the passes are always visible). */}
+        <RevealOnScroll>
+          <Pitch variant="full" theme="dark" padding={5}>
+            <defs>
+              <marker
+                id={arrowId}
+                viewBox="0 0 10 10"
+                refX="7"
+                refY="5"
+                markerWidth="4.5"
+                markerHeight="4.5"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 9 5 L 0 9 z" fill={color} />
+              </marker>
+            </defs>
+
+            {/* Attack-direction cue, low-key. */}
+            <text
+              x="50"
+              y="97"
+              textAnchor="middle"
+              fill="white"
+              fillOpacity="0.22"
+              fontSize="2.4"
+              letterSpacing="0.6"
             >
-              <path d="M 0 1 L 9 5 L 0 9 z" fill={color} />
-            </marker>
-          </defs>
+              Attacking →
+            </text>
 
-          {/* Attack-direction cue, low-key. */}
-          <text
-            x="50"
-            y="97"
-            textAnchor="middle"
-            fill="white"
-            fillOpacity="0.22"
-            fontSize="2.4"
-            letterSpacing="0.6"
-          >
-            Attacking →
-          </text>
+            {ordered.map((pass) => {
+              const visible = mode === 'all' || pass.lineBreaking;
+              return (
+                <PassLine
+                  key={pass.id}
+                  pass={pass}
+                  visible={visible}
+                  color={color}
+                  arrowId={arrowId}
+                  hoveredId={hoveredId}
+                  anyHovered={hovered !== null}
+                  onHover={setHoveredId}
+                />
+              );
+            })}
 
-          {ordered.map((pass) => {
-            const visible = mode === 'all' || pass.lineBreaking;
-            return (
-              <PassLine
-                key={pass.id}
-                pass={pass}
-                visible={visible}
-                color={color}
-                arrowId={arrowId}
-                hoveredId={hoveredId}
-                anyHovered={hovered !== null}
-                onHover={setHoveredId}
-              />
-            );
-          })}
-
-          {/* Broken-defender pulses — drawn above the lines, only for
+            {/* Broken-defender pulses — drawn above the lines, only for
               line-breaking passes; flash on reveal and on hover-focus. */}
-          {ordered.map((pass) => {
-            if (!pass.lineBreaking) return null;
-            const visible = mode === 'all' || pass.lineBreaking;
-            const dim = hovered !== null && hoveredId !== pass.id;
-            return (
-              <BrokenDefenders
-                key={`${pass.id}-def`}
-                pass={pass}
-                visible={visible}
-                dim={dim}
-                focused={hoveredId === pass.id}
-              />
-            );
-          })}
-        </Pitch>
+            {ordered.map((pass) => {
+              if (!pass.lineBreaking) return null;
+              const visible = mode === 'all' || pass.lineBreaking;
+              const dim = hovered !== null && hoveredId !== pass.id;
+              return (
+                <BrokenDefenders
+                  key={`${pass.id}-def`}
+                  pass={pass}
+                  visible={visible}
+                  dim={dim}
+                  focused={hoveredId === pass.id}
+                />
+              );
+            })}
+          </Pitch>
+        </RevealOnScroll>
 
         {/* Hover callout — the passer's name, with an optional headshot. */}
         <AnimatePresence>

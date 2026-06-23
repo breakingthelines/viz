@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
 export type SetPieceKind = 'corner' | 'free-kick';
@@ -218,9 +219,15 @@ export function SetPiece({
         </ControlDropdown>
       </div>
 
-      {/* Pitch + freeze-frame. Keyed on the active id so the reveal + arc replay. */}
-      <div className="relative">
-        <Pitch key={active.id} variant="half" theme="dark">
+      {/* Pitch + freeze-frame. Keyed on the active id so the reveal + arc replay.
+          `padding` insets the half-pitch inside the frame so the corner-taker's
+          headshot bubble + name label (out by the flag, ON the byline/touchline)
+          and any player on the goal line render fully instead of being clipped at
+          the block edge. ~7 units clears a headshot (r 3.4) plus its label.
+          RevealOnScroll plays the entrance when the block scrolls into view (pure
+          enhancement — the pitch is always visible regardless). */}
+      <RevealOnScroll className="relative">
+        <Pitch key={active.id} variant="half" theme="dark" padding={7}>
           {/* Marking lines sit beneath the players. */}
           <g style={{ pointerEvents: 'none' }}>
             {markingLines.map((m, i) => (
@@ -259,7 +266,7 @@ export function SetPiece({
             color={attackingColor}
           />
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       {/* Key — small data dots + the set-piece kind. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">

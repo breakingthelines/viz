@@ -5,6 +5,7 @@ import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single on-ball touch in StatsBomb pitch coordinates (120 × 80). */
 export interface HeatMapTouch {
@@ -198,8 +199,10 @@ export function HeatMap({
         )}
       </div>
 
-      {/* Pitch + density canvas overlay (square box). */}
-      <div className="relative aspect-square w-full">
+      {/* Pitch + density canvas overlay (square box). RevealOnScroll plays the
+          entrance on scroll-in (pure enhancement — the bloom is always visible
+          regardless; its canvas keeps its own `initial={false}`). */}
+      <RevealOnScroll className="relative aspect-square w-full">
         <Pitch
           variant="full"
           theme="dark"
@@ -211,7 +214,7 @@ export function HeatMap({
           // Key on the active filter so the canvas cross-fades on change.
           key={activePlayer ?? '__all__'}
         />
-      </div>
+      </RevealOnScroll>
 
       {/* Intensity legend — decodes the faint→vivid ramp so the reader knows
           brighter = more touches clustered there. */}

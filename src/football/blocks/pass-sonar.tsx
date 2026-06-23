@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -316,11 +317,14 @@ export function PassSonar({
           the take-over can never persist once the cursor is off the field.
           Square box so the 100×100 Pitch viewBox fills it rather than being
           letterboxed into the centre third of a 3:2 frame — which is what
-          crammed the sonars together and detached them from their real spots. */}
-      <div className="relative aspect-square w-full">
+          crammed the sonars together and detached them from their real spots.
+          RevealOnScroll plays the entrance on scroll-in (pure enhancement — the
+          sonars are always visible regardless). */}
+      <RevealOnScroll className="relative aspect-square w-full">
         <Pitch
           variant="full"
           theme="dark"
+          padding={6}
           className="absolute inset-0 !aspect-square h-full w-full"
         >
           <g onPointerLeave={() => setActiveId(null)}>
@@ -449,7 +453,7 @@ export function PassSonar({
             )}
           </AnimatePresence>
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>

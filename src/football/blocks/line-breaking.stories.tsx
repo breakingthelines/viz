@@ -468,10 +468,10 @@ export const TooltipClearsOnLeave: Story = {
     const calloutNode = () => canvasElement.querySelector('.rounded-full.bg-\\[\\#161616\\]\\/95');
 
     // Hover a pass group to open the passer callout. The hit-lines carry no
-    // label, so hover the pass <g> directly via the rendered SVG. (The pitch is
-    // the 100×100 viewBox SVG — the page also has small glyph SVGs.)
-    const pitch = canvasElement.querySelector('svg[viewBox="0 0 100 100"]')!;
-    const passGroup = pitch.querySelector('g > line[stroke="transparent"]')!.closest('g')!;
+    // label, so hover the pass <g> directly. The pass groups live in the pitch
+    // SVG; find them by their transparent hit-line (stable across the pitch's
+    // viewBox padding) rather than a hard-coded viewBox string.
+    const passGroup = canvasElement.querySelector('svg line[stroke="transparent"]')!.closest('g')!;
     await userEvent.hover(passGroup);
     await waitFor(() => expect(calloutNode()).not.toBeNull());
 

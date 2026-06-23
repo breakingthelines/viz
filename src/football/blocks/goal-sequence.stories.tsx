@@ -109,8 +109,10 @@ export const StaticFirstFrameShowsFullMove: Story = {
     }
 
     // One static connecting segment per step (solid/dashed) is present from the
-    // first frame — the move's full shape, not a single stub.
-    const pitch = canvasElement.querySelector('svg[viewBox="0 0 100 100"]')!;
+    // first frame — the move's full shape, not a single stub. Find the pitch SVG
+    // by content (it carries the move lines) rather than a hard-coded viewBox
+    // string, which the pitch padding (review #3, item 1) shifts off `0 0 100 100`.
+    const pitch = canvasElement.querySelector('svg:has(line)')!;
     const solidLines = [...pitch.querySelectorAll('line')].filter(
       (l) => l.getAttribute('stroke') !== 'transparent' && l.getAttribute('stroke') !== 'white'
     );

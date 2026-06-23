@@ -7,6 +7,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
 import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A progressive action: a carry or a pass that advances the ball. */
 export type ProgressionType = 'carry' | 'pass';
@@ -344,116 +345,123 @@ export function Progression({
           if (!e.currentTarget.contains(e.relatedTarget as Node)) setActiveId(null);
         }}
       >
-        <Pitch variant="full" theme="dark">
-          {ordered.map((action) => {
-            const start = toPitch(action.startX, action.startY);
-            const end = toPitch(action.endX, action.endY);
-            const { d, ctrl } = arcPath(start, end);
-            const isActive = action.id === activeId;
-            const dimmed = activeId !== null && !isActive;
-            const w = widthForXt(action.xt);
-            // Keep the arrow's true xT colour on hover — emphasis comes from the
-            // width bump, glow, and the dimming of the others, not a hue change.
-            const stroke = rampColor(action.xt, baseRgb);
-            const headR = headRadiusForXt(action.xt);
-            const isCarry = action.type === 'carry';
-            const hot = emphasis(xtFraction(action.xt));
-            const markerId = `${idPrefix}-h-${action.id}`;
+        {/* `padding` insets the pitch inside the frame so an action arrow that
+            ends right on the byline (into-the-box balls) — its arrowhead and head
+            pip — renders fully instead of being clipped at the block edge.
+            RevealOnScroll plays the entrance on scroll-in (pure enhancement — the
+            arrows are always visible regardless). */}
+        <RevealOnScroll>
+          <Pitch variant="full" theme="dark" padding={5}>
+            {ordered.map((action) => {
+              const start = toPitch(action.startX, action.startY);
+              const end = toPitch(action.endX, action.endY);
+              const { d, ctrl } = arcPath(start, end);
+              const isActive = action.id === activeId;
+              const dimmed = activeId !== null && !isActive;
+              const w = widthForXt(action.xt);
+              // Keep the arrow's true xT colour on hover — emphasis comes from the
+              // width bump, glow, and the dimming of the others, not a hue change.
+              const stroke = rampColor(action.xt, baseRgb);
+              const headR = headRadiusForXt(action.xt);
+              const isCarry = action.type === 'carry';
+              const hot = emphasis(xtFraction(action.xt));
+              const markerId = `${idPrefix}-h-${action.id}`;
 
-            return (
-              <motion.g
-                key={action.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${action.player}, ${TYPE_LABEL[action.type]}, xT ${action.xt.toFixed(
-                  3
-                )}`}
-                className="cursor-pointer focus:outline-none"
-                onMouseEnter={() => setActiveId(action.id)}
-                onMouseLeave={() => setActiveId(null)}
-                onFocus={() => setActiveId(action.id)}
-                onBlur={() => setActiveId(null)}
-                onClick={() => setActiveId((cur) => (cur === action.id ? null : action.id))}
-                initial={false}
-                // Dimmed (a sibling is hovered) stays legible context rather than
-                // near-invisible: the hovered arrow still pops via its width bump,
-                // glow and the relative fade of the rest.
-                animate={{ opacity: dimmed ? 0.3 : 1 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              >
-                {/* Per-arrow arrowhead, tinted to this action's ramp colour so the
+              return (
+                <motion.g
+                  key={action.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${action.player}, ${TYPE_LABEL[action.type]}, xT ${action.xt.toFixed(
+                    3
+                  )}`}
+                  className="cursor-pointer focus:outline-none"
+                  onMouseEnter={() => setActiveId(action.id)}
+                  onMouseLeave={() => setActiveId(null)}
+                  onFocus={() => setActiveId(action.id)}
+                  onBlur={() => setActiveId(null)}
+                  onClick={() => setActiveId((cur) => (cur === action.id ? null : action.id))}
+                  initial={false}
+                  // Dimmed (a sibling is hovered) stays legible context rather than
+                  // near-invisible: the hovered arrow still pops via its width bump,
+                  // glow and the relative fade of the rest.
+                  animate={{ opacity: dimmed ? 0.3 : 1 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                >
+                  {/* Per-arrow arrowhead, tinted to this action's ramp colour so the
                     head itself signals threat. */}
-                <defs>
-                  <marker
-                    id={markerId}
-                    viewBox="0 0 10 10"
-                    refX="6.5"
-                    refY="5"
-                    markerWidth={3.2 + hot * 2.2}
-                    markerHeight={3.2 + hot * 2.2}
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M0 0.8 L9 5 L0 9.2 L2.4 5 z" fill={stroke} />
-                  </marker>
-                </defs>
+                  <defs>
+                    <marker
+                      id={markerId}
+                      viewBox="0 0 10 10"
+                      refX="6.5"
+                      refY="5"
+                      markerWidth={3.2 + hot * 2.2}
+                      markerHeight={3.2 + hot * 2.2}
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M0 0.8 L9 5 L0 9.2 L2.4 5 z" fill={stroke} />
+                    </marker>
+                  </defs>
 
-                {/* Wide invisible hit-path so thin arrows stay easy to hover. */}
-                <path d={d} fill="none" stroke="transparent" strokeWidth={3.5} />
+                  {/* Wide invisible hit-path so thin arrows stay easy to hover. */}
+                  <path d={d} fill="none" stroke="transparent" strokeWidth={3.5} />
 
-                {/* The arrow. Curved; carries dashed, passes solid. Fades in on a
+                  {/* The arrow. Curved; carries dashed, passes solid. Fades in on a
                     stagger (NOT a pathLength draw-in — framer-motion implements
                     pathLength via strokeDasharray, which would clobber the
                     carry/pass dash and render every arrow identically). High-xT
                     arrows glow. */}
-                <motion.path
-                  d={d}
-                  fill="none"
-                  stroke={stroke}
-                  strokeWidth={isActive ? w + 0.5 : w}
-                  strokeLinecap="round"
-                  strokeDasharray={isCarry ? '2 1.7' : undefined}
-                  markerEnd={`url(#${markerId})`}
-                  initial={false}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
-                  style={{
-                    filter: isActive
-                      ? `drop-shadow(0 0 2px ${stroke})`
-                      : hot > 0.55
-                        ? `drop-shadow(0 0 ${0.6 + hot * 1.1}px ${stroke})`
-                        : undefined,
-                  }}
-                />
+                  <motion.path
+                    d={d}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth={isActive ? w + 0.5 : w}
+                    strokeLinecap="round"
+                    strokeDasharray={isCarry ? '2 1.7' : undefined}
+                    markerEnd={`url(#${markerId})`}
+                    initial={false}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    style={{
+                      filter: isActive
+                        ? `drop-shadow(0 0 2px ${stroke})`
+                        : hot > 0.55
+                          ? `drop-shadow(0 0 ${0.6 + hot * 1.1}px ${stroke})`
+                          : undefined,
+                    }}
+                  />
 
-                {/* Head pip — a magnitude cue at the arrow head, on the curve. */}
-                <motion.circle
-                  cx={end.x}
-                  cy={end.y}
-                  r={isActive ? headR + 0.3 : headR}
-                  fill={stroke}
-                  initial={false}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.25, ease: 'backOut' }}
-                  style={{
-                    transformOrigin: `${end.x}px ${end.y}px`,
-                    filter: hot > 0.55 ? `drop-shadow(0 0 ${0.5 + hot}px ${stroke})` : undefined,
-                  }}
-                />
+                  {/* Head pip — a magnitude cue at the arrow head, on the curve. */}
+                  <motion.circle
+                    cx={end.x}
+                    cy={end.y}
+                    r={isActive ? headR + 0.3 : headR}
+                    fill={stroke}
+                    initial={false}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.25, ease: 'backOut' }}
+                    style={{
+                      transformOrigin: `${end.x}px ${end.y}px`,
+                      filter: hot > 0.55 ? `drop-shadow(0 0 ${0.5 + hot}px ${stroke})` : undefined,
+                    }}
+                  />
 
-                {/* Faint origin tick — anchors where the action began. */}
-                <circle cx={start.x} cy={start.y} r={0.7} fill={stroke} fillOpacity={0.5} />
+                  {/* Faint origin tick — anchors where the action began. */}
+                  <circle cx={start.x} cy={start.y} r={0.7} fill={stroke} fillOpacity={0.5} />
 
-                {/* Control point is unused visually but keeps `ctrl` referenced
+                  {/* Control point is unused visually but keeps `ctrl` referenced
                     for callout anchoring of the active action below. */}
-                {isActive && <circle cx={ctrl.x} cy={ctrl.y} r={0} fill="none" />}
-              </motion.g>
-            );
-          })}
+                  {isActive && <circle cx={ctrl.x} cy={ctrl.y} r={0} fill="none" />}
+                </motion.g>
+              );
+            })}
 
-          {/* Callout for the active action, drawn last so it sits on top. Uses
+            {/* Callout for the active action, drawn last so it sits on top. Uses
               the action's own xT colour. */}
-          {active && <Callout action={active} color={rampColor(active.xt, baseRgb)} />}
-        </Pitch>
+            {active && <Callout action={active} color={rampColor(active.xt, baseRgb)} />}
+          </Pitch>
+        </RevealOnScroll>
 
         {/* Direction-of-play hint — quiet, lower-left. */}
         <div className="pointer-events-none absolute bottom-1.5 left-2 flex items-center gap-1 text-[9px] text-white/35">
