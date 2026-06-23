@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { PassNetwork } from '#/football/blocks/pass-network';
 import type { PassNetworkLink, PassNetworkPlayer } from '#/football/blocks/pass-network';
 import { collectBadCirclesDuring } from '#/test/console-spy';
@@ -535,5 +535,62 @@ export const SelectorSwapNoCircleWarning: Story = {
     });
 
     expect(bad).toEqual([]);
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host passes `initialSelection` to open the
+ * network on an author's saved player. Here it opens drilled into Griezmann, so
+ * the network IS France (his team-mates render, Argentina is absent) on first
+ * paint, with no interaction.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...BothTeamsWithSubs.args,
+    initialSelection: { selectedId: 'fr-griezmann', scope: 'starters', selectedTeam: null },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Griezmann')).toBeInTheDocument());
+    await expect(canvas.getByText('Mbappé')).toBeInTheDocument();
+    await expect(canvas.queryByText('Messi')).not.toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the FULL
+ * new selection object (player + scope + side) on every change. Flipping to Subs
+ * emits the full selection with `scope: 'subs'`; picking a France player then
+ * emits it with that player's id (the team-switch is derived from the data, so
+ * the emitted `selectedTeam` stays `null` — the active side comes from the
+ * player). The host gets a complete object each time, never a partial.
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...BothTeamsWithSubs.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    // Scope toggle emits the full selection with the new scope.
+    await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({
+      selectedId: null,
+      scope: 'subs',
+      selectedTeam: null,
+    });
+
+    // Picking a player emits the full selection carrying that player's id.
+    await userEvent.click(canvas.getByRole('button', { name: 'Starters' }));
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'Antoine Griezmann' }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({
+      selectedId: 'fr-griezmann',
+      scope: 'starters',
+      selectedTeam: null,
+    });
   },
 };

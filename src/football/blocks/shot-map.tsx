@@ -6,6 +6,7 @@ import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite, finitePositive } from '#/football/lib/finite';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
@@ -57,6 +58,26 @@ export interface Shot {
 /** Which teams' shots are shown. */
 export type ShotMapFilter = ShotTeam | 'both';
 
+/**
+ * The Shot Map's full user-selectable state:
+ *   • `team` — the team filter (a side, or `'both'`);
+ *   • `player` — the drilled-in shooter (display name), or `null` for all
+ *     shooters in scope.
+ * Seed it via {@link ShotMapProps.initialSelection} and observe changes via
+ * {@link ShotMapProps.onSelectionChange}.
+ *
+ * Note: the team filter can ALSO be driven externally via the pre-existing
+ * controlled {@link ShotMapProps.filter} / {@link ShotMapProps.onFilterChange}
+ * pair. When `filter` is supplied it wins for the team part; the player part is
+ * always owned by this selection.
+ */
+export interface ShotMapSelection {
+  /** Team filter: a single side, or both. */
+  team: ShotMapFilter;
+  /** Drilled-in shooter name, or `null` for all shooters in the team scope. */
+  player: string | null;
+}
+
 export interface ShotMapProps {
   /** Home team display name. */
   homeTeam: string;
@@ -91,6 +112,21 @@ export interface ShotMapProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the block's selection state on mount (e.g. the author's saved choice).
+   * When omitted, the block opens on the default (both teams, all players) —
+   * exactly as before. Read once on mount; later changes don't re-seed. The team
+   * part is overridden by the controlled {@link ShotMapProps.filter} when that is
+   * supplied.
+   */
+  initialSelection?: ShotMapSelection;
+  /**
+   * Fires whenever the user changes the selection (team filter or player), with
+   * the full new selection object. When omitted, no-op (today's behaviour). This
+   * is additive to — and fires alongside — the legacy
+   * {@link ShotMapProps.onFilterChange}.
+   */
+  onSelectionChange?: (selection: ShotMapSelection) => void;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -150,14 +186,24 @@ export function ShotMap({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: ShotMapProps) {
   const clipPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [playerFilter, setPlayerFilter] = useState<string | null>(null);
 
-  // Filter is controllable; falls back to local state for a standalone block.
-  const [filterState, setFilterState] = useState<ShotMapFilter>('both');
-  const filter = filterProp ?? filterState;
+  // Consolidated selection (seeded by the host, emits every change): the team
+  // filter + the drilled-in shooter. The team part stays controllable via the
+  // legacy `filter`/`onFilterChange` pair — when `filter` is supplied it wins
+  // for the team, but the selection (and its `onSelectionChange`) still reflects
+  // the user's pick so a host using the new contract gets the change either way.
+  const [selection, setSelection] = usePersistedSelection<ShotMapSelection>(
+    initialSelection,
+    { team: 'both', player: null },
+    onSelectionChange
+  );
+  const filter = filterProp ?? selection.team;
+  const playerFilter = selection.player;
 
   // Unique shooters per side, for the player combobox.
   const playersByTeam = useMemo(() => {
@@ -171,16 +217,20 @@ export function ShotMap({
   }, [shots]);
 
   const setFilter = (next: ShotMapFilter) => {
-    if (filterProp === undefined) setFilterState(next);
     onFilterChange?.(next);
-    // Drop the player selection if the new team scope no longer contains them.
-    if (playerFilter && next !== 'both') {
-      const inScope = (next === 'home' ? playersByTeam.home : playersByTeam.away).includes(
-        playerFilter
-      );
-      if (!inScope) setPlayerFilter(null);
-    }
+    setSelection((prev) => {
+      // Drop the player selection if the new team scope no longer contains them.
+      let player = prev.player;
+      if (player && next !== 'both') {
+        const inScope = (next === 'home' ? playersByTeam.home : playersByTeam.away).includes(
+          player
+        );
+        if (!inScope) player = null;
+      }
+      return { team: next, player };
+    });
   };
+  const setPlayerFilter = (player: string | null) => setSelection((prev) => ({ ...prev, player }));
 
   const colorFor = (team: ShotTeam) => (team === 'home' ? homeColor : awayColor);
 

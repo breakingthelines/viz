@@ -13,7 +13,27 @@ import {
   type SelectablePlayer,
   type SquadScope,
 } from '#/football/lib/player-select';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+
+/**
+ * The Pass Sonar's full user-selectable state, driven by its selector:
+ *   • `selectedId` — the drilled-in player, or `null` for the whole-team view;
+ *   • `scope` — the Starters / Subs whole-team scope (only meaningful when the
+ *     data carries starter flags);
+ *   • `selectedTeam` — the side whose whole-team view is active in team-aware
+ *     mode, or `null` for the home side.
+ * Seed it via {@link PassSonarProps.initialSelection} and observe changes via
+ * {@link PassSonarProps.onSelectionChange}.
+ */
+export interface PassSonarSelection {
+  /** Drilled-in player id, or `null` for the whole-team view. */
+  selectedId: string | null;
+  /** Starters / Subs whole-team scope. */
+  scope: SquadScope;
+  /** Active whole-team side (team-aware mode), or `null` for the home side. */
+  selectedTeam: string | null;
+}
 
 /** A single directional bucket of a player's passing. */
 export interface PassWedge {
@@ -93,6 +113,17 @@ export interface PassSonarProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the block's selection state on mount (e.g. the author's saved choice).
+   * When omitted, the block opens on the default whole-team / starters view —
+   * exactly as before. Read once on mount; later changes don't re-seed.
+   */
+  initialSelection?: PassSonarSelection;
+  /**
+   * Fires whenever the user changes the selection (player, scope or side), with
+   * the full new selection object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: PassSonarSelection) => void;
 }
 
 const TEAM_COLOR = '#eb0000';
@@ -237,15 +268,25 @@ export function PassSonar({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: PassSonarProps) {
   const clipPrefix = useId();
   // Hover-driven take-over focus (transient).
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Selector state: the chosen player (null = whole team) + the squad scope.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [scope, setScope] = useState<SquadScope>('starters');
-  // The team whose whole-team view is active (team-aware mode); null = home.
-  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
+  // Consolidated selector state (seeded by the host, emits every change): the
+  // chosen player (null = whole team), the squad scope, and the active side.
+  const [selection, setSelection] = usePersistedSelection<PassSonarSelection>(
+    initialSelection,
+    { selectedId: null, scope: 'starters', selectedTeam: null },
+    onSelectionChange
+  );
+  const { selectedId, scope, selectedTeam: activeTeamSel } = selection;
+  const setSelectedId = (id: string | null) =>
+    setSelection((prev) => ({ ...prev, selectedId: id }));
+  const setScope = (s: SquadScope) => setSelection((prev) => ({ ...prev, scope: s }));
+  const setActiveTeamSel = (t: string | null) =>
+    setSelection((prev) => ({ ...prev, selectedTeam: t }));
 
   // Whether the data carries starter flags / a team split — gates the squad
   // toggle and the team grouping. Untagged legacy data keeps the old behaviour

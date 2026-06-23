@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** How a single touch in the move connects to the next. */
@@ -43,6 +44,17 @@ export interface Goal {
   steps: GoalStep[];
 }
 
+/**
+ * The Goal Sequence ("The Move") block's full user-selectable state: which goal
+ * the move traces. Keyed on the stable {@link Goal.id}; `null` opens on the
+ * first goal (the default). Seed it via {@link GoalSequenceProps.initialSelection}
+ * and observe changes via {@link GoalSequenceProps.onSelectionChange}.
+ */
+export interface GoalSequenceSelection {
+  /** Selected goal id (matches a {@link Goal.id}), or `null` for the first goal. */
+  goalId: string | null;
+}
+
 export interface GoalSequenceProps {
   /** Team that scored — shown in the title. */
   team: string;
@@ -67,6 +79,17 @@ export interface GoalSequenceProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds which goal is shown on mount (e.g. the author's saved choice). When
+   * omitted, opens on the first goal — exactly as before. Read once on mount;
+   * later changes don't re-seed.
+   */
+  initialSelection?: GoalSequenceSelection;
+  /**
+   * Fires whenever the user picks a different goal, with the full new selection
+   * object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: GoalSequenceSelection) => void;
 }
 
 const ACCENT = '#eb0000';
@@ -103,11 +126,21 @@ export function GoalSequence({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: GoalSequenceProps) {
   // Bumping `runId` remounts the animated layer, so it replays from the start
-  // declaratively (no effects, no imperative animation controls).
+  // declaratively (no effects, no imperative animation controls). This is
+  // transient playback state — not part of the persisted selection.
   const [runId, setRunId] = useState(0);
-  const [goalId, setGoalId] = useState<string | null>(null);
+  // Consolidated selection (seeded by the host, emits every change): which goal
+  // is traced. `null` = the first goal (the default).
+  const [selection, setSelection] = usePersistedSelection<GoalSequenceSelection>(
+    initialSelection,
+    { goalId: null },
+    onSelectionChange
+  );
+  const { goalId } = selection;
 
   const goal = useMemo(() => goals.find((g) => g.id === goalId) ?? goals[0], [goals, goalId]);
 
@@ -125,7 +158,7 @@ export function GoalSequence({
   const selectedLabel = `${goal.label} · ${goal.minute}'`;
 
   const selectGoal = (id: string) => {
-    setGoalId(id);
+    setSelection({ goalId: id });
     setRunId((r) => r + 1); // fresh goal plays from the top
   };
 

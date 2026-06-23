@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { GoalSequence } from './goal-sequence';
 import type { Goal } from './goal-sequence';
 
@@ -119,6 +119,45 @@ export const StaticFirstFrameShowsFullMove: Story = {
     // ≥ steps.length lines: the static base draws one per step (the animated
     // reveal adds its own twins on top, so this is a safe lower bound).
     expect(solidLines.length).toBeGreaterThanOrEqual(steps.length);
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host passes `initialSelection` to open "The
+ * Move" on an author's saved goal rather than the first. Here it opens on the
+ * SECOND goal (Messi's): the picker trigger and the scorer read-out reflect the
+ * seeded goal on first paint, with no interaction.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...Default.args,
+    initialSelection: { goalId: 'messi-23' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The picker trigger shows the seeded goal's label, not the first goal's.
+    await expect(canvas.getByRole('button', { name: /Goal.*Messi finish/ })).toBeInTheDocument();
+    // The scorer read-out matches the seeded goal.
+    await waitFor(() => expect(canvas.getByText('L. Messi')).toBeInTheDocument());
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the full
+ * new selection object (the chosen goal id) whenever the user picks a different
+ * goal. Picking the second goal emits `{ goalId: 'messi-23' }`.
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...Default.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /Goal/ }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: /Messi finish/ }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({ goalId: 'messi-23' });
   },
 };
 
