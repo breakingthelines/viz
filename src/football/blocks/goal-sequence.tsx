@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** How a single touch in the move connects to the next. */
 export type GoalStepType = 'pass' | 'carry' | 'shot';
@@ -192,9 +193,11 @@ export function GoalSequence({
           block is meaningful the instant it renders — and whenever the animation
           isn't running — rather than a near-empty pitch until Replay is pressed.
           The animated reveal (keyed by runId so each Replay re-runs it) plays its
-          travelling ball + draw-in + bloom directly over that base. */}
-      <div className="relative">
-        <Pitch variant="full" theme="dark">
+          travelling ball + draw-in + bloom directly over that base. `padding`
+          insets the pitch so a finish on the byline + its bloom render fully;
+          RevealOnScroll plays the entrance on scroll-in (pure enhancement). */}
+      <RevealOnScroll className="relative">
+        <Pitch variant="full" theme="dark" padding={5}>
           <StaticMove steps={steps} points={points} finishIndex={finishIndex} color={color} />
           <MoveLayer
             key={runId}
@@ -204,7 +207,7 @@ export function GoalSequence({
             color={color}
           />
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       {/* Scorer + minute — data label only, no prose. */}
       <div className="mt-3 flex items-center gap-1.5 text-[11px] text-white/90">

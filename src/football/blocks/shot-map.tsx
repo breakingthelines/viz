@@ -6,6 +6,7 @@ import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite, finitePositive } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
 export type ShotTeam = 'home' | 'away';
@@ -279,9 +280,14 @@ export function ShotMap({
         </div>
       </div>
 
-      {/* Pitch + shots */}
-      <div className="relative">
-        <Pitch variant="full" theme="dark">
+      {/* Pitch + shots. `padding` insets the pitch inside the frame so a shot
+          marker / shooter headshot taken right on the byline (x≈100) or wide on a
+          touchline, plus a freeze-frame player on the goal line, renders fully
+          instead of being clipped at the block edge. ~6 units clears the largest
+          xG marker (r ≈ 4.9) and its goal bloom. RevealOnScroll plays the entrance
+          when the block scrolls into view (pure enhancement — always visible). */}
+      <RevealOnScroll className="relative">
+        <Pitch variant="full" theme="dark" padding={6}>
           {/* Freeze-frame for the active shot, rendered beneath the markers. */}
           {active && <FreezeFrameLayer shot={active} color={colorFor(active.team)} />}
 
@@ -348,7 +354,7 @@ export function ShotMap({
           {/* Callout for the active shot, drawn last so it sits on top. */}
           {active && <Callout shot={active} color={colorFor(active.team)} />}
         </Pitch>
-      </div>
+      </RevealOnScroll>
 
       {/* Team key — small data dots + names. A freeze-frame key appears while a
           shot is active so the grey dots that pop up read as the other players'

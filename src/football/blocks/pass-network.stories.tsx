@@ -272,8 +272,24 @@ const FRA_LINKS: PassNetworkLink[] = [
   { from: 'fr-tchouameni', to: 'fr-mbappe', count: 14 },
 ];
 
+// Substitutes' passes go to STARTERS, never to each other (the realistic case
+// that made a sub-to-sub-only Subs view read empty). The Subs scope shows these.
+const ARG_SUB_LINKS: PassNetworkLink[] = [
+  { from: 'sub-paredes', to: 'st', count: 9 }, // Paredes → Messi
+  { from: 'sub-paredes', to: 'rcm', count: 7 }, // Paredes → De Paul
+  { from: 'rcb', to: 'sub-montiel', count: 6 }, // Romero → Montiel (received)
+];
+const FRA_SUB_LINKS: PassNetworkLink[] = [
+  { from: 'fr-thuram', to: 'fr-mbappe', count: 5 }, // Thuram → Mbappé
+];
+
 const MATCH_PLAYERS: PassNetworkPlayer[] = [...ARG_STARTERS, ...ARG_SUBS, ...FRA_PLAYERS];
-const MATCH_LINKS: PassNetworkLink[] = [...ARGENTINA_LINKS, ...FRA_LINKS];
+const MATCH_LINKS: PassNetworkLink[] = [
+  ...ARGENTINA_LINKS,
+  ...FRA_LINKS,
+  ...ARG_SUB_LINKS,
+  ...FRA_SUB_LINKS,
+];
 
 /**
  * Both teams supplied with starter flags: the whole-team default shows
@@ -300,10 +316,12 @@ export const StartersSubsAndSelect: Story = {
     await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
     await expect(canvas.queryByText('Montiel')).not.toBeInTheDocument();
 
-    // Flip to Subs → the sub appears and the starters drop away.
+    // Flip to Subs → the sub appears. Tagliafico (a starter the subs never passed
+    // to) drops away; Messi stays because a sub fed him (Subs shows the subs'
+    // passes to anyone — see SubsShowPassesToAnyone).
     await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
     await waitFor(() => expect(canvas.getByText('Montiel')).toBeInTheDocument());
-    await expect(canvas.queryByText('Messi')).not.toBeInTheDocument();
+    await expect(canvas.queryByText('Tagliafico')).not.toBeInTheDocument();
 
     // Back to Starters, then open the dropdown — both team groups are present.
     await userEvent.click(canvas.getByRole('button', { name: 'Starters' }));
@@ -313,6 +331,45 @@ export const StartersSubsAndSelect: Story = {
     await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
+    // Subs are selectable in the dropdown too, grouped under their team — the
+    // selector lists every player (starters AND subs), not just the active scope.
+    await expect(list.getByRole('option', { name: 'Leandro Paredes' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'Marcus Thuram' })).toBeInTheDocument();
+  },
+};
+
+/**
+ * Subs-to-anyone lock (review #3, item 3). A substitute-only graph is almost
+ * always near-empty — subs rarely pass to each other — so the Subs scope must
+ * show each sub's passes to ANYONE (their involvement across the side), not
+ * sub-to-sub only. With the data, the subs (Paredes, Montiel) only ever connect
+ * to STARTERS (Messi, De Paul, Romero), so a sub-to-sub graph would have zero
+ * edges. This flips to Subs and asserts: the sub shows, the starter it fed
+ * (Messi) is pulled in as a pass partner, an unrelated starter (Tagliafico) is
+ * NOT, and at least one edge is actually drawn — i.e. the subs' web populates.
+ */
+export const SubsShowPassesToAnyone: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
+
+    // The sub shows, and the starter it passed to is pulled in as a partner.
+    await waitFor(() => expect(canvas.getByText('Paredes')).toBeInTheDocument());
+    await expect(canvas.getByText('Messi')).toBeInTheDocument(); // Paredes → Messi
+    await expect(canvas.getByText('De Paul')).toBeInTheDocument(); // Paredes → De Paul
+    // A starter no sub connected to is NOT shown — Subs is the subs' web, not the
+    // whole XI reappearing.
+    await expect(canvas.queryByText('Tagliafico')).not.toBeInTheDocument();
+
+    // The subs' passes are actually DRAWN — at least one edge (a non-transparent
+    // <line>) exists in the pitch, so the Subs view isn't the old empty graph.
+    const drawnEdges = [...canvasElement.querySelectorAll('svg line')].filter(
+      (l) => l.getAttribute('stroke') !== 'transparent'
+    );
+    expect(drawnEdges.length).toBeGreaterThan(0);
   },
 };
 

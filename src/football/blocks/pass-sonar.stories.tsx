@@ -263,6 +263,39 @@ export const SelectsPlayerAcrossTeams: Story = {
 };
 
 /**
+ * Subs-scope sonar lock (review #3, item 3). Each sub's wedge sonar is per-player
+ * (no cross-player edges), so the Subs scope simply shows the substitutes, each
+ * with their OWN passing wedges — it populates meaningfully (unlike the pass
+ * NETWORK, where subs needed their passes-to-anyone). Flips to Subs and asserts a
+ * sub (Paredes) shows, a starter (De Paul) drops away, and wedge paths are
+ * actually drawn on the pitch.
+ */
+export const SubsSonarPopulates: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // Default = Starters: a starter shows, a sub doesn't.
+    await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+    await expect(canvas.queryByText('Paredes')).not.toBeInTheDocument();
+
+    // Flip to Subs → the subs appear (with their own sonars), starters drop away.
+    await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
+    await waitFor(() => expect(canvas.getByText('Paredes')).toBeInTheDocument());
+    await expect(canvas.getByText('Montiel')).toBeInTheDocument();
+    await expect(canvas.queryByText('De Paul')).not.toBeInTheDocument();
+
+    // The subs' sonar wedges are actually drawn (filled <path> sectors), so the
+    // Subs view isn't an empty pitch.
+    const wedges = [...canvasElement.querySelectorAll('svg path')].filter((p) => {
+      const d = p.getAttribute('d') ?? '';
+      // A wedge path is the "M … L … A … Z" sector (starts by moving to the hub).
+      return d.startsWith('M') && d.includes('A') && d.trimEnd().endsWith('Z');
+    });
+    expect(wedges.length).toBeGreaterThan(0);
+  },
+};
+
+/**
  * Regression lock for the transient `<circle r="undefined">` warning (viz #27,
  * item 7). Selecting a player mounts the enlarged focus sonar; swapping straight
  * to another player makes AnimatePresence run the previous overlay's EXIT while

@@ -26,6 +26,19 @@ export interface PitchProps {
    * theme and `false` for the `dark` theme. An explicit value always wins.
    */
   showPattern?: boolean;
+  /**
+   * Extra viewBox margin, in pitch units, added symmetrically on all four sides
+   * so children placed ON the pitch boundary — a corner-taker at the flag, a
+   * player on the goal line, plus their headshot bubbles and name labels — render
+   * fully inside the frame instead of being clipped by the SVG's edge. The pitch
+   * markings stay at their 0–100 (or 50–100) coordinates; the viewBox simply
+   * grows outward by `padding`, insetting the pitch within the rendered box and
+   * leaving a quiet gutter for edge markers. Defaults to `0` (the pitch fills the
+   * box edge-to-edge, the original behaviour). The marker layer also gets
+   * `overflow: visible`, so anything reaching just past the padded box still
+   * paints rather than being cut.
+   */
+  padding?: number;
   /** Children to render on the pitch (markers, arrows, etc.) */
   children?: React.ReactNode;
 }
@@ -45,6 +58,7 @@ export function Pitch({
   lineColor,
   grassColor,
   showPattern,
+  padding = 0,
   children,
 }: PitchProps) {
   const isDark = theme === 'dark';
@@ -55,21 +69,35 @@ export function Pitch({
     lineColor ?? (isDark ? 'var(--color-pitch-lines-dark)' : 'var(--color-pitch-lines)');
   const resolvedShowPattern = showPattern ?? !isDark;
 
-  const getViewBox = () => {
+  // The pitch markings span this box in pitch units (full vs half/third). The
+  // padded viewBox grows outward from it by `padding` on every side, so edge
+  // markers get a gutter to render into instead of being clipped at the frame.
+  const base = (() => {
     switch (variant) {
       case 'half':
-        return '50 0 50 100';
+        return { x: 50, y: 0, w: 50, h: 100 };
       case 'attacking-third':
-        return '66.67 0 33.33 100';
+        return { x: 66.67, y: 0, w: 33.33, h: 100 };
       default:
-        return '0 0 100 100';
+        return { x: 0, y: 0, w: 100, h: 100 };
     }
-  };
-
+  })();
+  const pad = Number.isFinite(padding) ? Math.max(0, padding) : 0;
+  const viewBox = `${base.x - pad} ${base.y - pad} ${base.w + pad * 2} ${base.h + pad * 2}`;
+  // The OUTER rendered box keeps the exact aspect it had before — the default
+  // `aspect-[3/2]` className (or whatever a caller overrides it to, e.g. the
+  // square canvas blocks' `!aspect-square`) — so padding never changes a block's
+  // shape or, for the canvas-overlay blocks, its alignment with the sibling
+  // canvas. Padding only GROWS the viewBox symmetrically: with the default
+  // `preserveAspectRatio="xMidYMid meet"` the pitch then sits centred and
+  // slightly inset, opening an even gutter on all sides for edge markers. And
+  // `overflow: visible` lets a marker reaching just past the padded box still
+  // paint instead of being cut at the frame.
   return (
     <svg
-      viewBox={getViewBox()}
+      viewBox={viewBox}
       className={cn('w-full h-auto aspect-[3/2]', className)}
+      style={{ overflow: 'visible' }}
       xmlns="http://www.w3.org/2000/svg"
     >
       {/* Background */}

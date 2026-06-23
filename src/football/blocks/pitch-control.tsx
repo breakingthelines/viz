@@ -6,6 +6,7 @@ import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** BTL team accents — the only two colours on the control surface. */
 const HOME_COLOR = '#eb0000';
@@ -208,8 +209,11 @@ export function PitchControl({
         </div>
       </div>
 
-      {/* Pitch + control-surface canvas overlay (square box). */}
-      <div className="relative aspect-square w-full">
+      {/* Pitch + control-surface canvas overlay (square box). RevealOnScroll
+          plays the entrance on scroll-in (pure enhancement — the surface + dots
+          are always visible regardless; the canvas keeps its own
+          `initial={false}`). */}
+      <RevealOnScroll className="relative aspect-square w-full">
         <Pitch
           variant="full"
           theme="dark"
@@ -217,10 +221,14 @@ export function PitchControl({
         />
         <ControlCanvas players={resolved} hoveredId={hoveredId} />
 
-        {/* Player dots — SVG over the canvas, on the same 0..100 viewBox. */}
+        {/* Player dots — SVG over the canvas, on the same 0..100 viewBox. This
+            layer keeps the exact 0..100 box (no padding) so its dots stay aligned
+            with the control-surface canvas beneath; `overflow-visible` is enough
+            here so a hover ring / name label on a player near an edge isn't
+            clipped at the frame. */}
         <svg
           viewBox="0 0 100 100"
-          className="absolute inset-0 h-full w-full"
+          className="absolute inset-0 h-full w-full overflow-visible"
           xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="none"
         >
@@ -308,7 +316,7 @@ export function PitchControl({
             {homeTeam} attacking <span aria-hidden>→</span>
           </span>
         </div>
-      </div>
+      </RevealOnScroll>
 
       {/* Team key — small data dots + names; the hovered side reads brighter. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/60">

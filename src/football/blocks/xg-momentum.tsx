@@ -5,6 +5,7 @@ import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
+import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
@@ -276,7 +277,7 @@ export function XgMomentum({
         </div>
       </div>
 
-      <div className="relative">
+      <RevealOnScroll className="relative">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${VB_W} ${VB_H}`}
@@ -447,7 +448,7 @@ export function XgMomentum({
             leftPct={(guideX / VB_W) * 100}
           />
         )}
-      </div>
+      </RevealOnScroll>
 
       {/* Team key — small data dots + names. */}
       <div className="mt-3 flex items-center gap-4 text-[11px] text-white/90">
