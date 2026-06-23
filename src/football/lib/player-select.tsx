@@ -15,8 +15,17 @@ import { ControlDropdown, DropdownGroupLabel, DropdownItem } from '#/football/li
  *      — subs included — is cramped). It scopes the *whole-team* view to the
  *      starting XI by default.
  *
- * The component is presentational: the owning block holds the selected id and
- * the starters/subs scope in its own state and re-renders its plot accordingly.
+ * Team-aware mode (when both sides' data is supplied): pass `selectedTeam` +
+ * `onSelectTeam` and each team group gains a "{Team} — whole team" row at its
+ * top, so the reader can switch the panel to the OTHER side's whole-team view
+ * (e.g. "France — whole team") rather than only the home side's. Picking any
+ * single player still calls `onSelect(id)`; the owning block reads that player's
+ * own `team` off its data to switch sides. The top "Whole team" default row
+ * clears both selections back to the home side.
+ *
+ * The component is presentational: the owning block holds the selected id (and,
+ * in team-aware mode, the selected team) and the starters/subs scope in its own
+ * state and re-renders its plot accordingly.
  */
 
 /** A player as offered in the selector. */
@@ -55,6 +64,20 @@ export interface PlayerSelectProps {
   scope?: SquadScope;
   /** Fires when the Starters/Subs segmented control changes. */
   onScopeChange?: (scope: SquadScope) => void;
+  /**
+   * The team whose whole-team view is active, or `null` for the default (home)
+   * side. Provide with {@link PlayerSelectProps.onSelectTeam} to enable
+   * team-aware mode: each team group gains a "{Team} — whole team" row so the
+   * reader can switch the panel to the other side's whole-team view. Only takes
+   * effect when the players span more than one team (so the list is grouped).
+   */
+  selectedTeam?: string | null;
+  /**
+   * Fires with a team name when a "{Team} — whole team" row is chosen, or `null`
+   * for the top "Whole team" default (the home side). Enables team-aware mode
+   * together with {@link PlayerSelectProps.selectedTeam}.
+   */
+  onSelectTeam?: (team: string | null) => void;
 }
 
 /** Distinct team headings in first-seen order (skips players with no team). */
@@ -66,6 +89,29 @@ function teamOrder(players: SelectablePlayer[]): string[] {
   return seen;
 }
 
+/**
+ * Resolve the ACTIVE team a block should render, from the selector's two pieces
+ * of state plus the panel's home `team`. Shared by every team-aware block so the
+ * rule lives in one place:
+ *
+ *   • a player is selected → that player's own team (the drill-down switches
+ *     sides automatically, so picking a France player renders France's data);
+ *   • no player but a team chosen via "{Team} — whole team" → that team;
+ *   • neither → the panel's home `team` (the default whole-team view).
+ *
+ * `playerTeamOf` maps the selected id to its team (the caller knows its own data
+ * shape — players, passes or actions — so it supplies the lookup).
+ */
+export function resolveActiveTeam(
+  homeTeam: string,
+  selectedId: string | null,
+  selectedTeam: string | null | undefined,
+  playerTeamOf: (id: string) => string | undefined
+): string {
+  if (selectedId !== null) return playerTeamOf(selectedId) ?? selectedTeam ?? homeTeam;
+  return selectedTeam ?? homeTeam;
+}
+
 export function PlayerSelect({
   players,
   selectedId,
@@ -74,6 +120,8 @@ export function PlayerSelect({
   allLabel = 'Whole team',
   scope,
   onScopeChange,
+  selectedTeam,
+  onSelectTeam,
 }: PlayerSelectProps) {
   const teams = useMemo(() => teamOrder(players), [players]);
   // Group only when more than one team is present; otherwise a flat list reads
@@ -88,10 +136,26 @@ export function PlayerSelect({
     [players, teams, grouped]
   );
 
+  // Team-aware mode: a per-group "{Team} — whole team" row lets the reader switch
+  // the panel to the other side. Only meaningful once the list is grouped.
+  const teamAware = grouped && onSelectTeam !== undefined;
+  const wholeTeamLabel = (team: string) => `${team} — whole team`;
+
   const selected = selectedId !== null ? players.find((p) => p.id === selectedId) : undefined;
-  const valueLabel = selected?.name ?? allLabel;
+  // Trigger label: a selected player wins; else a selected team's whole-team
+  // label (team-aware mode); else the default all-players label.
+  const valueLabel =
+    selected?.name ?? (teamAware && selectedTeam ? wholeTeamLabel(selectedTeam) : allLabel);
 
   const showScopeToggle = scope !== undefined && onScopeChange !== undefined;
+
+  // Selecting a player clears any team-only selection (the player drives the
+  // side); the top default clears both back to the home side.
+  const pickPlayer = (id: string, close: () => void) => {
+    onSelect(id);
+    if (teamAware) onSelectTeam(null);
+    close();
+  };
 
   return (
     <div className="flex items-center gap-1.5">
@@ -100,9 +164,10 @@ export function PlayerSelect({
         {(close) => (
           <>
             <DropdownItem
-              selected={selectedId === null}
+              selected={selectedId === null && !(teamAware && selectedTeam)}
               onSelect={() => {
                 onSelect(null);
+                if (teamAware) onSelectTeam(null);
                 close();
               }}
             >
@@ -113,16 +178,27 @@ export function PlayerSelect({
                 {teams.map((team) => (
                   <div key={team}>
                     <DropdownGroupLabel>{team}</DropdownGroupLabel>
+                    {/* Team-aware: a whole-team row per side, so the panel can
+                        switch to the other team's full view (not only a player). */}
+                    {teamAware && (
+                      <DropdownItem
+                        selected={selectedId === null && selectedTeam === team}
+                        onSelect={() => {
+                          onSelectTeam(team);
+                          onSelect(null);
+                          close();
+                        }}
+                      >
+                        {wholeTeamLabel(team)}
+                      </DropdownItem>
+                    )}
                     {players
                       .filter((p) => p.team === team)
                       .map((p) => (
                         <DropdownItem
                           key={p.id}
                           selected={p.id === selectedId}
-                          onSelect={() => {
-                            onSelect(p.id);
-                            close();
-                          }}
+                          onSelect={() => pickPlayer(p.id, close)}
                         >
                           {p.name}
                         </DropdownItem>
@@ -134,10 +210,7 @@ export function PlayerSelect({
                   <DropdownItem
                     key={p.id}
                     selected={p.id === selectedId}
-                    onSelect={() => {
-                      onSelect(p.id);
-                      close();
-                    }}
+                    onSelect={() => pickPlayer(p.id, close)}
                   >
                     {p.name}
                   </DropdownItem>
@@ -148,10 +221,7 @@ export function PlayerSelect({
                 <DropdownItem
                   key={p.id}
                   selected={p.id === selectedId}
-                  onSelect={() => {
-                    onSelect(p.id);
-                    close();
-                  }}
+                  onSelect={() => pickPlayer(p.id, close)}
                 >
                   {p.name}
                 </DropdownItem>

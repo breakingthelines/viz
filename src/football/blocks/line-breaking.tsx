@@ -7,7 +7,11 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
-import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import {
+  PlayerSelect,
+  resolveActiveTeam,
+  type SelectablePlayer,
+} from '#/football/lib/player-select';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
@@ -109,6 +113,8 @@ export function LineBreaking({
   const arrowId = `${uid}-arrow`;
   const [mode, setMode] = useState<ViewMode>('all');
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  // The team whose whole-team view is active (team-aware mode); null = home.
+  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // A pass's selector key: a stable id when present, else the display name.
@@ -125,19 +131,27 @@ export function LineBreaking({
   }, [passes]);
 
   // True only when passes are split across teams (so the whole-team default
-  // scopes to this panel's side). Single-team / legacy data shows every pass.
+  // scopes to a single side). Single-team / legacy data shows every pass.
   const hasTeamSplit = useMemo(
     () => new Set(passes.map((p) => p.team).filter(Boolean)).size > 1,
     [passes]
   );
 
+  // The team a selected passer belongs to (drives the side-switch on drill-down).
+  const playerTeamOf = (id: string): string | undefined =>
+    passes.find((p) => playerKey(p) === id)?.team;
+
+  // The ACTIVE side: a selected passer's team, else a chosen whole-team side,
+  // else the home `team`. Picking a France passer therefore renders France.
+  const activeTeam = resolveActiveTeam(team, activePlayer, activeTeamSel, playerTeamOf);
+
   // Passes after the player filter (independent of the all/breaks view mode).
-  // Whole-team default scopes to the home side when both teams are present.
+  // Whole-team view scopes to the ACTIVE side when both teams are present.
   const playerFiltered = useMemo(() => {
     if (activePlayer !== null) return passes.filter((p) => playerKey(p) === activePlayer);
     if (!hasTeamSplit) return passes;
-    return passes.filter((p) => p.team === team);
-  }, [passes, activePlayer, hasTeamSplit, team]);
+    return passes.filter((p) => p.team === activeTeam);
+  }, [passes, activePlayer, hasTeamSplit, activeTeam]);
 
   const breakCount = useMemo(
     () => playerFiltered.filter((p) => p.lineBreaking).length,
@@ -175,6 +189,8 @@ export function LineBreaking({
               players={selectablePlayers}
               selectedId={activePlayer}
               onSelect={setActivePlayer}
+              selectedTeam={hasTeamSplit ? activeTeamSel : undefined}
+              onSelectTeam={hasTeamSplit ? setActiveTeamSel : undefined}
             />
           )}
           <ControlDropdown label="Showing" valueLabel={modeValueLabel}>
@@ -302,10 +318,13 @@ export function LineBreaking({
         </AnimatePresence>
       </div>
 
-      {/* Team key + count read-out — small + plain, mirrors the shot-map team key row. */}
+      {/* Team key + count read-out — small + plain, mirrors the shot-map team key row.
+          Labels the ACTIVE side; the crest only shows for the home side (the
+          block carries the home crest only), so the away view never shows the
+          wrong badge. */}
       <div className="mt-3 flex items-center gap-3 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
-          {crestUrl && (
+          {crestUrl && activeTeam === team && (
             <img
               src={crestUrl}
               alt=""
@@ -315,7 +334,7 @@ export function LineBreaking({
               className="inline-block size-4 shrink-0 rounded object-contain align-middle"
             />
           )}
-          <span className="truncate text-white/80">{team}</span>
+          <span className="truncate text-white/80">{activeTeam}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />

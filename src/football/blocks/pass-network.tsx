@@ -7,7 +7,12 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
-import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
+import {
+  PlayerSelect,
+  resolveActiveTeam,
+  type SelectablePlayer,
+  type SquadScope,
+} from '#/football/lib/player-select';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Default BTL home-team accent. */
@@ -187,6 +192,8 @@ export function PassNetwork({
   // Selector state: the chosen player (null = whole team) + the squad scope.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scope, setScope] = useState<SquadScope>('starters');
+  // The team whose whole-team view is active (team-aware mode); null = home.
+  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
 
   // Whether the data carries starter flags / a team split — gates the squad
   // toggle and the team grouping. Untagged legacy data keeps the old behaviour.
@@ -202,10 +209,24 @@ export function PassNetwork({
     [players]
   );
 
-  // The nodes actually drawn: this panel's side (when split), narrowed to the
+  // The ACTIVE side: a selected player's team, else a chosen whole-team side,
+  // else the home `team`. Picking a France player switches the WHOLE network to
+  // France (its nodes + its edges), with that player ego-highlighted — rather
+  // than the old behaviour of dropping a single isolated France node onto the
+  // Argentina graph.
+  const activeTeam = resolveActiveTeam(
+    team,
+    selectedId,
+    activeTeamSel,
+    (id) => players.find((p) => p.id === id)?.team
+  );
+
+  // The nodes actually drawn: the ACTIVE side (when split), narrowed to the
   // active squad scope when starter flags are present; else every supplied node.
   // A chosen player is NOT removed from the graph — a single isolated node loses
-  // the network's meaning — but drives a persistent ego-highlight (below).
+  // the network's meaning — but drives a persistent ego-highlight (below); the
+  // selected player is part of the active side, so the network IS that player's
+  // team.
   //
   // Subs scope is special. A sub-to-sub-only graph is almost always near-empty
   // (substitutes rarely pass to each other), so Subs instead shows each sub's
@@ -214,7 +235,7 @@ export function PassNetwork({
   // sub nodes are the subject and their pass partners are drawn as context so the
   // edges have somewhere to land. (Starters scope is unchanged: just the XI.)
   const visiblePlayers = useMemo(() => {
-    const sideSet = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    const sideSet = hasTeamSplit ? players.filter((p) => p.team === activeTeam) : players;
     if (!hasStarterFlags) {
       let set = sideSet;
       if (selectedId !== null && !set.some((p) => p.id === selectedId)) {
@@ -246,16 +267,16 @@ export function PassNetwork({
       if (sel) set = [...set, sel];
     }
     return set;
-  }, [players, links, hasTeamSplit, team, hasStarterFlags, scope, selectedId]);
+  }, [players, links, hasTeamSplit, activeTeam, hasStarterFlags, scope, selectedId]);
 
   // In Subs scope, the subs are the SUBJECT and their pass partners are drawn as
   // context — only edges that TOUCH a sub are shown, so the panel reads as "the
   // subs' involvement" rather than the full starter web reappearing.
   const subIdSet = useMemo(() => {
     if (!hasStarterFlags || scope !== 'subs') return null;
-    const sideSet = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    const sideSet = hasTeamSplit ? players.filter((p) => p.team === activeTeam) : players;
     return new Set(sideSet.filter((p) => p.starter === false).map((p) => p.id));
-  }, [players, hasStarterFlags, scope, hasTeamSplit, team]);
+  }, [players, hasStarterFlags, scope, hasTeamSplit, activeTeam]);
 
   const nodes = useMemo<ResolvedNode[]>(() => {
     const involvements = visiblePlayers.map((p) => p.involvement);
@@ -370,6 +391,8 @@ export function PassNetwork({
             onSelect={setSelectedId}
             scope={hasStarterFlags ? scope : undefined}
             onScopeChange={hasStarterFlags ? setScope : undefined}
+            selectedTeam={hasTeamSplit ? activeTeamSel : undefined}
+            onSelectTeam={hasTeamSplit ? setActiveTeamSel : undefined}
           />
         ) : (
           <span className="text-[11px] tabular-nums text-white/55">
@@ -516,13 +539,16 @@ export function PassNetwork({
           </span>
         ) : (
           <>
+            {/* Labels the ACTIVE side; the crest only shows for the home side (the
+                block carries the home crest only), so an away whole-team view
+                never shows the wrong badge. */}
             <span className="flex items-center gap-1.5">
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <Crest url={crestUrl} name={team} />
-              <span className="truncate">{team}</span>
+              {activeTeam === team && <Crest url={crestUrl} name={team} />}
+              <span className="truncate">{activeTeam}</span>
             </span>
             <span className="tabular-nums text-white/90">
               {nodes.length} players · {edges.length} links

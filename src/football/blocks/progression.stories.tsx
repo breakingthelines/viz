@@ -249,6 +249,51 @@ export const Default: Story = {
 };
 
 /**
+ * xT colour-ramp lock (review item 3). The progressive arrows must take the
+ * xT-driven colour gradient — low xT a dim accent, high xT a bright warm/amber —
+ * not render flat in one colour. The data spans ~0.014 → ~0.15 xT, so the ramp
+ * MUST produce a spread of `rgb(...)` strokes. This reads every drawn arrow's
+ * stroke colour and asserts: more than one distinct colour is used (not flat),
+ * and the brightest stroke (the highest-xT ball, warmed toward amber → high
+ * green channel) is clearly brighter than the dimmest (low-xT build-up). Guards
+ * against a regression where a wrapper/animation flattens the per-segment hue.
+ */
+export const XtColourRampApplied: Story = {
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Progression')).toBeInTheDocument());
+
+    // Parse an `rgb(r, g, b)` stroke into channels; null for anything else.
+    const parseRgb = (s: string | null): [number, number, number] | null => {
+      const m = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(s ?? '');
+      return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+    };
+
+    // Every visible (non-hit-area) arrow stroke, read off the rendered paths.
+    // The wide invisible hit-paths use stroke="transparent" and are excluded.
+    await waitFor(() => {
+      const colours = [...canvasElement.querySelectorAll('svg path[stroke]')]
+        .map((p) => parseRgb(p.getAttribute('stroke')))
+        .filter((c): c is [number, number, number] => c !== null);
+      // At least a handful of arrows are coloured.
+      expect(colours.length).toBeGreaterThan(3);
+
+      // The ramp is NOT flat: more than one distinct colour is in play.
+      const distinct = new Set(colours.map((c) => c.join(',')));
+      expect(distinct.size).toBeGreaterThan(1);
+
+      // Brightest (warm/amber, high green) clearly out-shines the dimmest — the
+      // hot end of the ramp is genuinely reached, not a uniform red.
+      const greens = colours.map((c) => c[1]);
+      const maxG = Math.max(...greens);
+      const minG = Math.min(...greens);
+      expect(maxG - minG).toBeGreaterThan(40);
+    });
+  },
+};
+
+/**
  * Tooltip-clear lock (viz #27, item 4): the action callout must close once the
  * pointer leaves the pitch. Hovers an arrow to open the callout, then moves the
  * pointer off the pitch (onto the block title) and asserts the callout is gone —
@@ -499,5 +544,29 @@ export const WholeTeamDefaultThenSelect: Story = {
       .reduce((s, a) => s + a.xt, 0)
       .toFixed(2);
     await expect(canvas.getByText(mbappeXt)).toBeInTheDocument();
+  },
+};
+
+/**
+ * "{Team} — whole team" switch. Picking "France — whole team" scopes the plot +
+ * total-xT read-out + team label to France's whole side (not one player): the
+ * total becomes France's full sum and the read-out names France.
+ */
+export const SelectsFranceWholeTeam: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const argXt = ARG_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
+    await waitFor(() => expect(canvas.getByText(argXt)).toBeInTheDocument());
+
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    // Total xT is now France's whole-side sum, and the read-out names France.
+    const fraXt = FRA_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
+    await waitFor(() => expect(canvas.getByText(fraXt)).toBeInTheDocument());
+    await expect(canvas.getByText('France')).toBeInTheDocument();
   },
 };

@@ -6,7 +6,11 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
-import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import {
+  PlayerSelect,
+  resolveActiveTeam,
+  type SelectablePlayer,
+} from '#/football/lib/player-select';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A progressive action: a carry or a pass that advances the ball. */
@@ -237,6 +241,8 @@ export function Progression({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ProgressionFilter>({ kind: 'all' });
   const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  // The team whose whole-team view is active (team-aware mode); null = home.
+  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
 
   const baseRgb = useMemo(() => parseHex(color), [color]);
 
@@ -244,24 +250,32 @@ export function Progression({
   const playerKey = (a: ProgressionAction): string => a.playerId ?? a.player;
 
   // True only when actions are split across teams (so the whole-team default
-  // scopes to this panel's side). Single-team / legacy data shows every action.
+  // scopes to a single side). Single-team / legacy data shows every action.
   const hasTeamSplit = useMemo(
     () => new Set(actions.map((a) => a.team).filter(Boolean)).size > 1,
     [actions]
   );
 
-  // Compose the player selection with the type filter. The whole-team default
-  // scopes to the home side when both teams are present.
+  // The team a selected player belongs to (drives the side-switch on drill-down).
+  const playerTeamOf = (id: string): string | undefined =>
+    actions.find((a) => playerKey(a) === id)?.team;
+
+  // The ACTIVE side: a selected player's team, else a chosen whole-team side,
+  // else the home `team`. Picking a France player therefore renders France.
+  const activeTeam = resolveActiveTeam(team, activePlayer, activeTeamSel, playerTeamOf);
+
+  // Compose the player selection with the type filter. The whole-team view
+  // scopes to the ACTIVE side when both teams are present.
   const matches = (a: ProgressionAction): boolean => {
     if (filter.kind === 'type' && a.type !== filter.type) return false;
     if (activePlayer !== null) return playerKey(a) === activePlayer;
-    if (hasTeamSplit) return a.team === team;
+    if (hasTeamSplit) return a.team === activeTeam;
     return true;
   };
 
   const shown = useMemo(
     () => actions.filter(matches),
-    [actions, filter, activePlayer, hasTeamSplit, team]
+    [actions, filter, activePlayer, hasTeamSplit, activeTeam]
   );
 
   // Draw the brightest (highest-xT) arrows last so they sit on top of the mass.
@@ -311,6 +325,8 @@ export function Progression({
               players={selectablePlayers}
               selectedId={activePlayer}
               onSelect={setActivePlayer}
+              selectedTeam={hasTeamSplit ? activeTeamSel : undefined}
+              onSelectTeam={hasTeamSplit ? setActiveTeamSel : undefined}
             />
           )}
           <ControlDropdown label="Showing" valueLabel={filterValueLabel}>
@@ -486,7 +502,10 @@ export function Progression({
           </span>
           <span className="text-white/45">xT</span>
           <span className="mx-0.5 text-white/15">·</span>
-          {crestUrl && (
+          {/* Crest only for the home side (the block carries the home crest
+              only); the away whole-team view shows just the name, never a wrong
+              badge. The label tracks the ACTIVE side. */}
+          {crestUrl && activeTeam === team && (
             <img
               src={crestUrl}
               alt=""
@@ -496,7 +515,7 @@ export function Progression({
               className="size-4 shrink-0 object-contain"
             />
           )}
-          <span className="truncate text-white/55">{team}</span>
+          <span className="truncate text-white/55">{activeTeam}</span>
         </div>
         <div className="flex items-center gap-3 text-white/55">
           <ThreatRamp baseRgb={baseRgb} />

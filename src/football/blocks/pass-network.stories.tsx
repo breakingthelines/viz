@@ -339,6 +339,77 @@ export const StartersSubsAndSelect: Story = {
 };
 
 /**
+ * Team-switch on player select (the headline fix). Picking a France player must
+ * switch the WHOLE network to France — France's nodes AND France's internal
+ * edges, with that player ego-highlighted — NOT drop a single isolated France
+ * node onto the Argentina graph. Drills into Griezmann and asserts: his France
+ * team-mates (Tchouaméni, Mbappé) are now on the pitch, an Argentina starter
+ * (Messi) has dropped away entirely, and a France internal edge is drawn.
+ */
+export const SelectingPlayerSwitchesTeam: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // Default = Argentina's XI.
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    // Drill into a France player.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'Antoine Griezmann' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    // The network is now FRANCE: Griezmann's team-mates render, Argentina is gone.
+    await waitFor(() => expect(canvas.getByText('Griezmann')).toBeInTheDocument());
+    await expect(canvas.getByText('Tchouaméni')).toBeInTheDocument();
+    await expect(canvas.getByText('Mbappé')).toBeInTheDocument();
+    await expect(canvas.queryByText('Messi')).not.toBeInTheDocument();
+    await expect(canvas.queryByText('De Paul')).not.toBeInTheDocument();
+
+    // At least one France internal edge is actually drawn (the network has shape,
+    // not a lone isolated node) — a non-transparent <line>.
+    const drawnEdges = [...canvasElement.querySelectorAll('svg line')].filter(
+      (l) => l.getAttribute('stroke') !== 'transparent'
+    );
+    expect(drawnEdges.length).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * "{Team} — whole team" switch. Each team group offers a whole-team row so the
+ * panel can show the OTHER side's full network (not just one player). Picks
+ * "France — whole team" and asserts France's starting XI shows (Tchouaméni,
+ * Griezmann, Mbappé), Argentina has dropped away, and no single player is
+ * focused (the read-out is the team line, not a player's involvement).
+ */
+export const SelectingFranceWholeTeam: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    // The per-side whole-team rows are offered.
+    await expect(
+      within(listbox).getByRole('option', { name: 'France — whole team' })
+    ).toBeInTheDocument();
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    // France's starting XI is shown; Argentina is gone.
+    await waitFor(() => expect(canvas.getByText('Griezmann')).toBeInTheDocument());
+    await expect(canvas.getByText('Tchouaméni')).toBeInTheDocument();
+    await expect(canvas.getByText('Mbappé')).toBeInTheDocument();
+    await expect(canvas.queryByText('Messi')).not.toBeInTheDocument();
+    // The legend names France (the active side), and the trigger reads the
+    // France whole-team label.
+    await expect(canvas.getAllByText('France').length).toBeGreaterThan(0);
+    await expect(canvas.getByText('France — whole team')).toBeInTheDocument();
+  },
+};
+
+/**
  * Subs-to-anyone lock (review #3, item 3). A substitute-only graph is almost
  * always near-empty — subs rarely pass to each other — so the Subs scope must
  * show each sub's passes to ANYONE (their involvement across the side), not
