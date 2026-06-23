@@ -7,7 +7,12 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
-import { PlayerSelect, type SelectablePlayer, type SquadScope } from '#/football/lib/player-select';
+import {
+  PlayerSelect,
+  resolveActiveTeam,
+  type SelectablePlayer,
+  type SquadScope,
+} from '#/football/lib/player-select';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single directional bucket of a player's passing. */
@@ -208,6 +213,8 @@ export function PassSonar({
   // Selector state: the chosen player (null = whole team) + the squad scope.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scope, setScope] = useState<SquadScope>('starters');
+  // The team whose whole-team view is active (team-aware mode); null = home.
+  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
 
   // Whether the data carries starter flags / a team split — gates the squad
   // toggle and the team grouping. Untagged legacy data keeps the old behaviour
@@ -224,18 +231,27 @@ export function PassSonar({
     [players]
   );
 
+  // The ACTIVE side: a selected player's team, else a chosen whole-team side,
+  // else the home `team`. Picking a France player therefore switches to France.
+  const activeTeam = resolveActiveTeam(
+    team,
+    selectedId,
+    activeTeamSel,
+    (id) => players.find((p) => p.id === id)?.team
+  );
+
   // The players actually drawn on the pitch:
   //   • a chosen player → just that player (the drill-down);
-  //   • whole team → this panel's side (when split), narrowed to the active
+  //   • whole team → the ACTIVE side (when split), narrowed to the active
   //     squad scope when starter flags are present; else every supplied player.
   const visiblePlayers = useMemo(() => {
     if (selectedId !== null) return players.filter((p) => p.id === selectedId);
-    let set = hasTeamSplit ? players.filter((p) => p.team === team) : players;
+    let set = hasTeamSplit ? players.filter((p) => p.team === activeTeam) : players;
     if (hasStarterFlags) {
       set = set.filter((p) => (scope === 'subs' ? p.starter === false : p.starter === true));
     }
     return set;
-  }, [players, selectedId, hasTeamSplit, team, hasStarterFlags, scope]);
+  }, [players, selectedId, hasTeamSplit, activeTeam, hasStarterFlags, scope]);
 
   // Colour-intensity ceiling across all wedges. Rather than the raw single max
   // (which let one dominant direction monopolise the saturation and washed the
@@ -292,6 +308,8 @@ export function PassSonar({
             onSelect={setSelectedId}
             scope={hasStarterFlags ? scope : undefined}
             onScopeChange={hasStarterFlags ? setScope : undefined}
+            selectedTeam={hasTeamSplit ? activeTeamSel : undefined}
+            onSelectTeam={hasTeamSplit ? setActiveTeamSel : undefined}
           />
         ) : (
           <span className="flex items-center gap-1.5 text-[11px] text-white/60">

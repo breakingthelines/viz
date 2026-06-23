@@ -455,6 +455,31 @@ export const WholeTeamDefaultThenSelect: Story = {
 };
 
 /**
+ * "{Team} — whole team" switch. Picking "France — whole team" scopes the plot +
+ * line-break count + team label to France's whole side (not one player): the
+ * count becomes France's breaks (2, vs Argentina's by default), and the team key
+ * names France.
+ */
+export const SelectsFranceWholeTeam: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const argBreaks = ARGENTINA_TAGGED.filter((p) => p.lineBreaking).length;
+    const fraBreaks = FRANCE_PASSES.filter((p) => p.lineBreaking).length;
+    await waitFor(() => expect(canvas.getByText(String(argBreaks))).toBeInTheDocument());
+
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    // Count is now France's whole-side breaks, and the team key names France.
+    await waitFor(() => expect(canvas.getByText(String(fraBreaks))).toBeInTheDocument());
+    await expect(canvas.getByText('France')).toBeInTheDocument();
+  },
+};
+
+/**
  * Tooltip-clear lock (viz #27, item 4): the passer callout must close once the
  * pointer leaves the pitch. Hovers a pass to open the callout, then moves the
  * pointer off the pitch and asserts the callout is gone — guarding the

@@ -263,6 +263,37 @@ export const SelectsPlayerAcrossTeams: Story = {
 };
 
 /**
+ * "{Team} — whole team" switch. The per-side whole-team rows let the panel show
+ * France's whole XI (not only one player). Picks "France — whole team" and
+ * asserts France's starters render (Tchouaméni, Griezmann), Argentina has
+ * dropped away, and the Starters / Subs toggle then scopes to FRANCE's subs
+ * (Thuram) — i.e. the squad scope follows the switched side.
+ */
+export const SelectsFranceWholeTeam: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    // France's starting XI shows; Argentina is gone.
+    await waitFor(() => expect(canvas.getByText('Tchouaméni')).toBeInTheDocument());
+    await expect(canvas.getByText('Griezmann')).toBeInTheDocument();
+    await expect(canvas.queryByText('De Paul')).not.toBeInTheDocument();
+
+    // The Subs scope now follows France: flipping to Subs shows the France sub
+    // (Thuram) and drops the France starters.
+    await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
+    await waitFor(() => expect(canvas.getByText('Thuram')).toBeInTheDocument());
+    await expect(canvas.queryByText('Tchouaméni')).not.toBeInTheDocument();
+  },
+};
+
+/**
  * Subs-scope sonar lock (review #3, item 3). Each sub's wedge sonar is per-player
  * (no cross-player edges), so the Subs scope simply shows the substitutes, each
  * with their OWN passing wedges — it populates meaningfully (unlike the pass
