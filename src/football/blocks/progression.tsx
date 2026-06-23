@@ -98,15 +98,69 @@ const DEFAULT_COLOR = '#eb0000';
 const SB_X = 120;
 const SB_Y = 80;
 
-// xT is read as a fraction of this ceiling for every visual ramp (width,
-// colour, head size). A single progressive action rarely tops ~0.15, so 0.16
-// keeps the hottest real balls near the top of the ramp without clipping.
+// Absolute ceiling for the MAGNITUDE ramps (stroke width, head-pip size, glow).
+// A single progressive action rarely tops ~0.15, so 0.16 keeps the hottest real
+// balls near the top of those size cues without clipping. NOTE: the COLOUR ramp
+// no longer reads off this ceiling — see {@link xtColorScale}.
 const XT_CEIL = 0.16;
 
-/** xT as a 0–1 fraction of the visual ceiling. */
+/** xT as a 0–1 fraction of the visual ceiling — drives the SIZE cues only. */
 function xtFraction(xt: number): number {
   if (!Number.isFinite(xt) || xt <= 0) return 0;
   return Math.min(1, xt / XT_CEIL);
+}
+
+/**
+ * Smallest xT span the colour scale will stretch across the whole ramp. When the
+ * shown actions barely vary (a single ball, or a tight cluster), normalising
+ * against a near-zero range would either divide by ~0 or paint random noise as a
+ * full rainbow. Flooring the span keeps a genuinely-flat set appropriately muted
+ * while still letting any real spread open up. ~0.012 ≈ a meaningful xT step.
+ */
+const XT_COLOR_SPAN_FLOOR = 0.012;
+
+/** Linear-interpolated quantile of an already-ascending array. */
+function quantileSorted(sorted: number[], q: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0]!;
+  const pos = (sorted.length - 1) * Math.max(0, Math.min(1, q));
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sorted[lo]!;
+  return sorted[lo]! + (sorted[hi]! - sorted[lo]!) * (pos - lo);
+}
+
+/**
+ * A DATA-RELATIVE xT→fraction scale for the colour ramp, built from the actions
+ * actually on screen (the team / player / type-filtered set). Real progressive
+ * xT is individually tiny and clustered low (mostly < 0.05), so reading colour
+ * off a fixed 0→0.16 domain crushed almost every arrow into the dim-red bottom
+ * and the whole mesh read as one flat colour. Normalising against THIS set's own
+ * range restores the gradient: the lowest-xT actions sit at the dim end and the
+ * highest at the bright-amber end, whatever the absolute magnitudes are.
+ *
+ * Robustness:
+ * - The range is the ~5th→~95th percentile, not raw min→max, so one freak
+ *   outlier can't compress everyone else into a sliver.
+ * - The span is floored ({@link XT_COLOR_SPAN_FLOOR}) so a single action or a
+ *   tight cluster stays muted instead of dividing by ~0 or rainbow-ing noise.
+ * - A gentle `sqrt` curve lifts the mid-range so the mass of build-up actions
+ *   spreads visibly rather than bunching near the floor.
+ *
+ * Returns a pure `xt → 0..1` function; rebuild it (memoised on the shown set) so
+ * the scale re-fits whenever the filter or player selection changes.
+ */
+function xtColorScale(xts: number[]): (xt: number) => number {
+  const vals = xts.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
+  if (vals.length === 0) return () => 0;
+  const lo = quantileSorted(vals, 0.05);
+  const hi = quantileSorted(vals, 0.95);
+  const span = Math.max(hi - lo, XT_COLOR_SPAN_FLOOR);
+  return (xt: number): number => {
+    if (!Number.isFinite(xt) || xt <= 0) return 0;
+    const frac = (xt - lo) / span;
+    return Math.sqrt(Math.max(0, Math.min(1, frac)));
+  };
 }
 
 /**
@@ -139,18 +193,24 @@ function headRadiusForXt(xt: number): number {
 }
 
 /**
- * Two-stop hot ramp from a live base toward an incandescent head, driven by xT.
- * Low threat is muted but still clearly coloured (not a near-grey ghost); high
- * threat brightens and warms toward white-hot so the eye lands on it first.
- * `base` is the team accent.
+ * Two-stop hot ramp from a live base toward an incandescent head. Low threat is
+ * muted but still clearly coloured (not a near-grey ghost); high threat brightens
+ * and warms toward white-hot so the eye lands on it first. `base` is the team
+ * accent.
  *
- * The cold end was previously dragged 55% toward a dark slate, which sank the
- * whole low/mid mass into a faint, barely-visible mesh. It now keeps far more of
- * the accent (a gentle dim only), so the build-up reads as a vivid web while the
- * high-xT balls still pull decisively ahead via the warm/glow top of the ramp.
+ * `frac` is a 0–1 position along the ramp. It is DATA-RELATIVE — produced by
+ * {@link xtColorScale} from the shown actions' own range — not a fixed fraction
+ * of an absolute xT ceiling. That is the fix for the "whole mesh is one flat red"
+ * bug: against the old fixed 0→0.16 domain, real (clustered-low) xT never climbed
+ * out of the cold end. The hue endpoints below are unchanged; only what drives
+ * the position along them changed.
+ *
+ * The cold end keeps far more of the accent (a gentle dim only) so build-up reads
+ * as a vivid web; the hot end lifts toward bright amber/white so the high-xT
+ * balls pull decisively ahead.
  */
-function rampColor(xt: number, base: RGB): string {
-  const t = emphasis(xtFraction(xt));
+function rampColor(frac: number, base: RGB): string {
+  const t = Math.max(0, Math.min(1, frac));
   // Cold end: the accent only lightly dimmed — saturated, not slate-grey.
   const cold = mix(base, { r: 92, g: 70, b: 78 }, 0.32);
   // Warm midpoint: the accent at full strength.
@@ -291,6 +351,13 @@ export function Progression({
     [actions, filter, activePlayer, hasTeamSplit, activeTeam]
   );
 
+  // Data-relative xT→colour scale, fitted to the CURRENTLY-SHOWN actions. Rebuilt
+  // whenever the shown set changes (type filter, player drill-down, team switch)
+  // so the gradient always spans this selection's own xT range — a single
+  // player's actions spread across the ramp just as the whole team's do, instead
+  // of every arrow flattening to the dim end of a fixed absolute domain.
+  const colorScale = useMemo(() => xtColorScale(shown.map((a) => a.xt)), [shown]);
+
   // Draw the brightest (highest-xT) arrows last so they sit on top of the mass.
   const ordered = useMemo(() => [...shown].sort((a, b) => a.xt - b.xt), [shown]);
 
@@ -388,9 +455,12 @@ export function Progression({
               const isActive = action.id === activeId;
               const dimmed = activeId !== null && !isActive;
               const w = widthForXt(action.xt);
-              // Keep the arrow's true xT colour on hover — emphasis comes from the
-              // width bump, glow, and the dimming of the others, not a hue change.
-              const stroke = rampColor(action.xt, baseRgb);
+              // Colour is DATA-RELATIVE (scaled against the shown set's xT range),
+              // so the gradient is visible on real clustered-low data. Size cues
+              // (width, head pip, glow) stay on the absolute magnitude. Hover
+              // emphasis comes from the width bump, glow and dimming the rest —
+              // not a hue change, so the arrow keeps its true ramp colour.
+              const stroke = rampColor(colorScale(action.xt), baseRgb);
               const headR = headRadiusForXt(action.xt);
               const isCarry = action.type === 'carry';
               const hot = emphasis(xtFraction(action.xt));
@@ -487,8 +557,10 @@ export function Progression({
             })}
 
             {/* Callout for the active action, drawn last so it sits on top. Uses
-              the action's own xT colour. */}
-            {active && <Callout action={active} color={rampColor(active.xt, baseRgb)} />}
+              the action's own (data-relative) xT colour. */}
+            {active && (
+              <Callout action={active} color={rampColor(colorScale(active.xt), baseRgb)} />
+            )}
           </Pitch>
         </RevealOnScroll>
 
@@ -534,8 +606,8 @@ export function Progression({
         <div className="flex items-center gap-3 text-white/55">
           <ThreatRamp baseRgb={baseRgb} />
           <span className="text-white/15">·</span>
-          <TypeKey color={rampColor(XT_CEIL * 0.7, baseRgb)} type="pass" />
-          <TypeKey color={rampColor(XT_CEIL * 0.7, baseRgb)} type="carry" />
+          <TypeKey color={rampColor(0.7, baseRgb)} type="pass" />
+          <TypeKey color={rampColor(0.7, baseRgb)} type="carry" />
         </div>
       </div>
 
@@ -544,9 +616,13 @@ export function Progression({
   );
 }
 
-/** Low→high xT colour-ramp legend — reads the hot/cold encoding at a glance. */
+/**
+ * Low→high xT colour-ramp legend — reads the hot/cold encoding at a glance. The
+ * stops walk the full ramp (dim → amber) so the key always shows both ends; the
+ * arrows themselves position along this same ramp by their data-relative xT.
+ */
 function ThreatRamp({ baseRgb }: { baseRgb: RGB }) {
-  const stops = [0.06, 0.28, 0.5, 0.72, 1].map((t) => rampColor(t * XT_CEIL, baseRgb));
+  const stops = [0.06, 0.28, 0.5, 0.72, 1].map((t) => rampColor(t, baseRgb));
   return (
     <span className="flex items-center gap-1.5" aria-hidden>
       <span className="text-white/40">low</span>
