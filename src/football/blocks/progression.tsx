@@ -12,6 +12,7 @@ import {
   resolveActiveTeam,
   type SelectablePlayer,
 } from '#/football/lib/player-select';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A progressive action: a carry or a pass that advances the ball. */
@@ -59,6 +60,25 @@ export interface ProgressionAction {
 /** Which actions are shown by TYPE: everything, carries only, or passes only. */
 export type ProgressionFilter = { kind: 'all' } | { kind: 'type'; type: ProgressionType };
 
+/**
+ * The Progression block's full user-selectable state:
+ *   • `filter` — the type filter (all actions / carries / passes);
+ *   • `activePlayer` — the drilled-in player (id or display name), or `null` for
+ *     the whole-team view;
+ *   • `selectedTeam` — the side whose whole-team view is active in team-aware
+ *     mode, or `null` for the home side.
+ * Seed it via {@link ProgressionProps.initialSelection} and observe changes via
+ * {@link ProgressionProps.onSelectionChange}.
+ */
+export interface ProgressionSelection {
+  /** Action-type filter. */
+  filter: ProgressionFilter;
+  /** Drilled-in player key, or `null` for the whole-team view. */
+  activePlayer: string | null;
+  /** Active whole-team side (team-aware mode), or `null` for the home side. */
+  selectedTeam: string | null;
+}
+
 export interface ProgressionProps {
   /** Team display name. */
   team: string;
@@ -90,6 +110,17 @@ export interface ProgressionProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the block's selection state on mount (e.g. the author's saved choice).
+   * When omitted, the block opens on the default (all actions, whole team) —
+   * exactly as before. Read once on mount; later changes don't re-seed.
+   */
+  initialSelection?: ProgressionSelection;
+  /**
+   * Fires whenever the user changes the selection (type filter, player or side),
+   * with the full new selection object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: ProgressionSelection) => void;
 }
 
 const DEFAULT_COLOR = '#eb0000';
@@ -305,13 +336,24 @@ export function Progression({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: ProgressionProps) {
   const idPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ProgressionFilter>({ kind: 'all' });
-  const [activePlayer, setActivePlayer] = useState<string | null>(null);
-  // The team whose whole-team view is active (team-aware mode); null = home.
-  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
+  // Consolidated selection (seeded by the host, emits every change): the type
+  // filter, the drilled-in player, and the active side.
+  const [selection, setSelection] = usePersistedSelection<ProgressionSelection>(
+    initialSelection,
+    { filter: { kind: 'all' }, activePlayer: null, selectedTeam: null },
+    onSelectionChange
+  );
+  const { filter, activePlayer, selectedTeam: activeTeamSel } = selection;
+  const setFilter = (f: ProgressionFilter) => setSelection((prev) => ({ ...prev, filter: f }));
+  const setActivePlayer = (id: string | null) =>
+    setSelection((prev) => ({ ...prev, activePlayer: id }));
+  const setActiveTeamSel = (t: string | null) =>
+    setSelection((prev) => ({ ...prev, selectedTeam: t }));
 
   const baseRgb = useMemo(() => parseHex(color), [color]);
 

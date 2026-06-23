@@ -7,6 +7,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
@@ -59,6 +60,18 @@ export interface SetPiece {
   players: SetPiecePlayer[];
 }
 
+/**
+ * The Set Piece block's full user-selectable state: which corner / free-kick the
+ * freeze-frame shows. Keyed on the stable {@link SetPiece.id}; omit (or
+ * `undefined`) to open on the first set piece (the default). Seed it via
+ * {@link SetPieceProps.initialSelection} and observe changes via
+ * {@link SetPieceProps.onSelectionChange}.
+ */
+export interface SetPieceSelection {
+  /** Selected set-piece id (matches a {@link SetPiece.id}); `undefined` = first. */
+  activeId?: string;
+}
+
 export interface SetPieceProps {
   /** The set pieces to step through (one shown at a time). */
   setPieces: SetPiece[];
@@ -85,6 +98,19 @@ export interface SetPieceProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds which set piece is shown on mount (e.g. the author's saved choice).
+   * When omitted, opens on the first set piece — exactly as before. Read once on
+   * mount; later changes don't re-seed. Overridden by the controlled
+   * {@link SetPieceProps.activeId} when that is supplied.
+   */
+  initialSelection?: SetPieceSelection;
+  /**
+   * Fires whenever the user picks a different set piece, with the full new
+   * selection object. When omitted, no-op (today's behaviour). This is additive
+   * to — and fires alongside — the legacy {@link SetPieceProps.onSelect}.
+   */
+  onSelectionChange?: (selection: SetPieceSelection) => void;
 }
 
 const ATTACKING_COLOR = '#eb0000';
@@ -132,15 +158,24 @@ export function SetPiece({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: SetPieceProps) {
   const first = setPieces[0];
 
-  // Active set piece is controllable; falls back to local state for a standalone block.
-  const [activeIdState, setActiveIdState] = useState<string | undefined>(first?.id);
-  const activeId = activeIdProp ?? activeIdState;
+  // Consolidated selection (seeded by the host, emits every change): which set
+  // piece is shown. Still controllable via the legacy `activeId`/`onSelect`
+  // pair — when `activeId` is supplied it wins, but the selection (and its
+  // `onSelectionChange`) still reflects the user's pick. Defaults to the first.
+  const [selection, setSelection] = usePersistedSelection<SetPieceSelection>(
+    initialSelection,
+    { activeId: first?.id },
+    onSelectionChange
+  );
+  const activeId = activeIdProp ?? selection.activeId;
   const setActiveId = (next: string) => {
-    if (activeIdProp === undefined) setActiveIdState(next);
     onSelect?.(next);
+    setSelection({ activeId: next });
   };
 
   const active = useMemo(

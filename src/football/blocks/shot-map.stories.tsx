@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, within } from 'storybook/test';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { ShotMap } from './shot-map';
 import type { Shot } from './shot-map';
 
@@ -454,5 +454,46 @@ export const ExtraTimeMinutesNoWrap: Story = {
         `${minute}' must render on one line (h=${rect.height} vs 2-digit ${singleLineH})`
       ).toBeLessThanOrEqual(singleLineH + 1.5);
     }
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host passes `initialSelection` to open the
+ * shot map on an author's saved team + player. Here it opens filtered to
+ * Argentina, narrowed to Messi: both triggers reflect the seed on first paint,
+ * with no interaction.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...Default.args,
+    initialSelection: { team: 'home', player: 'L. Messi' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // Team trigger shows the home side; player trigger shows the seeded shooter.
+    await expect(canvas.getByRole('button', { name: /Showing.*Argentina/ })).toBeInTheDocument();
+    await expect(canvas.getByRole('button', { name: /Player.*L\. Messi/ })).toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the FULL
+ * new selection object (team + player) whenever the user changes either filter.
+ * Switching the team filter to France emits `{ team: 'away', player: null }`.
+ * This fires alongside the legacy `onFilterChange` (kept for back-compat).
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...Default.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    // Open the team dropdown. Note the block also renders an always-present
+    // timeline `role="listbox"` (the minute strip), so target the dropdown's
+    // France OPTION directly rather than the (now non-unique) listbox.
+    await userEvent.click(canvas.getByRole('button', { name: /Showing/ }));
+    await userEvent.click(await canvas.findByRole('option', { name: /France/ }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({ team: 'away', player: null });
   },
 };

@@ -5,7 +5,19 @@ import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+
+/**
+ * The Heat Map's full user-selectable state: which player the cloud is filtered
+ * to. `null` is the "Whole team" default. Seed it via
+ * {@link HeatMapProps.initialSelection} and observe every change through
+ * {@link HeatMapProps.onSelectionChange}.
+ */
+export interface HeatMapSelection {
+  /** Filtered player id, or `null` for the whole-team view. */
+  activePlayer: string | null;
+}
 
 /** A single on-ball touch in StatsBomb pitch coordinates (120 × 80). */
 export interface HeatMapTouch {
@@ -60,6 +72,17 @@ export interface HeatMapProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the block's selection state on mount (e.g. the author's saved choice).
+   * When omitted, the block opens on the default whole-team view — exactly as
+   * before. Read once on mount; later changes don't re-seed.
+   */
+  initialSelection?: HeatMapSelection;
+  /**
+   * Fires whenever the user changes the selection, with the full new selection
+   * object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: HeatMapSelection) => void;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -133,9 +156,18 @@ export function HeatMap({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: HeatMapProps) {
-  // `null` = the "Whole team" option; otherwise a player id.
-  const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  // Consolidated selection (seeded by the host, emits every change). `null` =
+  // the "Whole team" option; otherwise a player id.
+  const [selection, setSelection] = usePersistedSelection<HeatMapSelection>(
+    initialSelection,
+    { activePlayer: null },
+    onSelectionChange
+  );
+  const { activePlayer } = selection;
+  const setActivePlayer = (id: string | null) => setSelection({ activePlayer: id });
   const titleId = useId();
 
   const allPlayers = players ?? [];

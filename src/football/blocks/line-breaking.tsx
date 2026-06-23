@@ -13,6 +13,7 @@ import {
   resolveActiveTeam,
   type SelectablePlayer,
 } from '#/football/lib/player-select';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
@@ -84,6 +85,17 @@ export interface LineBreakingProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the block's selection state on mount (e.g. the author's saved choice).
+   * When omitted, the block opens on the default (all passes, whole team) —
+   * exactly as before. Read once on mount; later changes don't re-seed.
+   */
+  initialSelection?: LineBreakingSelection;
+  /**
+   * Fires whenever the user changes the selection (view mode, player or side),
+   * with the full new selection object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: LineBreakingSelection) => void;
 }
 
 /** StatsBomb pitch is 120 long × 80 wide; the Pitch primitive is 100 × 100. */
@@ -92,12 +104,32 @@ const SB_WIDTH = 80;
 const normX = (x: number) => finite((x * 100) / SB_LENGTH);
 const normY = (y: number) => finite((y * 100) / SB_WIDTH);
 
-type ViewMode = 'all' | 'breaks';
+/** Which passes the plot shows: every pass, or only the line-breaking ones. */
+export type ViewMode = 'all' | 'breaks';
 
 const MODE_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: 'all', label: 'All passes' },
   { value: 'breaks', label: 'Only line breaks' },
 ];
+
+/**
+ * The Line Breaking block's full user-selectable state:
+ *   • `mode` — the "All passes" / "Only line breaks" view toggle;
+ *   • `activePlayer` — the drilled-in passer (id or display name), or `null` for
+ *     the whole-team view;
+ *   • `selectedTeam` — the side whose whole-team view is active in team-aware
+ *     mode, or `null` for the home side.
+ * Seed it via {@link LineBreakingProps.initialSelection} and observe changes via
+ * {@link LineBreakingProps.onSelectionChange}.
+ */
+export interface LineBreakingSelection {
+  /** View toggle: all passes, or only line-breaking ones. */
+  mode: ViewMode;
+  /** Drilled-in passer key, or `null` for the whole-team view. */
+  activePlayer: string | null;
+  /** Active whole-team side (team-aware mode), or `null` for the home side. */
+  selectedTeam: string | null;
+}
 
 /**
  * Line-breaking passes — the brand-defining BTL viz, on the quiet BTL dark
@@ -117,13 +149,24 @@ export function LineBreaking({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: LineBreakingProps) {
   const uid = useId();
   const arrowId = `${uid}-arrow`;
-  const [mode, setMode] = useState<ViewMode>('all');
-  const [activePlayer, setActivePlayer] = useState<string | null>(null);
-  // The team whose whole-team view is active (team-aware mode); null = home.
-  const [activeTeamSel, setActiveTeamSel] = useState<string | null>(null);
+  // Consolidated selection (seeded by the host, emits every change): the view
+  // toggle, the drilled-in passer, and the active side.
+  const [selection, setSelection] = usePersistedSelection<LineBreakingSelection>(
+    initialSelection,
+    { mode: 'all', activePlayer: null, selectedTeam: null },
+    onSelectionChange
+  );
+  const { mode, activePlayer, selectedTeam: activeTeamSel } = selection;
+  const setMode = (m: ViewMode) => setSelection((prev) => ({ ...prev, mode: m }));
+  const setActivePlayer = (id: string | null) =>
+    setSelection((prev) => ({ ...prev, activePlayer: id }));
+  const setActiveTeamSel = (t: string | null) =>
+    setSelection((prev) => ({ ...prev, selectedTeam: t }));
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // A pass's selector key: a stable id when present, else the display name.

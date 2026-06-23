@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { SetPiece } from './set-piece';
 import type { SetPiece as SetPieceData } from './set-piece';
 import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
@@ -99,6 +100,48 @@ export const Default: Story = {
 export const SingleCorner: Story = {
   args: {
     setPieces: [CORNER_73],
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host passes `initialSelection` to open the
+ * block on an author's saved set piece rather than the first. Here it opens on
+ * the SECOND set piece (the 31' free-kick): the switcher trigger and the kind
+ * read-out reflect the seed on first paint, with no interaction.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...Default.args,
+    initialSelection: { activeId: 'free-kick-31' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The switcher trigger shows the seeded set piece's label.
+    await expect(
+      canvas.getByRole('button', { name: /Showing.*31' Free-kick/ })
+    ).toBeInTheDocument();
+    // The kind read-out matches the seeded free-kick (the default would be Corner).
+    await expect(canvas.getByText('Free-kick')).toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the full
+ * new selection object (the chosen set-piece id) whenever the user switches.
+ * Picking the free-kick emits `{ activeId: 'free-kick-31' }`. This fires
+ * alongside the legacy `onSelect` (kept for back-compat).
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...Default.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /Showing/ }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: /31' Free-kick/ }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({ activeId: 'free-kick-31' });
   },
 };
 

@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A defensive ball-hunting action, in StatsBomb pitch coordinates (120 × 80). */
@@ -63,6 +64,17 @@ export interface PressMapProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Seeds the plotted metric on mount (e.g. the author's saved choice). When
+   * omitted, opens on "All actions" — exactly as before. Read once on mount;
+   * later changes don't re-seed.
+   */
+  initialSelection?: PressMapSelection;
+  /**
+   * Fires whenever the user changes the plotted metric, with the full new
+   * selection object. When omitted, no-op (today's behaviour).
+   */
+  onSelectionChange?: (selection: PressMapSelection) => void;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -79,13 +91,24 @@ const BLOB_RADIUS_RATIO = 0.085;
 const HOME_COLOR = '#eb0000';
 
 /** Which actions are shown / counted. */
-type PressMetric = 'all' | 'pressure' | 'recovery';
+export type PressMetric = 'all' | 'pressure' | 'recovery';
 
 const METRIC_OPTIONS: { value: PressMetric; label: string }[] = [
   { value: 'all', label: 'All actions' },
   { value: 'pressure', label: 'Pressures' },
   { value: 'recovery', label: 'Ball recoveries' },
 ];
+
+/**
+ * The Press Map's full user-selectable state: which pressing metric is plotted
+ * and counted (all actions / pressures only / ball recoveries only). Seed it via
+ * {@link PressMapProps.initialSelection} and observe changes via
+ * {@link PressMapProps.onSelectionChange}.
+ */
+export interface PressMapSelection {
+  /** Plotted metric. */
+  metric: PressMetric;
+}
 
 /** The three pitch thirds, ordered own-goal → opposition-goal. */
 type ThirdKey = keyof PressThirds;
@@ -155,8 +178,18 @@ export function PressMap({
   className,
   wordmark,
   builderControls,
+  initialSelection,
+  onSelectionChange,
 }: PressMapProps) {
-  const [metric, setMetric] = useState<PressMetric>('all');
+  // Consolidated selection (seeded by the host, emits every change): the plotted
+  // metric. The thirds breakdown + PPDA readout are derived, not selected.
+  const [selection, setSelection] = usePersistedSelection<PressMapSelection>(
+    initialSelection,
+    { metric: 'all' },
+    onSelectionChange
+  );
+  const { metric } = selection;
+  const setMetric = (m: PressMetric) => setSelection({ metric: m });
   const [hoverThird, setHoverThird] = useState<ThirdKey | null>(null);
   const titleId = useId();
 

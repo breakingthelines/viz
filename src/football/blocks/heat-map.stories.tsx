@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, within } from 'storybook/test';
 import { HeatMap } from '#/football/blocks/heat-map';
 import type { HeatMapPlayer, HeatMapTouch } from '#/football/blocks/heat-map';
 import { expectCanvasVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
@@ -197,6 +197,46 @@ export const WholeTeamDefaultThenSelect: Story = {
     const mbappeTouches = MATCH_TOUCHES.filter((t) => t.player === 'fra-mbappe').length;
     await expect(canvas.getByText(String(mbappeTouches))).toBeInTheDocument();
     await expect(canvas.getByRole('button', { name: /Mbappé/ })).toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — seeding. A host (the editor) passes `initialSelection`
+ * to open the block on an author's saved player rather than the whole-team
+ * default. Here it opens already filtered to a France player: the trigger shows
+ * that player and the bloom is narrowed to their touches on first paint.
+ */
+export const SeededSelection: Story = {
+  args: {
+    ...BothTeams.args,
+    initialSelection: { activePlayer: 'fra-mbappe' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // Opens on the seeded player (no interaction): trigger + narrowed count.
+    await expect(canvas.getByRole('button', { name: /Mbappé/ })).toBeInTheDocument();
+    const mbappeTouches = MATCH_TOUCHES.filter((t) => t.player === 'fra-mbappe').length;
+    await expect(canvas.getByText(String(mbappeTouches))).toBeInTheDocument();
+  },
+};
+
+/**
+ * Persisted selection — change emission. `onSelectionChange` fires with the FULL
+ * new selection object whenever the user changes the filter, so the host can
+ * persist it. Unseeded (whole-team default); selecting a player emits
+ * `{ activePlayer }`.
+ */
+export const EmitsSelectionChange: Story = {
+  args: {
+    ...BothTeams.args,
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'Mbappé' }));
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({ activePlayer: 'fra-mbappe' });
   },
 };
 
