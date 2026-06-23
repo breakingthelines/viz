@@ -502,6 +502,15 @@ const MATCH_PROGRESSION: ProgressionAction[] = [
   ...FRA_PROGRESSION.map((a) => ({ ...a, team: 'France', playerId: `fra-${a.player}` })),
 ];
 
+// Crests for the both-teams stories. Home = Argentina, away = France.
+const CREST_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const CREST_FRANCE = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+
+/** True when an HTML `<img>` with this exact src is present. */
+function hasCrest(root: HTMLElement, url: string): boolean {
+  return [...root.querySelectorAll('img')].some((el) => el.getAttribute('src') === url);
+}
+
 /**
  * Both teams supplied: the player selector splits into Argentina / France
  * alongside the existing type (All / Carries / Passes) filter, and the
@@ -510,7 +519,8 @@ const MATCH_PROGRESSION: ProgressionAction[] = [
 export const BothTeams: Story = {
   args: {
     team: 'Argentina',
-    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    crestUrl: CREST_ARGENTINA,
+    awayCrestUrl: CREST_FRANCE,
     actions: MATCH_PROGRESSION,
   },
 };
@@ -568,5 +578,33 @@ export const SelectsFranceWholeTeam: Story = {
     const fraXt = FRA_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
     await waitFor(() => expect(canvas.getByText(fraXt)).toBeInTheDocument());
     await expect(canvas.getByText('France')).toBeInTheDocument();
+  },
+};
+
+/**
+ * Away crest follows the active side (viz #34). The block carries BOTH crests
+ * now, so switching to France must badge the read-out with FRANCE's flag rather
+ * than dropping to a name-only label (the 0.3.3 behaviour, fixed here). Asserts
+ * the default whole-team view wears the home (Argentina) crest, then "France —
+ * whole team" wears France's crest and drops Argentina's.
+ */
+export const AwayCrestFollowsActiveTeam: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const argXt = ARG_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
+    await waitFor(() => expect(canvas.getByText(argXt)).toBeInTheDocument());
+
+    // Default = Argentina: the read-out wears the home (Argentina) crest only.
+    await waitFor(() => expect(hasCrest(canvasElement, CREST_ARGENTINA)).toBe(true));
+    await expect(hasCrest(canvasElement, CREST_FRANCE)).toBe(false);
+
+    // Switch to France's whole team → France's crest shows, Argentina's is gone.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(hasCrest(canvasElement, CREST_FRANCE)).toBe(true));
+    await expect(hasCrest(canvasElement, CREST_ARGENTINA)).toBe(false);
   },
 };

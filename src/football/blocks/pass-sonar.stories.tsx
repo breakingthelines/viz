@@ -208,11 +208,24 @@ const FRANCE: PassSonarPlayer[] = [
   },
 ];
 
+// Crests for the team-aware stories. Home = Argentina, away = France. Pinned so
+// the focus-card crest assertions can match the exact `<image href>` regardless
+// of which players carry headshots.
+const ARGENTINA_CREST = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const FRANCE_CREST = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+
+/** True when an SVG `<image>` with this exact href is rendered anywhere. */
+function hasImageHref(root: HTMLElement, href: string): boolean {
+  return [...root.querySelectorAll('image')].some(
+    (img) => img.getAttribute('href') === href || img.getAttributeNS(null, 'href') === href
+  );
+}
+
 /** Original single-team sonar (now with team/starter tags on the XI). */
 export const Argentina: Story = {
   args: {
     team: 'Argentina',
-    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    crestUrl: ARGENTINA_CREST,
     players: ARGENTINA,
   },
 };
@@ -225,7 +238,8 @@ export const Argentina: Story = {
 export const BothTeamsWithSubs: Story = {
   args: {
     team: 'Argentina',
-    crestUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    crestUrl: ARGENTINA_CREST,
+    awayCrestUrl: FRANCE_CREST,
     players: [...ARGENTINA, ...ARGENTINA_SUBS, ...FRANCE],
   },
 };
@@ -262,32 +276,21 @@ export const SelectsPlayerAcrossTeams: Story = {
   },
 };
 
-// The home crest used by the team-aware stories. Pinned here so the focus-card
-// crest assertion below can match the exact `<image href>` regardless of which
-// players carry headshots.
-const ARGENTINA_CREST = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
-
-/** True when an SVG `<image>` with this exact href is rendered anywhere. */
-function hasImageHref(root: HTMLElement, href: string): boolean {
-  return [...root.querySelectorAll('image')].some(
-    (img) => img.getAttribute('href') === href || img.getAttributeNS(null, 'href') === href
-  );
-}
-
 /**
- * Per-player focus-card crest is the SELECTED player's side, never hard-keyed to
- * the home crest (viz #31). The block carries only the HOME crest, so:
+ * Per-player focus-card crest is the SELECTED player's OWN side (viz #31 + #34).
+ * The block now carries BOTH crests — home (Argentina) AND away (France) — so:
  *   • selecting a HOME player (Messi, Argentina) → the focus card wears the home
- *     crest;
- *   • selecting an AWAY player (Mbappé, France) → the focus card shows the name
- *     alone, NOT the home (Argentina) crest — the bug was the away card wearing
- *     the Argentina flag.
- * Asserts the crest `<image href>` is present for the home pick and absent for
- * the away pick (matching on the crest URL specifically, since home headshots
- * also render `<image>` elements).
+ *     (Argentina) crest, never France's;
+ *   • selecting an AWAY player (Mbappé, France) → the focus card now wears the
+ *     away (France) crest, never the home (Argentina) flag. (Under #31 the block
+ *     carried only the home crest, so the away card was name-only; #34 bakes the
+ *     away crest, so France's flag shows.)
+ * Asserts the crest `<image href>` tracks the picked player's side — the right
+ * flag present, the other absent (matching on the crest URL specifically, since
+ * headshots also render `<image>` elements).
  */
 export const FocusCardCrestFollowsSelectedTeam: Story = {
-  args: { ...BothTeamsWithSubs.args, crestUrl: ARGENTINA_CREST },
+  args: { ...BothTeamsWithSubs.args },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -300,15 +303,19 @@ export const FocusCardCrestFollowsSelectedTeam: Story = {
 
     await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
 
-    // HOME player: the focus card surfaces the home (Argentina) crest.
+    // HOME player: the focus card surfaces the home (Argentina) crest, not France's.
     await pick('Messi');
     await waitFor(() => expect(canvas.getAllByText('Messi').length).toBeGreaterThan(0));
     await waitFor(() => expect(hasImageHref(canvasElement, ARGENTINA_CREST)).toBe(true));
+    await waitFor(() => expect(hasImageHref(canvasElement, FRANCE_CREST)).toBe(false));
 
-    // AWAY player: switching to a France player must DROP the home crest — the
-    // away card never wears the Argentina flag (the regression under test).
+    // AWAY player: switching to a France player surfaces FRANCE's crest and drops
+    // the home (Argentina) flag — the active team's crest, never the wrong side's.
+    // The previous (Argentina) overlay animates out, so poll until its crest has
+    // cleared rather than reading mid-transition.
     await pick('Mbappé');
     await waitFor(() => expect(canvas.getAllByText('Mbappé').length).toBeGreaterThan(0));
+    await waitFor(() => expect(hasImageHref(canvasElement, FRANCE_CREST)).toBe(true));
     await waitFor(() => expect(hasImageHref(canvasElement, ARGENTINA_CREST)).toBe(false));
   },
 };
@@ -341,6 +348,36 @@ export const SelectsFranceWholeTeam: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
     await waitFor(() => expect(canvas.getByText('Thuram')).toBeInTheDocument());
     await expect(canvas.queryByText('Tchouaméni')).not.toBeInTheDocument();
+  },
+};
+
+/**
+ * Away whole-team focus wears the away crest (viz #34). In France's whole-team
+ * view, focusing a France player must surface the focus card with FRANCE's flag,
+ * not the home (Argentina) flag (which is what #31 left the away side without
+ * any crest at all). Switches to "France — whole team", focuses a France player
+ * via its hit-area, and asserts the focus card shows France's crest and never
+ * the Argentina one.
+ */
+export const AwayWholeTeamFocusWearsAwayCrest: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
+
+    // Switch the panel to France's whole team.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(canvas.getByText('Griezmann')).toBeInTheDocument());
+
+    // Focus a France player's sonar → the focus card mounts wearing FRANCE's
+    // crest; the home (Argentina) flag never appears for the away side.
+    const hit = canvas.getByRole('button', { name: /Griezmann, \d+ passes/i });
+    hit.focus();
+    await waitFor(() => expect(hasImageHref(canvasElement, FRANCE_CREST)).toBe(true));
+    await expect(hasImageHref(canvasElement, ARGENTINA_CREST)).toBe(false);
   },
 };
 

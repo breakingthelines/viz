@@ -7,6 +7,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
 import {
+  activeCrest,
   PlayerSelect,
   resolveActiveTeam,
   type SelectablePlayer,
@@ -61,8 +62,15 @@ export type ProgressionFilter = { kind: 'all' } | { kind: 'type'; type: Progress
 export interface ProgressionProps {
   /** Team display name. */
   team: string;
-  /** Optional team crest URL — a small crest is shown next to the team name. */
+  /** Optional home team crest URL — a small crest is shown next to the team name. */
   crestUrl?: string;
+  /**
+   * Away team crest URL. When the data is team-split (both sides' actions are
+   * supplied), switching the panel to the OTHER side — "{Away} — whole team" or
+   * any away player — badges the read-out with this crest. Omit it (legacy /
+   * home-only data) and the away view shows the name alone, never the home badge.
+   */
+  awayCrestUrl?: string;
   /** Accent colour. Defaults to BTL red. */
   color?: string;
   /** Progressive actions to plot. */
@@ -231,6 +239,7 @@ function arcPath(
 export function Progression({
   team,
   crestUrl,
+  awayCrestUrl,
   color = DEFAULT_COLOR,
   actions,
   className,
@@ -263,6 +272,10 @@ export function Progression({
   // The ACTIVE side: a selected player's team, else a chosen whole-team side,
   // else the home `team`. Picking a France player therefore renders France.
   const activeTeam = resolveActiveTeam(team, activePlayer, activeTeamSel, playerTeamOf);
+
+  // Crest for the active side — home crest for the home side, away crest for the
+  // other side (when supplied); name-only when the away crest isn't baked.
+  const crestForActive = activeCrest(activeTeam, team, crestUrl, awayCrestUrl);
 
   // Compose the player selection with the type filter. The whole-team view
   // scopes to the ACTIVE side when both teams are present.
@@ -502,12 +515,13 @@ export function Progression({
           </span>
           <span className="text-white/45">xT</span>
           <span className="mx-0.5 text-white/15">·</span>
-          {/* Crest only for the home side (the block carries the home crest
-              only); the away whole-team view shows just the name, never a wrong
+          {/* Crest for the ACTIVE side: the home crest for the home side, the
+              away crest for the other side (when supplied). An away view with no
+              away crest baked shows the name alone — never the wrong (home)
               badge. The label tracks the ACTIVE side. */}
-          {crestUrl && activeTeam === team && (
+          {crestForActive && (
             <img
-              src={crestUrl}
+              src={crestForActive}
               alt=""
               aria-hidden
               width={16}

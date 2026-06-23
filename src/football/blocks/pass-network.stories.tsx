@@ -121,8 +121,18 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// Wikimedia national flag, used as the team crest.
+// Wikimedia national flags, used as the team crests.
 const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const FLAG_FRANCE = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+
+/** True when an SVG `<image>` or HTML `<img>` with this exact href/src is present. */
+function hasCrest(root: HTMLElement, url: string): boolean {
+  const imgs = [...root.querySelectorAll('img')].some((el) => el.getAttribute('src') === url);
+  const svgImgs = [...root.querySelectorAll('image')].some(
+    (el) => el.getAttribute('href') === url || el.getAttributeNS(null, 'href') === url
+  );
+  return imgs || svgImgs;
+}
 
 export const Argentina: Story = {
   args: {
@@ -301,6 +311,7 @@ export const BothTeamsWithSubs: Story = {
   args: {
     team: 'Argentina',
     crestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
     players: MATCH_PLAYERS,
     links: MATCH_LINKS,
   },
@@ -406,6 +417,47 @@ export const SelectingFranceWholeTeam: Story = {
     // France whole-team label.
     await expect(canvas.getAllByText('France').length).toBeGreaterThan(0);
     await expect(canvas.getByText('France — whole team')).toBeInTheDocument();
+  },
+};
+
+/**
+ * Away crest follows the active side (viz #34). The block now carries BOTH
+ * crests — the home (Argentina) flag AND the away (France) flag — so switching
+ * the panel to France must badge the legend with FRANCE's flag, not drop to a
+ * name-only label (the 0.3.3 behaviour, fixed here). Asserts:
+ *   • default whole-team view shows the home (Argentina) crest, not the away one;
+ *   • "France — whole team" shows the away (France) crest and drops Argentina's;
+ *   • drilling into a France player switches the network to France and never
+ *     leaves the home (Argentina) crest showing.
+ */
+export const AwayCrestFollowsActiveTeam: Story = {
+  args: { ...BothTeamsWithSubs.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
+
+    // Default = Argentina: the legend wears the home (Argentina) crest only.
+    await waitFor(() => expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(true));
+    await expect(hasCrest(canvasElement, FLAG_FRANCE)).toBe(false);
+
+    // Switch to France's whole team → the legend now wears FRANCE's crest, and
+    // Argentina's is gone (the away side is no longer name-only).
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox).getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(hasCrest(canvasElement, FLAG_FRANCE)).toBe(true));
+    await expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(false);
+
+    // Drilling into a France player switches the network to France; the home
+    // (Argentina) crest must never reappear on the legend.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox2 = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox2).getByRole('option', { name: 'Antoine Griezmann' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(canvas.getByText('Griezmann')).toBeInTheDocument());
+    await expect(canvas.queryByText('Messi')).not.toBeInTheDocument();
+    await expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(false);
   },
 };
 
