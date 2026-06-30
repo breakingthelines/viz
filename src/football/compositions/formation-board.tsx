@@ -5,6 +5,7 @@ import { PlayerMarker } from '#/football/primitives/player-marker';
 import type { Formation, FormationPosition } from '#/football/types';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { surname } from '#/football/lib/player-name';
 
 export interface FormationBoardProps {
   /** Formation data to display */
@@ -110,7 +111,7 @@ export function FormationBoard({
                   fontSize="2"
                   opacity="0.8"
                 >
-                  {pos.player.name.split(' ').pop()}
+                  {surname(pos.player.name)}
                 </text>
               )}
             </g>

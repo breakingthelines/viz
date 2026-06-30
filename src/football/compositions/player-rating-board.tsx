@@ -5,6 +5,7 @@ import type { Formation, FormationPosition } from '#/football/types';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { surname } from '#/football/lib/player-name';
 
 /**
  * Player grade — 1 (best) through 6 (worst). BTL appropriates the BILD
@@ -309,7 +310,7 @@ export function PlayerRatingBoard({
                 opacity="0.85"
                 style={{ pointerEvents: 'none' }}
               >
-                {pos.player.name.split(' ').pop()}
+                {surname(pos.player.name)}
               </text>
             </g>
           );
