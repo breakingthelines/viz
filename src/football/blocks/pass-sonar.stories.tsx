@@ -261,8 +261,10 @@ export const SelectsPlayerAcrossTeams: Story = {
     const listbox = await canvas.findByRole('listbox');
     const list = within(listbox);
 
-    // "Whole team" default is offered, plus both team group headings.
-    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    // Each team group offers its own "Whole team" row (bare label, disambiguated
+    // by its qualified accessible name), plus both team group headings.
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
 
@@ -447,7 +449,7 @@ export const SelectorSwapNoCircleWarning: Story = {
       await pick('Messi');
       await pick('De Paul');
       await pick('Mbappé');
-      await pick('Whole team');
+      await pick('Argentina — whole team');
       await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
     });
 

@@ -7,7 +7,7 @@ import { ControlDropdown, DropdownGroupLabel, DropdownItem } from '#/football/li
  * Sonar, Pass Network, Progression).
  *
  * The control is two pieces:
- *   1. A dropdown: a "Whole team" default at the top, then the players split
+ *   1. A dropdown: a top-level "Whole team" default, then the players split
  *      into team groups (e.g. Argentina / France). Selecting a player calls
  *      `onSelect(id)`; "Whole team" calls `onSelect(null)`.
  *   2. An optional segmented Starters / Subs toggle, shown only when the block
@@ -16,12 +16,19 @@ import { ControlDropdown, DropdownGroupLabel, DropdownItem } from '#/football/li
  *      starting XI by default.
  *
  * Team-aware mode (when both sides' data is supplied): pass `selectedTeam` +
- * `onSelectTeam` and each team group gains a "{Team} — whole team" row at its
- * top, so the reader can switch the panel to the OTHER side's whole-team view
- * (e.g. "France — whole team") rather than only the home side's. Picking any
- * single player still calls `onSelect(id)`; the owning block reads that player's
- * own `team` off its data to switch sides. The top "Whole team" default row
- * clears both selections back to the home side.
+ * `onSelectTeam` and each team group gains its OWN "Whole team" row at its top,
+ * so the reader can switch the panel to the OTHER side's whole-team view. That
+ * row's group heading already names the team, so its visible label stays bare
+ * ("Whole team") — the qualified "{Team} — whole team" form is reserved for the
+ * `aria-label` (disambiguating the two teams' otherwise-identical rows for
+ * assistive tech) and the trigger pill (which has no heading for context, e.g.
+ * "France — whole team"). Because the home team's own row already reproduces
+ * the default `{selectedId:null, selectedTeam:null}` state, the SEPARATE
+ * top-level "Whole team" row is only rendered when there's no per-team row to
+ * duplicate it — i.e. team-aware mode is off (a single team, or a grouped list
+ * whose block never wired `selectedTeam`/`onSelectTeam`, e.g. Heat Map). Picking
+ * any single player still calls `onSelect(id)`; the owning block reads that
+ * player's own `team` off its data to switch sides.
  *
  * The component is presentational: the owning block holds the selected id (and,
  * in team-aware mode, the selected team) and the starters/subs scope in its own
@@ -67,15 +74,18 @@ export interface PlayerSelectProps {
   /**
    * The team whose whole-team view is active, or `null` for the default (home)
    * side. Provide with {@link PlayerSelectProps.onSelectTeam} to enable
-   * team-aware mode: each team group gains a "{Team} — whole team" row so the
-   * reader can switch the panel to the other side's whole-team view. Only takes
-   * effect when the players span more than one team (so the list is grouped).
+   * team-aware mode: each team group gains its own "Whole team" row (visible
+   * label bare — the group heading above already names the team; disambiguated
+   * for assistive tech via a qualified `aria-label`, e.g. "France — whole
+   * team") so the reader can switch the panel to the other side's whole-team
+   * view. Only takes effect when the players span more than one team (so the
+   * list is grouped).
    */
   selectedTeam?: string | null;
   /**
-   * Fires with a team name when a "{Team} — whole team" row is chosen, or `null`
-   * for the top "Whole team" default (the home side). Enables team-aware mode
-   * together with {@link PlayerSelectProps.selectedTeam}.
+   * Fires with a team name when a team group's "Whole team" row is chosen, or
+   * `null` for the home side (the default). Enables team-aware mode together
+   * with {@link PlayerSelectProps.selectedTeam}.
    */
   onSelectTeam?: (team: string | null) => void;
 }
@@ -164,11 +174,16 @@ export function PlayerSelect({
   // Team-aware mode: a per-group "{Team} — whole team" row lets the reader switch
   // the panel to the other side. Only meaningful once the list is grouped.
   const teamAware = grouped && onSelectTeam !== undefined;
+  // Qualified label ("France — whole team"), used for the TRIGGER pill (which has
+  // no eyebrow for context) and for each row's `aria-label` (so the two teams'
+  // otherwise-identical bare "Whole team" rows stay disambiguated for assistive
+  // tech and accessible-name queries). The row's VISIBLE label stays bare —
+  // `allLabel` — since the group heading above it already names the team.
   const wholeTeamLabel = (team: string) => `${team} — whole team`;
 
   const selected = selectedId !== null ? players.find((p) => p.id === selectedId) : undefined;
-  // Trigger label: a selected player wins; else a selected team's whole-team
-  // label (team-aware mode); else the default all-players label.
+  // Trigger label: a selected player wins; else a selected team's qualified
+  // whole-team label (team-aware mode); else the default all-players label.
   const valueLabel =
     selected?.name ?? (teamAware && selectedTeam ? wholeTeamLabel(selectedTeam) : allLabel);
 
@@ -188,23 +203,33 @@ export function PlayerSelect({
       <ControlDropdown label={label} valueLabel={valueLabel}>
         {(close) => (
           <>
-            <DropdownItem
-              selected={selectedId === null && !(teamAware && selectedTeam)}
-              onSelect={() => {
-                onSelect(null);
-                if (teamAware) onSelectTeam(null);
-                close();
-              }}
-            >
-              {allLabel}
-            </DropdownItem>
+            {/* In team-aware mode the home team's own per-team row below already
+                produces this exact {selectedId:null, selectedTeam:null} state, so
+                a separate top-level row would just duplicate it. Render it only
+                when there's no per-team row to double up with — the single-team
+                flat case, or a grouped-but-not-team-aware list (e.g. Heat Map). */}
+            {!teamAware && (
+              <DropdownItem
+                selected={selectedId === null}
+                onSelect={() => {
+                  onSelect(null);
+                  close();
+                }}
+              >
+                {allLabel}
+              </DropdownItem>
+            )}
             {grouped ? (
               <>
                 {teams.map((team) => (
                   <div key={team}>
                     <DropdownGroupLabel>{team}</DropdownGroupLabel>
                     {/* Team-aware: a whole-team row per side, so the panel can
-                        switch to the other team's full view (not only a player). */}
+                        switch to the other team's full view (not only a player).
+                        The eyebrow above already names the team, so the visible
+                        label stays bare; the aria-label carries the qualified
+                        name so screen readers (and tests) can tell the two
+                        teams' otherwise-identical "Whole team" rows apart. */}
                     {teamAware && (
                       <DropdownItem
                         selected={selectedId === null && selectedTeam === team}
@@ -213,8 +238,9 @@ export function PlayerSelect({
                           onSelect(null);
                           close();
                         }}
+                        ariaLabel={wholeTeamLabel(team)}
                       >
-                        {wholeTeamLabel(team)}
+                        {allLabel}
                       </DropdownItem>
                     )}
                     {players

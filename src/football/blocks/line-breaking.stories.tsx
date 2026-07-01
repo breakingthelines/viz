@@ -449,11 +449,13 @@ export const WholeTeamDefaultThenSelect: Story = {
     const argBreaks = ARGENTINA_TAGGED.filter((p) => p.lineBreaking).length;
     await waitFor(() => expect(canvas.getByText(String(argBreaks))).toBeInTheDocument());
 
-    // Open the player dropdown and confirm both team groups are present.
+    // Open the player dropdown and confirm both team groups are present, each
+    // with its own "Whole team" row (disambiguated by accessible name).
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     const list = within(listbox);
-    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
 

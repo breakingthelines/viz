@@ -78,15 +78,23 @@ export interface DropdownItemProps {
   onSelect: () => void;
   /** Row label. */
   children: ReactNode;
+  /**
+   * Accessible name override, forwarded to the underlying `<button>`. Use when
+   * the visible label alone can't disambiguate a row (e.g. two team groups each
+   * showing a bare "Whole team" row) so assistive tech — and accessible-name
+   * queries like `getByRole('option', { name })` — resolve the intended one.
+   */
+  ariaLabel?: string;
 }
 
 /** One selectable row inside a {@link ControlDropdown} popover. */
-export function DropdownItem({ selected, onSelect, children }: DropdownItemProps) {
+export function DropdownItem({ selected, onSelect, children, ariaLabel }: DropdownItemProps) {
   return (
     <button
       type="button"
       role="option"
       aria-selected={selected}
+      aria-label={ariaLabel}
       onMouseDown={(e) => e.preventDefault()} // keep trigger focus so blur-close doesn't beat the click
       onClick={onSelect}
       className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2.5 py-1.5 text-left text-[12px] text-white transition-colors hover:bg-white/[0.06]"
