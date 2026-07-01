@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
@@ -627,22 +628,6 @@ function FreezeFrameKey({ hasFreezeFrame }: { hasFreezeFrame: boolean }) {
         <span>keeper</span>
       </span>
     </span>
-  );
-}
-
-/** Small ~16px team crest rendered before a team name. Nothing when absent. */
-function Crest({ url, name }: { url?: string; name: string }) {
-  if (!url) return null;
-  return (
-    <img
-      src={url}
-      alt=""
-      aria-hidden
-      width={16}
-      height={16}
-      className="inline-block size-4 rounded object-contain align-middle"
-      title={name}
-    />
   );
 }
 

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
@@ -344,14 +345,7 @@ export function PressMap({
       <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
-          {crestUrl && (
-            <img
-              src={crestUrl}
-              alt=""
-              aria-hidden
-              className="size-4 shrink-0 rounded object-contain"
-            />
-          )}
+          {crestUrl && <Crest url={crestUrl} className="shrink-0" />}
           <span className="truncate text-white/70">{team}</span>
         </span>
         <span>

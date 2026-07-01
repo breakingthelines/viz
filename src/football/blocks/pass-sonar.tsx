@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
@@ -386,12 +387,7 @@ export function PassSonar({
         ) : (
           <span className="flex items-center gap-1.5 text-[11px] text-white/60">
             {crestUrl ? (
-              <img
-                src={crestUrl}
-                alt=""
-                aria-hidden
-                className="size-4 rounded-full object-contain"
-              />
+              <Crest url={crestUrl} className="rounded-full" />
             ) : (
               <span
                 className="inline-block size-2 rounded-full"

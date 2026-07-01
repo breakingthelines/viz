@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
@@ -633,16 +634,7 @@ export function Progression({
               away crest for the other side (when supplied). An away view with no
               away crest baked shows the name alone — never the wrong (home)
               badge. The label tracks the ACTIVE side. */}
-          {crestForActive && (
-            <img
-              src={crestForActive}
-              alt=""
-              aria-hidden
-              width={16}
-              height={16}
-              className="size-4 shrink-0 object-contain"
-            />
-          )}
+          {crestForActive && <Crest url={crestForActive} className="shrink-0 rounded-none" />}
           <span className="truncate text-white/55">{activeTeam}</span>
         </div>
         <div className="flex items-center gap-3 text-white/55">

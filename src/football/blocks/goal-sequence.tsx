@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
@@ -177,15 +178,7 @@ export function GoalSequence({
       {/* Header: team (+ crest) title, optional goal picker, Replay. */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-[13px] font-semibold tracking-tight text-white">
-          {crestUrl && (
-            <img
-              src={crestUrl}
-              alt=""
-              width={16}
-              height={16}
-              className="size-4 shrink-0 object-contain"
-            />
-          )}
+          {crestUrl && <Crest url={crestUrl} className="shrink-0 rounded-none" />}
           {team}
         </span>
 

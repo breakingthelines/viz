@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
@@ -381,16 +382,7 @@ export function LineBreaking({
           wrong (home) badge. */}
       <div className="mt-3 flex items-center gap-3 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
-          {crestForActive && (
-            <img
-              src={crestForActive}
-              alt=""
-              aria-hidden
-              width={16}
-              height={16}
-              className="inline-block size-4 shrink-0 rounded object-contain align-middle"
-            />
-          )}
+          {crestForActive && <Crest url={crestForActive} className="shrink-0" />}
           <span className="truncate text-white/80">{activeTeam}</span>
         </span>
         <span className="flex items-center gap-1.5">
@@ -430,6 +422,7 @@ function PasserAvatar({
         <img
           src={imageUrl}
           alt=""
+          crossOrigin="anonymous"
           className="size-full object-cover"
           onError={() => setFailed(true)}
         />

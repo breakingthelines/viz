@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
@@ -494,22 +495,6 @@ function TeamReadout({
       <Crest url={crestUrl} name={name} />
       <span className="tabular-nums text-white/80">{value.toFixed(2)}</span>
     </span>
-  );
-}
-
-/** Small ~16px team crest rendered before a team name. Nothing when absent. */
-function Crest({ url, name }: { url?: string; name: string }) {
-  if (!url) return null;
-  return (
-    <img
-      src={url}
-      alt=""
-      aria-hidden
-      width={16}
-      height={16}
-      className="inline-block size-4 rounded object-contain align-middle"
-      title={name}
-    />
   );
 }
 

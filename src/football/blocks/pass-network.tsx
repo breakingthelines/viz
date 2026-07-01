@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
@@ -615,21 +616,5 @@ export function PassNetwork({
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
-  );
-}
-
-/** Small ~16px team crest rendered before a team name. Nothing when absent. */
-function Crest({ url, name }: { url?: string; name: string }) {
-  if (!url) return null;
-  return (
-    <img
-      src={url}
-      alt=""
-      aria-hidden
-      width={16}
-      height={16}
-      className="inline-block size-4 rounded object-contain align-middle"
-      title={name}
-    />
   );
 }
