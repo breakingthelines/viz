@@ -790,11 +790,13 @@ export const WholeTeamDefaultThenSelect: Story = {
     const argXt = ARG_PROGRESSION.reduce((s, a) => s + a.xt, 0).toFixed(2);
     await waitFor(() => expect(canvas.getByText(argXt)).toBeInTheDocument());
 
-    // Open the player dropdown — a "Whole team" default + both team groups.
+    // Open the player dropdown — both team groups are present, each with its
+    // own "Whole team" row (disambiguated by accessible name).
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     const list = within(listbox);
-    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
 

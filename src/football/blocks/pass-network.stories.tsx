@@ -334,12 +334,14 @@ export const StartersSubsAndSelect: Story = {
     await waitFor(() => expect(canvas.getByText('Montiel')).toBeInTheDocument());
     await expect(canvas.queryByText('Tagliafico')).not.toBeInTheDocument();
 
-    // Back to Starters, then open the dropdown — both team groups are present.
+    // Back to Starters, then open the dropdown — both team groups are present,
+    // each with its own "Whole team" row (disambiguated by accessible name).
     await userEvent.click(canvas.getByRole('button', { name: 'Starters' }));
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     const list = within(listbox);
-    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
     // Subs are selectable in the dropdown too, grouped under their team — the
@@ -530,7 +532,7 @@ export const SelectorSwapNoCircleWarning: Story = {
       await openAndPick('Rodrigo De Paul');
       await waitFor(() => expect(canvas.getByText('De Paul')).toBeInTheDocument());
       await openAndPick('Kylian Mbappé');
-      await openAndPick('Whole team');
+      await openAndPick('Argentina — whole team');
       await waitFor(() => expect(canvas.getByText('Messi')).toBeInTheDocument());
     });
 
