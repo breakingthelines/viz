@@ -199,9 +199,13 @@ export function PanelFooter({
 
       // Size the output explicitly. html-to-image derives the canvas height from
       // the truncated integer `clientHeight`, so the footer's fractional last row
-      // — flush against the panel's bottom padding — gets cropped (×pixelRatio,
-      // that's the visible clip). Ceil the real box + 1px so the whole footer
-      // lands in frame. CSS px, unscaled: html-to-image multiplies by pixelRatio.
+      // gets cropped (×pixelRatio = the visible clip). `getBoundingClientRect`
+      // already includes the panel's symmetric `p-4` (16px top AND bottom), so
+      // ceil it (+1px to absorb sub-pixel rounding) and the footer keeps that full
+      // bottom padding — matching the top. CSS px, unscaled (html-to-image
+      // multiplies by pixelRatio). We deliberately DON'T override paddingBottom
+      // here: doing so collapsed the clone's 16px bottom padding and made the
+      // logos sit flush against the edge.
       const rect = panel.getBoundingClientRect();
       const dataUrl = await toPng(panel, {
         pixelRatio: 2,
@@ -221,9 +225,10 @@ export function PanelFooter({
         // crossOrigin handle the common stale-CORS case above.
         imagePlaceholder:
           'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        // Neutralise any residual selection ring on the clone + paint the +1px
-        // bottom strip with the panel background rather than a transparent sliver.
-        style: { boxShadow: 'none', paddingBottom: '1px', boxSizing: 'border-box' },
+        // Neutralise any residual selection ring on the clone. (No padding
+        // override — the panel's own symmetric `p-4` is what gives the footer its
+        // breathing room, matching the top.)
+        style: { boxShadow: 'none' },
         // Drop the save button + builder controls from the saved image.
         filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
       });
