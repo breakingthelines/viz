@@ -197,20 +197,23 @@ export function PanelFooter({
       const titleEl = panel.querySelector('.font-semibold');
       const name = slugify(titleEl?.textContent ?? 'breaking the lines');
 
-      // Size the output explicitly. html-to-image derives the canvas height from
-      // the truncated integer `clientHeight`, so the footer's fractional last row
-      // gets cropped (×pixelRatio = the visible clip). `getBoundingClientRect`
-      // already includes the panel's symmetric `p-4` (16px top AND bottom), so
-      // ceil it (+1px to absorb sub-pixel rounding) and the footer keeps that full
-      // bottom padding — matching the top. CSS px, unscaled (html-to-image
-      // multiplies by pixelRatio). We deliberately DON'T override paddingBottom
-      // here: doing so collapsed the clone's 16px bottom padding and made the
-      // logos sit flush against the edge.
+      // Size the output explicitly. html-to-image rasterises the panel but DROPS
+      // the root node's bottom padding — the footer's fractional last row lands on
+      // the canvas edge, so the logos come out flush at the bottom while the top
+      // padding survives (visibly asymmetric; measured: top ~99px, bottom 0px at
+      // pixelRatio 2). Rather than fight the library, force the canvas height to
+      // the measured box PLUS the panel's own bottom padding again, and let
+      // `backgroundColor` fill that added strip — so the footer sits the same
+      // distance from the bottom as the header does from the top. Width is pinned
+      // so the aspect-ratio pitch SVG doesn't reflow taller and clip. CSS px
+      // (html-to-image multiplies by pixelRatio). Regression-guarded by
+      // pass-sonar-save-padding.stories.tsx, which measures the actual PNG.
       const rect = panel.getBoundingClientRect();
+      const padBottom = parseFloat(getComputedStyle(panel).paddingBottom) || 16;
       const dataUrl = await toPng(panel, {
         pixelRatio: 2,
         width: Math.ceil(rect.width),
-        height: Math.ceil(rect.height) + 1,
+        height: Math.ceil(rect.height) + Math.ceil(padBottom),
         backgroundColor: '#0a0a0a',
         // Force a fresh, CORS-correct fetch of each crest/headshot (the CDN
         // reflects Access-Control-Allow-Origin per request with `Vary: Origin`).
