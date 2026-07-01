@@ -5,19 +5,28 @@ import { Pitch } from '#/football/primitives/pitch';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
-import { PlayerSelect, type SelectablePlayer } from '#/football/lib/player-select';
+import {
+  activeCrest,
+  PlayerSelect,
+  resolveActiveTeam,
+  type SelectablePlayer,
+} from '#/football/lib/player-select';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /**
- * The Heat Map's full user-selectable state: which player the cloud is filtered
- * to. `null` is the "Whole team" default. Seed it via
- * {@link HeatMapProps.initialSelection} and observe every change through
- * {@link HeatMapProps.onSelectionChange}.
+ * The Heat Map's full user-selectable state:
+ *   • `activePlayer` — the filtered player, or `null` for the whole-team view;
+ *   • `selectedTeam` — the side whose whole-team view is active in team-aware
+ *     mode, or `null` for the home side.
+ * Seed it via {@link HeatMapProps.initialSelection} and observe every change
+ * through {@link HeatMapProps.onSelectionChange}.
  */
 export interface HeatMapSelection {
   /** Filtered player id, or `null` for the whole-team view. */
   activePlayer: string | null;
+  /** Active whole-team side (team-aware mode), or `null` for the home side. */
+  selectedTeam: string | null;
 }
 
 /** A single on-ball touch in StatsBomb pitch coordinates (120 × 80). */
@@ -38,11 +47,11 @@ export interface HeatMapPlayer {
   name: string;
   /**
    * Team display name (the selector's group heading, e.g. "Argentina"). When
-   * BOTH teams' players are supplied, the selector splits them by team and the
-   * default "Whole team" view shows only the panel's own `team`; the other
-   * side's players stay available to drill into. Omit (the single-team case) and
-   * the players render as one flat list with the default showing every touch —
-   * the original behaviour.
+   * BOTH teams' players are supplied, the selector splits them into team
+   * groups, each with its own "Whole team" row, so the panel can switch to the
+   * OTHER side's full bloom — not only drill into one of its players. Omit
+   * (the single-team case) and the players render as one flat list with the
+   * default showing every touch — the original behaviour.
    */
   team?: string;
 }
@@ -50,8 +59,15 @@ export interface HeatMapPlayer {
 export interface HeatMapProps {
   /** Team display name. */
   team: string;
-  /** Team crest URL. Rendered as a small badge before the team name. */
+  /** Home team crest URL. Rendered as a small badge before the team name. */
   crestUrl?: string;
+  /**
+   * Away team crest URL. When the data is team-split (both sides' players are
+   * supplied), switching the panel to the OTHER side — "{Away} — whole team" or
+   * any away player — badges it with this crest. Omit it (legacy / home-only
+   * data) and the away view shows the name alone, never the home badge.
+   */
+  awayCrestUrl?: string;
   /** Bloom accent colour. Defaults to the BTL home red. */
   color?: string;
   /** Every touch to plot, in StatsBomb 120 × 80 coordinates. */
@@ -151,6 +167,7 @@ const HEAT_FLOOR = 0.06;
 export function HeatMap({
   team,
   crestUrl,
+  awayCrestUrl,
   color = '#eb0000',
   touches,
   players,
@@ -160,15 +177,18 @@ export function HeatMap({
   initialSelection,
   onSelectionChange,
 }: HeatMapProps) {
-  // Consolidated selection (seeded by the host, emits every change). `null` =
-  // the "Whole team" option; otherwise a player id.
+  // Consolidated selection (seeded by the host, emits every change): the
+  // filtered player (`null` = whole team) and the active side.
   const [selection, setSelection] = usePersistedSelection<HeatMapSelection>(
     initialSelection,
-    { activePlayer: null },
+    { activePlayer: null, selectedTeam: null },
     onSelectionChange
   );
-  const { activePlayer } = selection;
-  const setActivePlayer = (id: string | null) => setSelection({ activePlayer: id });
+  const { activePlayer, selectedTeam: activeTeamSel } = selection;
+  const setActivePlayer = (id: string | null) =>
+    setSelection((prev) => ({ ...prev, activePlayer: id }));
+  const setActiveTeamSel = (t: string | null) =>
+    setSelection((prev) => ({ ...prev, selectedTeam: t }));
   const titleId = useId();
 
   const allPlayers = players ?? [];
@@ -181,30 +201,46 @@ export function HeatMap({
     [allPlayers]
   );
 
-  // Ids belonging to THIS panel's team (matched on the team display name). Used
-  // for the whole-team default so it shows only the home side's territory even
-  // when the away players are present for drill-down.
-  const homePlayerIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const p of allPlayers) if (p.team === team) ids.add(p.id);
-    return ids;
-  }, [allPlayers, team]);
-
   // True only when players are split across teams (so a whole-team default must
-  // scope to the home side). With a single team — or untagged legacy data — the
-  // default keeps showing every touch, exactly as before.
+  // scope to the active side). With a single team — or untagged legacy data —
+  // the default keeps showing every touch, exactly as before.
   const hasTeamSplit = useMemo(
     () => new Set(allPlayers.map((p) => p.team).filter(Boolean)).size > 1,
     [allPlayers]
   );
 
+  // The ACTIVE side: a selected player's team, else a chosen whole-team side,
+  // else the home `team`. Picking a France player switches the bloom, crest and
+  // label to France — rather than filtering to a lone France player's touches
+  // while everything else still reads as the home side.
+  const activeTeam = resolveActiveTeam(
+    team,
+    activePlayer,
+    activeTeamSel,
+    (id) => allPlayers.find((p) => p.id === id)?.team
+  );
+
+  // Crest for whichever side is active — the home crest for the home side, the
+  // away crest for the other side (when supplied). An away view with no away
+  // crest baked falls back to a name-only label rather than the home badge.
+  const crestForActive = activeCrest(activeTeam, team, crestUrl, awayCrestUrl);
+
+  // Ids belonging to the ACTIVE side (matched on the team display name). Used
+  // for the whole-team view so it blooms only that side's territory even when
+  // the other side's players are present for drill-down.
+  const activeTeamIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of allPlayers) if (p.team === activeTeam) ids.add(p.id);
+    return ids;
+  }, [allPlayers, activeTeam]);
+
   const visibleTouches = useMemo(() => {
     if (activePlayer !== null) return touches.filter((t) => t.player === activePlayer);
-    // Whole-team view: scope to the home side when both teams are present, else
-    // every touch (single-team / legacy data).
+    // Whole-team view: scope to the ACTIVE side when both teams are present,
+    // else every touch (single-team / legacy data).
     if (!hasTeamSplit) return touches;
-    return touches.filter((t) => t.player !== undefined && homePlayerIds.has(t.player));
-  }, [touches, activePlayer, hasTeamSplit, homePlayerIds]);
+    return touches.filter((t) => t.player !== undefined && activeTeamIds.has(t.player));
+  }, [touches, activePlayer, hasTeamSplit, activeTeamIds]);
 
   return (
     <figure
@@ -228,6 +264,8 @@ export function HeatMap({
             players={selectablePlayers}
             selectedId={activePlayer}
             onSelect={setActivePlayer}
+            selectedTeam={hasTeamSplit ? activeTeamSel : undefined}
+            onSelectTeam={hasTeamSplit ? setActiveTeamSel : undefined}
           />
         )}
       </div>
@@ -244,8 +282,11 @@ export function HeatMap({
         <DensityCanvas
           touches={visibleTouches}
           color={color}
-          // Key on the active filter so the canvas cross-fades on change.
-          key={activePlayer ?? '__all__'}
+          // Key on the active filter AND side so the canvas cross-fades on
+          // every change that alters `visibleTouches` — including switching
+          // between the home and away whole-team views (both `activePlayer ===
+          // null`, so the side alone must drive the re-key there).
+          key={activePlayer ?? `__all__:${activeTeam}`}
         />
       </RevealOnScroll>
 
@@ -253,12 +294,15 @@ export function HeatMap({
           brighter = more touches clustered there. */}
       <IntensityLegend color={color} />
 
-      {/* Footer: team + a small plain touch count. */}
+      {/* Footer: the ACTIVE side, badged with that side's crest — the home
+          crest for the home side, the away crest for the other side (when
+          supplied) — + a small plain touch count. An away view with no away
+          crest baked shows the name alone, never the wrong (home) badge. */}
       <div className="mt-3 flex items-center justify-between gap-4 text-[11px] text-white/90">
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2 rounded-full" style={{ backgroundColor: color }} />
-          <Crest url={crestUrl} name={team} />
-          <span className="truncate text-white/70">{team}</span>
+          <Crest url={crestForActive} name={activeTeam} />
+          <span className="truncate text-white/70">{activeTeam}</span>
         </span>
         <span>
           <span className="tabular-nums text-white/80">{visibleTouches.length}</span> touches
