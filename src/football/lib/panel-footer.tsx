@@ -178,19 +178,53 @@ export function PanelFooter({
     const panel = footerRef.current?.parentElement;
     if (!panel || busy) return;
     setBusy(true);
+
+    // A host (the editor) may put a selection ring on the captured panel
+    // (`ring-2 ring-red-100` → a box-shadow). Strip it on the live node for the
+    // duration of the capture so the saved image is the clean published card,
+    // not a red-ringed "selected" state. Restored in `finally`.
+    const ringClasses = Array.from(panel.classList).filter(
+      (c) => c === 'ring' || c.startsWith('ring-')
+    );
+    const prevBoxShadow = panel.style.boxShadow;
+    const prevOutline = panel.style.outline;
+    panel.classList.remove(...ringClasses);
+    panel.style.boxShadow = 'none';
+    panel.style.outline = 'none';
+
     try {
       const { toPng } = await import('html-to-image');
       const titleEl = panel.querySelector('.font-semibold');
       const name = slugify(titleEl?.textContent ?? 'breaking the lines');
+
+      // Size the output explicitly. html-to-image derives the canvas height from
+      // the truncated integer `clientHeight`, so the footer's fractional last row
+      // — flush against the panel's bottom padding — gets cropped (×pixelRatio,
+      // that's the visible clip). Ceil the real box + 1px so the whole footer
+      // lands in frame. CSS px, unscaled: html-to-image multiplies by pixelRatio.
+      const rect = panel.getBoundingClientRect();
       const dataUrl = await toPng(panel, {
         pixelRatio: 2,
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height) + 1,
         backgroundColor: '#0a0a0a',
-        // A failed crest/headshot URL must not abort the whole capture: swap in a
-        // transparent pixel instead of rejecting (html-to-image rejects on any
-        // image load error by default).
+        // Force a fresh, CORS-correct fetch of each crest/headshot (the CDN
+        // reflects Access-Control-Allow-Origin per request with `Vary: Origin`).
+        // Without this a STALE pre-CORS edge-cache copy — served without the ACAO
+        // header — taints the canvas and the image comes out blank. Pairs with
+        // `crossOrigin="anonymous"` on the crest <img> / headshot <image> tags.
+        cacheBust: true,
+        fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
+        // A genuinely dead (404) crest/headshot URL must not abort the whole
+        // capture: swap in a transparent pixel instead of rejecting (html-to-image
+        // rejects on any image load error by default). Last resort — cacheBust +
+        // crossOrigin handle the common stale-CORS case above.
         imagePlaceholder:
           'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        // Drop the save button itself from the saved image.
+        // Neutralise any residual selection ring on the clone + paint the +1px
+        // bottom strip with the panel background rather than a transparent sliver.
+        style: { boxShadow: 'none', paddingBottom: '1px', boxSizing: 'border-box' },
+        // Drop the save button + builder controls from the saved image.
         filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
       });
       const link = document.createElement('a');
@@ -201,6 +235,9 @@ export function PanelFooter({
       // Best-effort: a capture failure shouldn't disturb the block.
       console.error('[viz] share-as-image failed', err);
     } finally {
+      panel.classList.add(...ringClasses);
+      panel.style.boxShadow = prevBoxShadow;
+      panel.style.outline = prevOutline;
       setBusy(false);
     }
   };

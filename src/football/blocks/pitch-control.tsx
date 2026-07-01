@@ -4,6 +4,7 @@ import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import { surname } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
+import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
@@ -303,16 +304,7 @@ export function PitchControl({
         {/* Attack-direction cue (home attacks right) — quiet, no eyebrow. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex justify-center">
           <span className="flex items-center gap-1.5 text-[10px] text-white/90">
-            {homeCrestUrl && (
-              <img
-                src={homeCrestUrl}
-                alt=""
-                aria-hidden
-                width={16}
-                height={16}
-                className="inline-block size-4 shrink-0 rounded object-contain align-middle"
-              />
-            )}
+            {homeCrestUrl && <Crest url={homeCrestUrl} className="shrink-0" />}
             {homeTeam} attacking <span aria-hidden>→</span>
           </span>
         </div>
@@ -368,13 +360,9 @@ function TeamKey({
         style={{ backgroundColor: color, opacity: dim ? 0.45 : 1 }}
       />
       {crestUrl && (
-        <img
-          src={crestUrl}
-          alt=""
-          aria-hidden
-          width={16}
-          height={16}
-          className="inline-block size-4 shrink-0 rounded object-contain align-middle transition-opacity"
+        <Crest
+          url={crestUrl}
+          className="shrink-0 transition-opacity"
           style={{ opacity: dim ? 0.45 : 1 }}
         />
       )}

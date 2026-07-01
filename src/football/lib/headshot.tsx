@@ -93,6 +93,11 @@ export function SvgHeadshot({
           height={r * 2}
           clipPath={`url(#${clipId})`}
           preserveAspectRatio="xMidYMid slice"
+          // Load cross-origin so the CDN photo can be rasterised into the
+          // share-as-image canvas without tainting it (the BTL CDN reflects
+          // Access-Control-Allow-Origin per request). Without this the headshot
+          // renders on screen but comes out blank in the saved PNG.
+          crossOrigin="anonymous"
           // Missing/404 photo → fall back to the monogram disc below.
           onError={() => setFailed(true)}
           style={style}
