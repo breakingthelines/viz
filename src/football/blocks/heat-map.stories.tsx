@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { HeatMap } from '#/football/blocks/heat-map';
 import type { HeatMapPlayer, HeatMapTouch } from '#/football/blocks/heat-map';
 import { expectCanvasVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
@@ -120,6 +120,16 @@ const MATCH_TOUCHES: HeatMapTouch[] = [
 const FLAG_SPAIN = 'https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Spain.svg';
 const FLAG_ITALY = 'https://upload.wikimedia.org/wikipedia/commons/0/03/Flag_of_Italy.svg';
 const FLAG_ARGENTINA = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg';
+const FLAG_FRANCE = 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Flag_of_France.svg';
+
+/** True when an SVG `<image>` or HTML `<img>` with this exact href/src is present. */
+function hasCrest(root: HTMLElement, url: string): boolean {
+  const imgs = [...root.querySelectorAll('img')].some((el) => el.getAttribute('src') === url);
+  const svgImgs = [...root.querySelectorAll('image')].some(
+    (el) => el.getAttribute('href') === url || el.getAttributeNS(null, 'href') === url
+  );
+  return imgs || svgImgs;
+}
 
 export const Default: Story = {
   args: {
@@ -160,6 +170,7 @@ export const BothTeams: Story = {
   args: {
     team: 'Argentina',
     crestUrl: FLAG_ARGENTINA,
+    awayCrestUrl: FLAG_FRANCE,
     color: '#6db4ff',
     touches: MATCH_TOUCHES,
     players: MATCH_PLAYERS,
@@ -168,8 +179,10 @@ export const BothTeams: Story = {
 
 /**
  * Exercises the selector on a two-team match: the whole-team default scopes to
- * Argentina's touches, the dropdown shows both team groups, and selecting a
- * France player narrows the bloom to just that player.
+ * Argentina's touches, the dropdown shows both team groups (EACH with its own
+ * "Whole team" row — the top-level bare row drops once team-aware mode is
+ * active, per the shared `PlayerSelect` rule), and selecting a France player
+ * narrows the bloom to just that player.
  */
 export const WholeTeamDefaultThenSelect: Story = {
   args: { ...BothTeams.args },
@@ -184,11 +197,14 @@ export const WholeTeamDefaultThenSelect: Story = {
     await expect(countCell).toBeInTheDocument();
     await expect(argTotal).toBeLessThan(total);
 
-    // Open the dropdown: a "Whole team" default + both team groups.
+    // Open the dropdown: EACH team group carries its own "Whole team" row
+    // (disambiguated for assistive tech via a qualified accessible name), not a
+    // single generic top-level row.
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     const list = within(listbox);
-    await expect(list.getByRole('option', { name: 'Whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
     await expect(list.getByText('Argentina')).toBeInTheDocument();
     await expect(list.getByText('France')).toBeInTheDocument();
 
@@ -201,6 +217,62 @@ export const WholeTeamDefaultThenSelect: Story = {
 };
 
 /**
+ * Team-aware selector (the headline fix, mirroring Pass Network's #30/#32/#41
+ * treatment). Heat Map was the one football block that never opted into the
+ * shared `PlayerSelect` team-aware mode — its dropdown showed a single generic
+ * "Whole team" row instead of a per-team eyebrow + "Whole team" row for EACH
+ * side, and its footer crest/label stayed hard-wired to the home team even
+ * after drilling into the away side. Asserts, on the two-team fixture:
+ *   • the dropdown groups players under an "Argentina" and a "France" eyebrow,
+ *     each with its OWN qualified "Whole team" row;
+ *   • picking "France — whole team" blooms France's touches (not Argentina's),
+ *     and the footer crest + label switch to France's flag + name;
+ *   • the home (Argentina) crest is gone once France is active — never the
+ *     wrong badge.
+ */
+export const TeamAwareSelectorFollowsActiveSide: Story = {
+  args: { ...BothTeams.args },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Default = Argentina: the footer wears the home crest only.
+    await waitFor(() => expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(true));
+    await expect(hasCrest(canvasElement, FLAG_FRANCE)).toBe(false);
+    await expect(canvas.getByText('Argentina')).toBeInTheDocument();
+
+    // Open the dropdown: a per-team eyebrow + qualified "Whole team" row for
+    // EACH side — the primary ask.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox = await canvas.findByRole('listbox');
+    const list = within(listbox);
+    await expect(list.getByRole('option', { name: 'Argentina — whole team' })).toBeInTheDocument();
+    await expect(list.getByRole('option', { name: 'France — whole team' })).toBeInTheDocument();
+
+    // Switch to France's whole team → the bloom, crest AND label all follow.
+    await userEvent.click(list.getByRole('option', { name: 'France — whole team' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+
+    const franceTotal = MATCH_TOUCHES.filter((t) => (t.player ?? '').startsWith('fra-')).length;
+    await waitFor(() => expect(canvas.getByText(String(franceTotal))).toBeInTheDocument());
+    await expect(canvas.getByRole('button', { name: /France — whole team/ })).toBeInTheDocument();
+    await waitFor(() => expect(hasCrest(canvasElement, FLAG_FRANCE)).toBe(true));
+    await expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(false);
+    await expect(canvas.getAllByText('France').length).toBeGreaterThan(0);
+
+    // Drilling into a France player also switches the footer to France; the
+    // home (Argentina) crest must never reappear.
+    await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
+    const listbox2 = await canvas.findByRole('listbox');
+    await userEvent.click(within(listbox2).getByRole('option', { name: 'Griezmann' }));
+    await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    const griezmannTouches = MATCH_TOUCHES.filter((t) => t.player === 'fra-griezmann').length;
+    await waitFor(() => expect(canvas.getByText(String(griezmannTouches))).toBeInTheDocument());
+    await expect(hasCrest(canvasElement, FLAG_ARGENTINA)).toBe(false);
+    await expect(hasCrest(canvasElement, FLAG_FRANCE)).toBe(true);
+  },
+};
+
+/**
  * Persisted selection — seeding. A host (the editor) passes `initialSelection`
  * to open the block on an author's saved player rather than the whole-team
  * default. Here it opens already filtered to a France player: the trigger shows
@@ -209,7 +281,7 @@ export const WholeTeamDefaultThenSelect: Story = {
 export const SeededSelection: Story = {
   args: {
     ...BothTeams.args,
-    initialSelection: { activePlayer: 'fra-mbappe' },
+    initialSelection: { activePlayer: 'fra-mbappe', selectedTeam: null },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -222,9 +294,10 @@ export const SeededSelection: Story = {
 
 /**
  * Persisted selection — change emission. `onSelectionChange` fires with the FULL
- * new selection object whenever the user changes the filter, so the host can
- * persist it. Unseeded (whole-team default); selecting a player emits
- * `{ activePlayer }`.
+ * new selection object (player + side) whenever the user changes the filter, so
+ * the host can persist it. Unseeded (whole-team default); selecting a player
+ * emits `{ activePlayer, selectedTeam }` with the active side still `null` (the
+ * team-switch is derived from the player's own data, mirroring Pass Network).
  */
 export const EmitsSelectionChange: Story = {
   args: {
@@ -236,7 +309,10 @@ export const EmitsSelectionChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: 'Mbappé' }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({ activePlayer: 'fra-mbappe' });
+    await expect(args.onSelectionChange).toHaveBeenCalledWith({
+      activePlayer: 'fra-mbappe',
+      selectedTeam: null,
+    });
   },
 };
 
