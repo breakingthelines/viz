@@ -178,7 +178,7 @@ export async function exportAsPng(
   const { toPng } = await import('html-to-image');
   const dataUrl = await toPng(element, buildCaptureOptions(element, options));
 
-  downloadDataUrl(dataUrl, `${fileName}.png`);
+  await saveImage(dataUrl, `${fileName}.png`);
 }
 
 /**
@@ -231,7 +231,40 @@ export async function copyToClipboard(
 }
 
 /**
- * Helper to trigger download from data URL
+ * Save a rendered image data URL to the device.
+ *
+ * On touch devices a synthetic `<a download>` click is unreliable — iOS Safari
+ * ignores the `download` attribute and just opens the image inline, so tapping
+ * the save button appears to do nothing. There we prefer the Web Share API,
+ * which surfaces the native share sheet (with "Save Image" / "Save to Files").
+ * Desktop keeps the direct download. `navigator.share` needs the caller's
+ * transient activation, so this must be awaited straight off the user gesture
+ * (the export's `toPng` is the only work in between).
+ */
+async function saveImage(dataUrl: string, fileName: string): Promise<void> {
+  const isTouch =
+    typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+
+  if (isTouch && typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+    } catch (err) {
+      // User dismissed the share sheet — a no-op; don't also fire a download.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      // Any other failure (activation lost, share unsupported): fall through.
+    }
+  }
+
+  downloadDataUrl(dataUrl, fileName);
+}
+
+/**
+ * Helper to trigger a direct file download from a data URL (desktop path).
  */
 function downloadDataUrl(dataUrl: string, fileName: string): void {
   const link = document.createElement('a');
