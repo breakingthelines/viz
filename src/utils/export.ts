@@ -55,14 +55,26 @@ export interface ExportOptions {
    */
   filter?: (node: HTMLElement) => boolean;
   /**
-   * Force a fresh, CORS-correct fetch of every remote image in the capture
-   * (`cacheBust` + `fetchRequestInit: { mode: 'cors', cache: 'no-cache' }`).
-   * Without this, a stale pre-CORS edge-cache copy of a crest/headshot — one
-   * served without an `Access-Control-Allow-Origin` header — taints the
-   * canvas and the image comes out blank, even though the live `<img>` has
-   * `crossOrigin="anonymous"` set correctly. Default `true`.
+   * Fetch every remote image in the capture in CORS mode with revalidation
+   * (`fetchRequestInit: { mode: 'cors', cache: 'no-cache' }`) so a stale
+   * pre-CORS edge-cache copy of a crest/headshot — one served without an
+   * `Access-Control-Allow-Origin` header — can't taint the canvas and blank
+   * the image. Default `true`. Note this does NOT append a cache-busting
+   * query string — see `cacheBust`, which is off by default because some
+   * image CDNs reject any query param with a 403.
    */
   cors?: boolean;
+  /**
+   * Append a cache-busting query param to every remote image URL before
+   * fetching. `html-to-image` offers this to dodge a poisoned browser cache,
+   * but the extra query string makes some strict / token-gated image CDNs —
+   * notably `media.api-sports.io`, where football headshots and crests
+   * hotlink from — return `403 Forbidden`; the CORS fetch then rejects and
+   * the image silently blanks (substituted by `imagePlaceholder`). `cors`
+   * already forces revalidation via `cache: 'no-cache'`, so cache-busting is
+   * redundant for CORS-clean hosts. Default `false`.
+   */
+  cacheBust?: boolean;
   /**
    * Data URL substituted for any image that still fails to load (a
    * genuinely dead URL, after the `cors` re-fetch above) so one bad asset
@@ -109,6 +121,7 @@ function buildCaptureOptions(element: HTMLElement, options: ExportOptions) {
     filterExportIgnore = true,
     filter,
     cors = true,
+    cacheBust = false,
     imagePlaceholder = TRANSPARENT_PIXEL,
     fitToContent = true,
     style,
@@ -139,9 +152,8 @@ function buildCaptureOptions(element: HTMLElement, options: ExportOptions) {
     height,
     style: { boxShadow: 'none', ...style },
     filter: composedFilter,
-    ...(cors
-      ? { cacheBust: true, fetchRequestInit: { mode: 'cors' as const, cache: 'no-cache' as const } }
-      : {}),
+    cacheBust,
+    ...(cors ? { fetchRequestInit: { mode: 'cors' as const, cache: 'no-cache' as const } } : {}),
     imagePlaceholder,
   };
 }
