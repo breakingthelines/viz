@@ -1,5 +1,6 @@
 import { type ReactNode, useId, useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
+import { exportAsPng } from '#/utils/export';
 import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 
 /**
@@ -193,52 +194,23 @@ export function PanelFooter({
     panel.style.outline = 'none';
 
     try {
-      const { toPng } = await import('html-to-image');
       const titleEl = panel.querySelector('.font-semibold');
       const name = slugify(titleEl?.textContent ?? 'breaking the lines');
 
-      // Size the output explicitly. html-to-image rasterises the panel but DROPS
-      // the root node's bottom padding — the footer's fractional last row lands on
-      // the canvas edge, so the logos come out flush at the bottom while the top
-      // padding survives (visibly asymmetric; measured: top ~99px, bottom 0px at
-      // pixelRatio 2). Rather than fight the library, force the canvas height to
-      // the measured box PLUS the panel's own bottom padding again, and let
-      // `backgroundColor` fill that added strip — so the footer sits the same
-      // distance from the bottom as the header does from the top. Width is pinned
-      // so the aspect-ratio pitch SVG doesn't reflow taller and clip. CSS px
-      // (html-to-image multiplies by pixelRatio). Regression-guarded by
-      // pass-sonar-save-padding.stories.tsx, which measures the actual PNG.
-      const rect = panel.getBoundingClientRect();
-      const padBottom = parseFloat(getComputedStyle(panel).paddingBottom) || 16;
-      const dataUrl = await toPng(panel, {
-        pixelRatio: 2,
-        width: Math.ceil(rect.width),
-        height: Math.ceil(rect.height) + Math.ceil(padBottom),
+      // Every other export-correctness fix — 2x pixelRatio, CORS-safe
+      // crest/headshot re-fetch, the dead-image placeholder, the
+      // data-export-ignore filter, and exact content-box sizing that
+      // recovers the bottom padding html-to-image otherwise drops — lives in
+      // the shared `exportAsPng` and applies by default; see its JSDoc.
+      // `backgroundColor` is the one thing that's genuinely THIS panel's
+      // own: its dark card background, so the sizing fix's added bottom
+      // strip paints correctly. Regression-guarded by
+      // pass-sonar-save-padding.stories.tsx, which measures the actual PNG
+      // this produces.
+      await exportAsPng(panel, {
         backgroundColor: '#0a0a0a',
-        // Force a fresh, CORS-correct fetch of each crest/headshot (the CDN
-        // reflects Access-Control-Allow-Origin per request with `Vary: Origin`).
-        // Without this a STALE pre-CORS edge-cache copy — served without the ACAO
-        // header — taints the canvas and the image comes out blank. Pairs with
-        // `crossOrigin="anonymous"` on the crest <img> / headshot <image> tags.
-        cacheBust: true,
-        fetchRequestInit: { mode: 'cors', cache: 'no-cache' },
-        // A genuinely dead (404) crest/headshot URL must not abort the whole
-        // capture: swap in a transparent pixel instead of rejecting (html-to-image
-        // rejects on any image load error by default). Last resort — cacheBust +
-        // crossOrigin handle the common stale-CORS case above.
-        imagePlaceholder:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        // Neutralise any residual selection ring on the clone. (No padding
-        // override — the panel's own symmetric `p-4` is what gives the footer its
-        // breathing room, matching the top.)
-        style: { boxShadow: 'none' },
-        // Drop the save button + builder controls from the saved image.
-        filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === 'true'),
+        fileName: `btl-${name}`,
       });
-      const link = document.createElement('a');
-      link.download = `btl-${name}.png`;
-      link.href = dataUrl;
-      link.click();
     } catch (err) {
       // Best-effort: a capture failure shouldn't disturb the block.
       console.error('[viz] share-as-image failed', err);
