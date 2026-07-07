@@ -159,6 +159,37 @@ function buildCaptureOptions(element: HTMLElement, options: ExportOptions) {
 }
 
 /**
+ * Rasterise `element` to a PNG data URL. Applies every export-correctness
+ * fix by default: 2x `pixelRatio`, CORS-safe re-fetch of remote
+ * crest/headshot images, a transparent-pixel fallback for a dead image URL,
+ * the `data-export-ignore="true"` exclusion filter, and exact content-box
+ * sizing that recovers the bottom padding `html-to-image` otherwise drops.
+ * All of it is overridable via `options`, but nothing needs to be
+ * re-specified to get a correct capture — see {@link ExportOptions}.
+ *
+ * This is the capture half of `exportAsPng` split out on its own so a caller
+ * that needs the image BEFORE deciding how to deliver it — e.g. to show it
+ * in an in-app preview and share it off a later, clean tap, where
+ * `navigator.share()` must run synchronously off the user gesture with no
+ * intervening await (iOS Safari's transient-activation window is only a few
+ * seconds and does not survive an async capture in between) — can await the
+ * capture on its own timeline and keep the share call itself gesture-clean.
+ * `exportAsPng` below still does capture + save as one step for callers that
+ * don't need that split.
+ *
+ * Keeps the lazy `import('html-to-image')` for the same reason documented at
+ * the top of this file: it is load-bearing for capture timing, not just
+ * bundle-splitting.
+ */
+export async function captureElementToPng(
+  element: HTMLElement,
+  options: ExportOptions = {}
+): Promise<string> {
+  const { toPng } = await import('html-to-image');
+  return toPng(element, buildCaptureOptions(element, options));
+}
+
+/**
  * Export an element as PNG and trigger download.
  *
  * Applies every export-correctness fix by default: 2x `pixelRatio`,
@@ -175,10 +206,23 @@ export async function exportAsPng(
 ): Promise<void> {
   const { fileName = 'visualization' } = options;
 
-  const { toPng } = await import('html-to-image');
-  const dataUrl = await toPng(element, buildCaptureOptions(element, options));
+  const dataUrl = await captureElementToPng(element, options);
 
   await saveImage(dataUrl, `${fileName}.png`);
+}
+
+/**
+ * Warm the `html-to-image` chunk ahead of a save tap. Call once, e.g. on
+ * mount of a component that owns a save button, so the eventual capture
+ * (`captureElementToPng`/`exportAsPng`) hits an already-loaded module instead
+ * of paying the cold `import()` cost inside the user gesture's activation
+ * window. Best-effort: swallows load failures (e.g. offline) since the lazy
+ * `import()` at capture time is still a correct, if slower, fallback.
+ */
+export function preloadImageExport(): void {
+  if (typeof window !== 'undefined') {
+    void import('html-to-image').catch(() => {});
+  }
 }
 
 /**
@@ -237,9 +281,18 @@ export async function copyToClipboard(
  * ignores the `download` attribute and just opens the image inline, so tapping
  * the save button appears to do nothing. There we prefer the Web Share API,
  * which surfaces the native share sheet (with "Save Image" / "Save to Files").
- * Desktop keeps the direct download. `navigator.share` needs the caller's
- * transient activation, so this must be awaited straight off the user gesture
- * (the export's `toPng` is the only work in between).
+ * Desktop keeps the direct download.
+ *
+ * NOTE: this is the fallback path for callers of `exportAsPng` who don't use
+ * `useImageSave`. It still awaits a `fetch` + `share()` off the gesture, so it
+ * is still subject to the original bug this module was built to fix — iOS
+ * Safari's transient activation is only a few seconds and an async capture
+ * ahead of this call can burn through it before `share()` runs. Callers that
+ * need a RELIABLE touch share should use `useImageSave` instead: it captures
+ * the PNG first, then opens an in-app overlay whose Share button calls
+ * `navigator.share()` synchronously off a fresh tap (see
+ * `src/components/use-image-save.tsx`). This function is kept for back-compat
+ * and for non-interactive/desktop-only callers.
  */
 async function saveImage(dataUrl: string, fileName: string): Promise<void> {
   const isTouch =
@@ -264,11 +317,44 @@ async function saveImage(dataUrl: string, fileName: string): Promise<void> {
 }
 
 /**
- * Helper to trigger a direct file download from a data URL (desktop path).
+ * Trigger a direct file download from a data URL (desktop path). Exported
+ * (in addition to being used internally by `saveImage`) so `useImageSave` can
+ * reuse the exact same mechanism for its own desktop/fine-pointer branch and
+ * its overlay's Download button, rather than re-deriving it.
  */
-function downloadDataUrl(dataUrl: string, fileName: string): void {
+export function downloadDataUrl(dataUrl: string, fileName: string): void {
   const link = document.createElement('a');
   link.download = fileName;
   link.href = dataUrl;
   link.click();
+}
+
+/**
+ * Synchronously decode a `data:` URL into a `Blob`, without `fetch`.
+ *
+ * `useImageSave`'s overlay Share button must call `navigator.share()`
+ * SYNCHRONOUSLY off the tap — no `await` in between — so the browser still
+ * considers the click's transient activation "fresh". `fetch(dataUrl)` (what
+ * `saveImage` above uses) is itself async even for a same-document `data:`
+ * URL in some engines, which is exactly the kind of incidental await this
+ * function exists to avoid. `atob` + `Uint8Array` + the `Blob` constructor
+ * are all synchronous, so this can run directly inside a click handler with
+ * nothing awaited before `share()`.
+ */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex === -1) {
+    throw new Error('dataUrlToBlob: not a data URL');
+  }
+  const header = dataUrl.slice(0, commaIndex);
+  const body = dataUrl.slice(commaIndex + 1);
+  const mimeMatch = /^data:([^;,]+)?/.exec(header);
+  const mime = mimeMatch?.[1] || 'image/png';
+
+  const binary = header.includes(';base64') ? atob(body) : decodeURIComponent(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
 }
