@@ -156,6 +156,7 @@ export function LineupPitch({
                     monogramSizeRatio={0.8}
                     fallbackStroke="white"
                     fallbackStrokeWidth={0.3}
+                    pointerEvents="auto"
                   />
                 ) : (
                   <>
