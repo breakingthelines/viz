@@ -186,7 +186,69 @@ export async function captureElementToPng(
   options: ExportOptions = {}
 ): Promise<string> {
   const { toPng } = await import('html-to-image');
-  return toPng(element, buildCaptureOptions(element, options));
+  // Inline cross-origin SVG <image> hrefs first — WebKit / iOS Safari hangs
+  // indefinitely rasterising an SVG that references external images. Restored
+  // afterwards so the live DOM keeps its original hrefs.
+  const restoreSvgImages = await inlineSvgImageHrefs(element);
+  try {
+    return await toPng(element, buildCaptureOptions(element, options));
+  } finally {
+    restoreSvgImages();
+  }
+}
+
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
+/** Read a Blob as a `data:` URL. */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Inline every external SVG `<image>` href as a `data:` URI, returning a
+ * restore function. `html-to-image` inlines HTML `<img>` and CSS backgrounds
+ * but NOT SVG `<image>` (`href` / `xlink:href`), and WebKit / iOS Safari HANGS
+ * indefinitely when rasterising an SVG that references a cross-origin image
+ * (it won't load external resources from an SVG drawn to a canvas) — so the
+ * capture never resolves and the caller is stuck "saving" forever. Our football
+ * pitches render player headshots as SVG `<image>` (`SvgHeadshot`), so this is
+ * load-bearing for lineups; it also stops those headshots coming out blank.
+ * Best-effort per node: a failed fetch leaves that href untouched (it just
+ * won't appear) rather than aborting the whole capture.
+ */
+async function inlineSvgImageHrefs(element: HTMLElement): Promise<() => void> {
+  const nodes = Array.from(element.querySelectorAll('image'));
+  const restores: Array<() => void> = [];
+  await Promise.all(
+    nodes.map(async (node) => {
+      const hrefAttr = node.getAttribute('href');
+      const xlinkAttr = node.getAttributeNS(XLINK_NS, 'href');
+      const href = hrefAttr ?? xlinkAttr;
+      if (!href || href.startsWith('data:')) return;
+      try {
+        const resp = await fetch(href, { mode: 'cors', cache: 'no-cache' });
+        if (!resp.ok) return;
+        const dataUrl = await blobToDataUrl(await resp.blob());
+        node.setAttribute('href', dataUrl);
+        if (xlinkAttr != null) node.removeAttributeNS(XLINK_NS, 'href');
+        restores.push(() => {
+          if (hrefAttr != null) node.setAttribute('href', hrefAttr);
+          else node.removeAttribute('href');
+          if (xlinkAttr != null) node.setAttributeNS(XLINK_NS, 'href', xlinkAttr);
+        });
+      } catch {
+        /* leave this node's href as-is */
+      }
+    })
+  );
+  return () => {
+    for (const restore of restores) restore();
+  };
 }
 
 /**
