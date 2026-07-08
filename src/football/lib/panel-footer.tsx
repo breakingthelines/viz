@@ -1,6 +1,6 @@
-import { type ReactNode, useId, useRef, useState } from 'react';
+import { type ReactNode, useId, useRef } from 'react';
 import { cn } from '#/lib/utils';
-import { exportAsPng } from '#/utils/export';
+import { useImageSave } from '#/components/use-image-save';
 import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 
 /**
@@ -171,14 +171,13 @@ export function PanelFooter({
   builderControls?: ReactNode;
 }) {
   const footerRef = useRef<HTMLDivElement>(null);
-  const [busy, setBusy] = useState(false);
+  const { save, overlay, saving: busy } = useImageSave();
 
   const onSave = async () => {
     // The footer is always a direct child of the block panel, so its parent is
     // the element we want to capture.
     const panel = footerRef.current?.parentElement;
     if (!panel || busy) return;
-    setBusy(true);
 
     // A host (the editor) may put a selection ring on the captured panel
     // (`ring-2 ring-red-100` → a box-shadow). Strip it on the live node for the
@@ -197,63 +196,64 @@ export function PanelFooter({
       const titleEl = panel.querySelector('.font-semibold');
       const name = slugify(titleEl?.textContent ?? 'breaking the lines');
 
-      // Every other export-correctness fix — 2x pixelRatio, CORS-safe
+      // Every export-correctness fix — 2x pixelRatio, CORS-safe
       // crest/headshot re-fetch, the dead-image placeholder, the
       // data-export-ignore filter, and exact content-box sizing that
       // recovers the bottom padding html-to-image otherwise drops — lives in
-      // the shared `exportAsPng` and applies by default; see its JSDoc.
-      // `backgroundColor` is the one thing that's genuinely THIS panel's
-      // own: its dark card background, so the sizing fix's added bottom
-      // strip paints correctly. Regression-guarded by
+      // the shared capture inside `useImageSave`/`exportAsPng`; see its
+      // JSDoc. `backgroundColor` is the one thing that's genuinely THIS
+      // panel's own: its dark card background, so the sizing fix's added
+      // bottom strip paints correctly. Regression-guarded by
       // pass-sonar-save-padding.stories.tsx, which measures the actual PNG
-      // this produces.
-      await exportAsPng(panel, {
+      // this produces. On touch, `save` opens the in-app overlay (rendered
+      // below) instead of downloading directly, so the Share tap that
+      // follows is a clean, freshly-activated gesture.
+      await save(panel, {
         backgroundColor: '#0a0a0a',
         fileName: `btl-${name}`,
       });
-    } catch (err) {
-      // Best-effort: a capture failure shouldn't disturb the block.
-      console.error('[viz] share-as-image failed', err);
     } finally {
       panel.classList.add(...ringClasses);
       panel.style.boxShadow = prevBoxShadow;
       panel.style.outline = prevOutline;
-      setBusy(false);
     }
   };
 
   return (
-    <div
-      ref={footerRef}
-      className={cn(
-        'mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-2.5',
-        className
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        {/* Builder-only leading slot (e.g. the editor's match picker). Marked
-            export-ignore so it never lands in the saved PNG. */}
-        {builderControls != null && (
-          <div data-export-ignore="true" className="flex min-w-0 items-center">
-            {builderControls}
-          </div>
+    <>
+      <div
+        ref={footerRef}
+        className={cn(
+          'mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-2.5',
+          className
         )}
-        {wordmark ?? <BtlWordmark />}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Builder-only leading slot (e.g. the editor's match picker). Marked
+              export-ignore so it never lands in the saved PNG. */}
+          {builderControls != null && (
+            <div data-export-ignore="true" className="flex min-w-0 items-center">
+              {builderControls}
+            </div>
+          )}
+          {wordmark ?? <BtlWordmark />}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            data-export-ignore="true"
+            onClick={onSave}
+            disabled={busy}
+            aria-label="Save this block as an image"
+            title="Save as image"
+            className="flex size-7 items-center justify-center rounded-[6px] border border-white/10 bg-white/[0.04] text-white/65 transition-colors hover:border-white/25 hover:text-white disabled:cursor-default disabled:opacity-50"
+          >
+            <SaveGlyph className={busy ? 'animate-pulse' : undefined} />
+          </button>
+          <ProviderMark provider={provider} />
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          data-export-ignore="true"
-          onClick={onSave}
-          disabled={busy}
-          aria-label="Save this block as an image"
-          title="Save as image"
-          className="flex size-7 items-center justify-center rounded-[6px] border border-white/10 bg-white/[0.04] text-white/65 transition-colors hover:border-white/25 hover:text-white disabled:cursor-default disabled:opacity-50"
-        >
-          <SaveGlyph className={busy ? 'animate-pulse' : undefined} />
-        </button>
-        <ProviderMark provider={provider} />
-      </div>
-    </div>
+      {overlay}
+    </>
   );
 }
