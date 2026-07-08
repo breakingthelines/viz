@@ -155,12 +155,12 @@ export function PlayerRatingBoard({
   markerVariant = 'confirmed',
   onPlayerClick,
   selectedPlayerId,
-  markerSize = 3.9,
+  markerSize = 6.4,
   emphasiseTopGraded = true,
   teamColor,
   className,
 }: PlayerRatingBoardProps) {
-  const radius = finitePositive(markerSize, 3.9);
+  const radius = finitePositive(markerSize, 6.4);
   const strokeDashArray = markerVariant === 'predicted' ? '0.6 0.4' : undefined;
   const effectiveOpacity = markerVariant === 'predicted' ? 0.6 : 1;
   const teamLabel = formation.team.shortName ?? formation.team.name;
@@ -306,7 +306,7 @@ export function PlayerRatingBoard({
                 y={posY + radius + 2}
                 textAnchor="middle"
                 fill="white"
-                fontSize="2.6"
+                fontSize="4.3"
                 opacity="0.85"
                 style={{ pointerEvents: 'none' }}
               >
