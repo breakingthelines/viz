@@ -85,7 +85,7 @@ export function LineupPitch({
   numberColor = 'white',
   theme = 'dark',
   className,
-  markerSize: markerSizeRaw = 3.4,
+  markerSize: markerSizeRaw = 5.6,
   markerContent = 'number',
   showNames = true,
   editable = false,
@@ -95,7 +95,7 @@ export function LineupPitch({
   const color = teamColor ?? 'var(--color-team-home)';
   const chipLabel = teamShortName ?? teamName;
   const formationLabel = formatFormationLabel(formation);
-  const markerSize = finitePositive(markerSizeRaw, 3.4);
+  const markerSize = finitePositive(markerSizeRaw, 5.6);
 
   return (
     // Inter-first sans (product decision): opt out of the host page's editorial
@@ -188,10 +188,10 @@ export function LineupPitch({
                 {showNames && (
                   <text
                     x={position.x}
-                    y={position.y + markerSize + 2.7}
+                    y={position.y + markerSize + 3.5}
                     textAnchor="middle"
                     fill="white"
-                    fontSize="2.4"
+                    fontSize="4.0"
                     fontWeight="600"
                     opacity="0.9"
                     style={{ pointerEvents: 'none' }}
@@ -254,10 +254,10 @@ export function LineupPitch({
               {slot.role && (
                 <text
                   x={position.x}
-                  y={position.y + markerSize + 2.7}
+                  y={position.y + markerSize + 3.5}
                   textAnchor="middle"
                   fill="white"
-                  fontSize="2.2"
+                  fontSize="3.6"
                   fontWeight="600"
                   opacity="0.55"
                   style={{ pointerEvents: 'none' }}
