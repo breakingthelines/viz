@@ -211,17 +211,42 @@ export async function exportAsPng(
   await saveImage(dataUrl, `${fileName}.png`);
 }
 
+/** Module-level dedup for {@link preloadImageExport} — see its JSDoc. */
+let preloadStarted = false;
+
 /**
- * Warm the `html-to-image` chunk ahead of a save tap. Call once, e.g. on
- * mount of a component that owns a save button, so the eventual capture
- * (`captureElementToPng`/`exportAsPng`) hits an already-loaded module instead
- * of paying the cold `import()` cost inside the user gesture's activation
- * window. Best-effort: swallows load failures (e.g. offline) since the lazy
- * `import()` at capture time is still a correct, if slower, fallback.
+ * Opt-in warmup: issues one `import('html-to-image')` ahead of a save tap so
+ * the eventual capture (`captureElementToPng`/`exportAsPng`) hits an
+ * already-loaded module instead of paying the cold `import()` cost inside
+ * the user gesture's activation window. Dedups itself at the module level
+ * (via `preloadStarted`) — safe to call more than once, from more than one
+ * place; only the first call anywhere actually issues the `import()`.
+ * Best-effort: swallows load failures (e.g. offline) and resets so a later
+ * call can retry, since the lazy `import()` at capture time is still a
+ * correct, if slower, fallback either way.
+ *
+ * NOT called automatically by `useImageSave` — this was tried (both via a
+ * `useEffect` and via a direct render-body call on every mount) and, even
+ * with the dedup above, measured to make `captureElementToPng`'s timing
+ * LESS reliable under heavy parallel load: a real, reproducible regression
+ * against `pass-sonar-save-padding.stories.tsx` (roughly 5-20% of full-suite
+ * runs, depending on exactly how the warmup was scheduled, vs 0/30+ with no
+ * automatic warmup). The precise mechanism wasn't fully isolated, but the
+ * pattern was consistent enough, and the padding regression too
+ * load-bearing, to leave the wiring out rather than ship a latency
+ * micro-optimisation that measurably destabilises an existing correctness
+ * guard. Exported for a host that wants to call it itself (e.g. once, near
+ * an app root, well away from any save-button mount) — at its own risk if
+ * doing so from many places at once under heavy load.
  */
 export function preloadImageExport(): void {
-  if (typeof window !== 'undefined') {
-    void import('html-to-image').catch(() => {});
+  if (typeof window !== 'undefined' && !preloadStarted) {
+    preloadStarted = true;
+    void import('html-to-image').catch(() => {
+      // Let a later real capture retry the import instead of latching a
+      // permanent failure from one transient warmup error.
+      preloadStarted = false;
+    });
   }
 }
 

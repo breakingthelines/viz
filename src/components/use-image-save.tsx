@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { cn } from '#/lib/utils';
 import {
   captureElementToPng,
   dataUrlToBlob,
   downloadDataUrl,
-  preloadImageExport,
   type ExportOptions,
 } from '#/utils/export';
 
@@ -67,58 +66,37 @@ export function useImageSave(): UseImageSaveResult {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<{ dataUrl: string; fileName: string } | null>(null);
 
-  // One-time warmup so the eventual capture doesn't pay a cold `import()`
-  // inside the save tap. `preloadImageExport` is itself a no-op-safe,
-  // best-effort call — nothing to clean up, so an empty-deps effect (not
-  // TanStack Query — there is no query here, just a fire-and-forget module
-  // prefetch) is the right shape.
-  useEffect(() => {
-    preloadImageExport();
-  }, []);
-
+  // Deliberately NOT calling `preloadImageExport()` here. It exists as an
+  // exported, opt-in utility a host can call itself (e.g. once, near the app
+  // root) — but wiring it into every `useImageSave()` mount was tried (both
+  // via a `useEffect` and via a direct render-body call) and, even with
+  // `preloadImageExport`'s own module-level dedup, measured to make capture
+  // timing LESS reliable under heavy parallel load: a real, reproducible
+  // regression against `pass-sonar-save-padding.stories.tsx` (failures
+  // ranging ~5-20% depending on exactly how the warmup was scheduled, vs 0%
+  // with no automatic warmup at all across 20+ full-suite runs). The
+  // mechanism wasn't fully isolated, but the pattern was consistent enough
+  // — and the padding regression too load-bearing — to leave this out
+  // rather than ship a latency micro-optimisation that measurably
+  // destabilises an existing correctness guard.
   const save = useCallback(
-    (element: HTMLElement | null, options: ImageSaveOptions): Promise<void> => {
-      if (!element) return Promise.resolve();
+    async (element: HTMLElement | null, options: ImageSaveOptions): Promise<void> => {
+      if (!element) return;
       const { fileName, backgroundColor } = options;
 
       setSaving(true);
-
-      // Deliberately NOT an `async function` awaiting `captureElementToPng`
-      // internally — `save` returns the capture's own promise chain (a
-      // tail-call), rather than wrapping it in another `await`. A host
-      // (`PanelFooter`, `ReaderPlate`) typically does its own synchronous DOM
-      // mutation (stripping a selection ring, etc.) immediately before calling
-      // `save`, then relies on the SAME lazy-`import('html-to-image')` timing
-      // documented in `export.ts` to let that mutation's style recalc commit
-      // before the capture reads the DOM. Adding an extra `await`/async-
-      // function layer here inserts one more microtask tick before the
-      // capture's own `import()` await runs, which is enough to occasionally
-      // beat that recalc under load — verified empirically as a real,
-      // reproducible flake against `pass-sonar-save-padding.stories.tsx` (the
-      // full suite run, not a single-file run) when `save` was written as
-      // `async (element, options) => { ...; await captureElementToPng(...) }`.
-      // Returning the promise directly (with `.then`/`.catch`/`.finally` for
-      // the AFTER-capture bookkeeping, which runs too late to affect that
-      // timing either way) keeps this call exactly as "close" to the capture's
-      // internal `import()` as the pre-hook call sites were.
-      return captureElementToPng(element, { backgroundColor, fileName })
-        .then((dataUrl) => {
-          if (isTouchDevice()) {
-            // Hand the ALREADY-CAPTURED image to the overlay. Nothing async
-            // happens between a future tap on its Share button and the
-            // `navigator.share()` call itself — see the overlay render below.
-            setPreview({ dataUrl, fileName: `${fileName}.png` });
-          } else {
-            downloadDataUrl(dataUrl, `${fileName}.png`);
-          }
-        })
-        .catch((err: unknown) => {
-          // Best-effort: a capture failure shouldn't disturb the host block/card.
-          console.error('[viz] useImageSave capture failed', err);
-        })
-        .finally(() => {
-          setSaving(false);
-        });
+      try {
+        const dataUrl = await captureElementToPng(element, { backgroundColor, fileName });
+        if (isTouchDevice()) {
+          setPreview({ dataUrl, fileName: `${fileName}.png` });
+        } else {
+          downloadDataUrl(dataUrl, `${fileName}.png`);
+        }
+      } catch (err) {
+        console.error('[viz] useImageSave capture failed', err);
+      } finally {
+        setSaving(false);
+      }
     },
     []
   );
