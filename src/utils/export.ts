@@ -190,11 +190,35 @@ export async function captureElementToPng(
   // indefinitely rasterising an SVG that references external images. Restored
   // afterwards so the live DOM keeps its original hrefs.
   const restoreSvgImages = await inlineSvgImageHrefs(element);
+  // Collapse export-ignored chrome (e.g. the save button) so its siblings
+  // reflow flush before capture. Restored afterwards.
+  const restoreHidden = hideExportIgnored(element);
   try {
     return await toPng(element, buildCaptureOptions(element, options));
   } finally {
+    restoreHidden();
     restoreSvgImages();
   }
+}
+
+/**
+ * Collapse every `data-export-ignore="true"` node with `display: none` before
+ * capture, returning a restore function. The `filterExportIgnore` capture
+ * option drops these nodes from the clone, but html-to-image still reserves
+ * their original layout box — leaving a gap where they sat (e.g. the save
+ * button's slot beside a card footer's formation label, which pushes the label
+ * off the corner). `display: none` removes them from layout so their siblings
+ * reflow flush; restored immediately after the capture.
+ */
+function hideExportIgnored(element: HTMLElement): () => void {
+  const nodes = Array.from(element.querySelectorAll<HTMLElement>('[data-export-ignore="true"]'));
+  const previous = nodes.map((node) => node.style.display);
+  for (const node of nodes) node.style.display = 'none';
+  return () => {
+    nodes.forEach((node, i) => {
+      node.style.display = previous[i];
+    });
+  };
 }
 
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
