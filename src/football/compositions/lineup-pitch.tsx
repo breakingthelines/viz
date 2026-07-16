@@ -65,6 +65,15 @@ export interface LineupPitchProps {
   editable?: boolean;
   /** Fires with the slot index when a slot is clicked (only when editable). */
   onSlotClick?: (index: number) => void;
+  /**
+   * Fires with a filled slot's player (and its index) when the marker is
+   * clicked in read-only mode — e.g. to navigate to the player's entity page.
+   * Has no effect when `editable`: there, a marker click opens the assignment
+   * picker via {@link onSlotClick} instead, so a click never means two
+   * different things on the same marker. Empty slots are never interactive
+   * under this prop (there's no player to click through to).
+   */
+  onPlayerClick?: (player: LineupSlotPlayer, index: number) => void;
   /** Index of the currently selected slot (highlight ring). */
   selectedSlotIndex?: number;
 }
@@ -90,6 +99,7 @@ export function LineupPitch({
   showNames = true,
   editable = false,
   onSlotClick,
+  onPlayerClick,
   selectedSlotIndex,
 }: LineupPitchProps) {
   const color = teamColor ?? 'var(--color-team-home)';
@@ -115,8 +125,19 @@ export function LineupPitch({
         {slots.map((slot, index) => {
           const position = { x: finite(slot.x), y: finite(slot.y) };
           const isSelected = selectedSlotIndex === index;
-          const interactive = editable && Boolean(onSlotClick);
-          const handleClick = interactive ? () => onSlotClick?.(index) : undefined;
+          // In the builder (`editable`), every slot click opens the assignment
+          // picker. In the reader, only FILLED slots can be interactive, and
+          // only to report the player out via `onPlayerClick` (e.g. a link to
+          // their entity page) — empty slots have nothing to click through to.
+          const interactive = editable
+            ? Boolean(onSlotClick)
+            : Boolean(slot.player && onPlayerClick);
+          const handleClick = interactive
+            ? () => {
+                if (editable) onSlotClick?.(index);
+                else if (slot.player) onPlayerClick?.(slot.player, index);
+              }
+            : undefined;
 
           if (slot.player) {
             const player = slot.player;

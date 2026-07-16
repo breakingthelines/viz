@@ -157,3 +157,39 @@ export const Headshots: Story = {
     })),
   },
 };
+
+/**
+ * Read-only markers wired to `onPlayerClick` — how a host (the editor's
+ * Lineup reader) links a headshot through to the player's entity page.
+ * Clicking a filled marker reports the player below (a host would navigate
+ * instead); empty slots and the `editable` builder are unaffected.
+ */
+export const ReaderWithPlayerLinks: Story = {
+  render: function ReaderWithPlayerLinksStory() {
+    const [lastClicked, setLastClicked] = useState<string | null>(null);
+    const slots = templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    }));
+
+    return (
+      <div className="flex flex-col gap-3">
+        <LineupPitch
+          slots={slots}
+          teamName="Arsenal"
+          teamShortName="Arsenal"
+          formation="4-3-3"
+          teamColor="#eb0000"
+          editable={false}
+          onPlayerClick={(player) => setLastClicked(`${player.name} (#${player.shirtNumber})`)}
+        />
+        <p
+          data-testid="last-clicked"
+          style={{ color: 'white', fontSize: 13, textAlign: 'center', minHeight: 18 }}
+        >
+          {lastClicked ? `Clicked: ${lastClicked}` : 'Click a headshot marker →'}
+        </p>
+      </div>
+    );
+  },
+};
