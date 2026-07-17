@@ -39,6 +39,17 @@ export interface PitchProps {
    * paints rather than being cut.
    */
   padding?: number;
+  /**
+   * How the pitch fills its container. `'width'` (default) is the classic
+   * `w-full h-auto` behaviour — the SVG is as wide as its container and the
+   * height follows from the aspect ratio; this is right whenever the
+   * container's WIDTH is the binding constraint (an inline card, a portrait
+   * viewport). `'height'` instead fills the container's height and derives
+   * width from it (capped at the container width so it can never overflow
+   * horizontally) — for a container whose HEIGHT is the binding constraint,
+   * e.g. a fullscreen pitch on a landscape phone, which is wide but short.
+   */
+  fit?: 'width' | 'height';
   /** Children to render on the pitch (markers, arrows, etc.) */
   children?: React.ReactNode;
 }
@@ -59,6 +70,7 @@ export function Pitch({
   grassColor,
   showPattern,
   padding = 0,
+  fit = 'width',
   children,
 }: PitchProps) {
   const isDark = theme === 'dark';
@@ -96,7 +108,11 @@ export function Pitch({
   return (
     <svg
       viewBox={viewBox}
-      className={cn('w-full h-auto aspect-[3/2]', className)}
+      className={cn(
+        fit === 'height' ? 'h-full w-auto max-w-full' : 'w-full h-auto',
+        'aspect-[3/2]',
+        className
+      )}
       style={{ overflow: 'visible' }}
       xmlns="http://www.w3.org/2000/svg"
     >
