@@ -93,11 +93,30 @@ export function SvgHeadshot({
           height={r * 2}
           clipPath={`url(#${clipId})`}
           preserveAspectRatio="xMidYMid slice"
-          // Load cross-origin so the CDN photo can be rasterised into the
-          // share-as-image canvas without tainting it (the BTL CDN reflects
-          // Access-Control-Allow-Origin per request). Without this the headshot
-          // renders on screen but comes out blank in the saved PNG.
-          crossOrigin="anonymous"
+          // Deliberately NO `crossOrigin` here — this is a plain on-screen
+          // render, and canvas-tainting rules (what `crossOrigin` is for)
+          // only matter when pixels get read back out via a canvas; drawing a
+          // cross-origin image straight to the page needs no CORS grant at
+          // all, exactly like a normal `<img>`. An earlier version of this
+          // component set `crossOrigin="anonymous"` unconditionally so the
+          // save-as-image canvas capture wouldn't taint — but that made EVERY
+          // on-screen headshot (the vast majority of renders, which never get
+          // exported) depend on the CDN returning a matching
+          // Access-Control-Allow-Origin for the viewer's exact origin. That
+          // isn't guaranteed for every request (a stale pre-CORS edge-cache
+          // copy, a not-yet-allowlisted origin, an older hotlink baked into
+          // already-published content) — a miss doesn't error visibly, it
+          // just silently swaps in the monogram fallback below, which is
+          // very plausibly why headshots were reported "not loading" on some
+          // devices/networks and not others. The export path no longer needs
+          // this attribute either: `captureElementToPng` (viz `utils/export.ts`)
+          // pre-inlines every SVG `<image>` href as a same-origin `data:` URI
+          // via its OWN independent CORS-safe fetch before rasterising, so it
+          // never depends on this live element's crossOrigin at all. See
+          // {@link Crest} for the sibling primitive, which still needs
+          // `crossOrigin` (its plain `<img>` export path doesn't get the same
+          // pre-inlining) — do not "fix" that one to match this without
+          // re-verifying its export path first.
           // Missing/404 photo → fall back to the monogram disc below.
           onError={() => setFailed(true)}
           style={style}
