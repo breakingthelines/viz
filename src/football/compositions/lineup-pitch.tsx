@@ -255,7 +255,7 @@ export function LineupPitch({
   numberColor = 'white',
   theme = 'dark',
   className,
-  markerSize: markerSizeRaw = 5.6,
+  markerSize: markerSizeRaw,
   markerContent = 'number',
   showNames = true,
   editable = false,
