@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
-import { Pitch } from '#/football/primitives/pitch';
-import type { PitchTheme } from '#/football/primitives/pitch';
+import { Pitch, toScreen, fromScreen } from '#/football/primitives/pitch';
+import type { PitchTheme, PitchOrientation } from '#/football/primitives/pitch';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { monogram, surname } from '#/football/lib/player-name';
 import { SvgHeadshot } from '#/football/lib/headshot';
@@ -115,27 +115,50 @@ export interface LineupPitchProps {
    * landscape phone viewport, which is wide but short.
    */
   fit?: 'width' | 'height';
+  /**
+   * Pitch orientation. Defaults to `landscape` — every existing consumer
+   * (the editor's Lineup block, Match Centre) renders identically to today.
+   * `portrait` rotates the pitch a quarter-turn so the own goal sits at the
+   * bottom and the front line at the top — attacking UP the screen — for a
+   * lineup that needs to fill a phone-shaped viewport. Forwarded straight to
+   * the underlying {@link Pitch}; every slot's marker is repositioned via
+   * the same {@link toScreen} remap so markings and markers always agree on
+   * where the pitch is. Marker CONTENT — the number/monogram, the name
+   * label, the headshot, the empty-slot "+" — is never rotated, only its
+   * anchor point moves, so it stays upright and legible in both
+   * orientations. Drag-to-swap (`onSlotsSwap`) also works unchanged in
+   * portrait: the pointer-to-pitch-space conversion accounts for
+   * orientation via {@link fromScreen} before any hit-testing happens, so
+   * the gesture math itself never needs to know which orientation is active.
+   */
+  orientation?: PitchOrientation;
 }
 
 /** Client-pixel movement past which a marker press counts as a drag rather than a tap. */
 const DRAG_THRESHOLD_PX = 6;
 
 /**
- * Project a pointer event's screen position into the SVG's own 0–100 pitch
- * user-space — the same space `slot.x` / `slot.y` already live in — via the
- * element's screen CTM. This is what keeps the drag tracking correct
- * regardless of how large the `aspect-[3/2]` box is rendered at (a mobile
- * card vs. the desktop builder) and however the SVG is letterboxed within it.
+ * Project a pointer event's screen position into the pitch's own 0–100
+ * normalized user-space — the same space `slot.x` / `slot.y` already live in
+ * — via the element's screen CTM, then {@link fromScreen} to undo the
+ * `orientation` remap. This is what keeps the drag tracking correct
+ * regardless of how large the `aspect-[3/2]`/`aspect-[2/3]` box is rendered
+ * at (a mobile card vs. the desktop builder), however the SVG is
+ * letterboxed within it, AND regardless of orientation — everything
+ * downstream (`nearestSlotIndex`, the accumulated `dx`/`dy` offset) reads
+ * this result and stays written purely in terms of `slot.x`/`slot.y`,
+ * without ever needing to know which orientation is active.
  */
 function toPitchPoint(
   svg: SVGSVGElement,
   clientX: number,
-  clientY: number
+  clientY: number,
+  orientation: PitchOrientation
 ): { x: number; y: number } {
   const ctm = svg.getScreenCTM();
   if (!ctm) return { x: clientX, y: clientY };
   const { x, y } = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
-  return { x, y };
+  return fromScreen(x, y, orientation);
 }
 
 /** The slot whose (x, y) is closest to a pitch-space point — the pending drop target. */
@@ -245,6 +268,11 @@ function MarkerGlyph({
  * assignments, without ever leaving the formation grid. It's built on raw
  * Pointer Events + `getScreenCTM()` hit-testing rather than a DnD library —
  * see the module doc for why.
+ *
+ * Renders `landscape` (goal-to-goal left → right) by default; pass
+ * `orientation="portrait"` for a vertical pitch (own goal at the bottom,
+ * attacking up the screen) that fills a phone-shaped viewport — see
+ * {@link LineupPitchProps.orientation}.
  */
 export function LineupPitch({
   slots,
@@ -265,6 +293,7 @@ export function LineupPitch({
   selectedSlotIndex,
   fullscreen = false,
   fit = 'width',
+  orientation = 'landscape',
 }: LineupPitchProps) {
   const color = teamColor ?? 'var(--color-team-home)';
   const chipLabel = teamShortName ?? teamName;
@@ -332,7 +361,7 @@ export function LineupPitch({
     if (!svg) return;
     const movedPx = Math.hypot(e.clientX - drag.startClientX, e.clientY - drag.startClientY);
     if (!drag.dragging && movedPx < DRAG_THRESHOLD_PX) return; // still within tap tolerance
-    const pt = toPitchPoint(svg, e.clientX, e.clientY);
+    const pt = toPitchPoint(svg, e.clientX, e.clientY, orientation);
     setDrag({
       ...drag,
       dragging: true,
@@ -372,9 +401,16 @@ export function LineupPitch({
         </div>
       )}
 
-      <Pitch variant="full" theme={theme} fit={fit}>
+      <Pitch variant="full" theme={theme} fit={fit} orientation={orientation}>
         {slots.map((slot, index) => {
-          const position = { x: finite(slot.x), y: finite(slot.y) };
+          // `position` is SCREEN space (post-`toScreen`) — every render usage
+          // below (marker glyph, rings, name/role labels) draws directly at
+          // this anchor with plain, unrotated local offsets, exactly as
+          // before this prop existed. `slot.x`/`slot.y` themselves stay
+          // untouched, normalized pitch-space values throughout — the
+          // formation data never changes with orientation, only where it
+          // lands on screen.
+          const position = toScreen(finite(slot.x), finite(slot.y), orientation);
           const isSelected = selectedSlotIndex === index;
           // In the builder (`editable`), every slot click opens the assignment
           // picker. In the reader, only FILLED slots can be interactive, and
@@ -605,13 +641,21 @@ export function LineupPitch({
           (() => {
             const origin = slots[drag.fromIndex];
             if (!origin?.player) return null;
-            const ghostX = finite(origin.x) + drag.dx;
-            const ghostY = finite(origin.y) + drag.dy;
+            // `drag.dx`/`drag.dy` are a normalized-space offset (see
+            // `DragGesture`'s doc comment) — add them to the origin slot's
+            // own normalized position, THEN convert to screen space for
+            // rendering, so the ghost tracks the pointer correctly in
+            // either orientation.
+            const ghost = toScreen(
+              finite(origin.x) + drag.dx,
+              finite(origin.y) + drag.dy,
+              orientation
+            );
             return (
               <g style={{ pointerEvents: 'none' }} className="drop-shadow-lg">
                 <MarkerGlyph
-                  x={ghostX}
-                  y={ghostY}
+                  x={ghost.x}
+                  y={ghost.y}
                   player={origin.player}
                   markerSize={markerSize * 1.06}
                   markerContent={markerContent}

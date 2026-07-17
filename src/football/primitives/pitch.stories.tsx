@@ -21,6 +21,10 @@ const meta = {
     showPattern: {
       control: 'boolean',
     },
+    orientation: {
+      control: 'select',
+      options: ['landscape', 'portrait'],
+    },
   },
 } satisfies Meta<typeof Pitch>;
 
@@ -189,5 +193,99 @@ export const DefaultPaddingUnchanged: Story = {
     expect(svg, 'pitch SVG present').not.toBeNull();
     expect(svg!.getAttribute('viewBox')).toBe('0 0 100 100');
     expect(svg!.getAttribute('class') ?? '').toContain('aspect-[3/2]');
+  },
+};
+
+/**
+ * Portrait orientation — the pitch rotated a quarter-turn so the own goal
+ * sits at the BOTTOM and the opposition goal at the TOP (attacking UP the
+ * screen), for a lineup that needs to fill a phone-shaped viewport. Locks:
+ * the aspect flips to `aspect-[2/3]`, the viewBox stays `0 0 100 100` (the
+ * full-pitch box is a fixed shape of the quarter-turn — see `toScreen`), and
+ * the two goal markings actually land at opposite ends of the box (proof
+ * this is a real rotation, not a no-op that only swapped the CSS aspect):
+ * one goal's `y` sits just below the box (own goal, bottom), the other's
+ * just above it (opposition goal, top).
+ */
+export const Portrait: Story = {
+  args: {
+    variant: 'full',
+    orientation: 'portrait',
+    showPattern: true,
+    lineColor: '#ffffff',
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '300px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('viewBox')).toBe('0 0 100 100');
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
+
+    // The two goal-mouth rects (9.6 wide x 2 deep — the same shape landscape
+    // always drew) must land at opposite ends of the box after the
+    // quarter-turn. Matched by APPROXIMATE size (not exact string equality):
+    // `screenRect` derives width/height from a corner subtraction, which can
+    // land a float epsilon off the clean authored 9.6/2 (e.g.
+    // `9.600000000000001`) — a rendering non-issue, but exact string
+    // equality on it would make this assertion, not the pitch, wrong.
+    const rects = [...svg!.querySelectorAll('rect')];
+    const goalRects = rects.filter((r) => {
+      const w = Number(r.getAttribute('width'));
+      const h = Number(r.getAttribute('height'));
+      return Math.abs(w - 9.6) < 0.01 && Math.abs(h - 2) < 0.01;
+    });
+    expect(goalRects.length, 'both goal-mouth rects found').toBe(2);
+    const ys = goalRects.map((r) => Number(r.getAttribute('y')));
+    expect(Math.min(...ys), 'opposition goal at the top').toBeCloseTo(-2, 1);
+    expect(Math.max(...ys), 'own goal at the bottom').toBeCloseTo(100, 1);
+  },
+};
+
+/**
+ * Portrait `half` viewBox — the attacking half (nearest the opposition goal)
+ * becomes the TOP slice of the box in portrait, since the opposition goal
+ * now sits at the top: `y: [0, 50]` rather than landscape's `x: [50, 100]`.
+ */
+export const PortraitHalf: Story = {
+  args: { variant: 'half', orientation: 'portrait', showPattern: true },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '200px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('viewBox')).toBe('0 0 100 50');
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
+  },
+};
+
+/**
+ * Portrait `attacking-third` viewBox — same logic as `PortraitHalf`, one
+ * third of the box: `y: [0, 33.33]`.
+ */
+export const PortraitAttackingThird: Story = {
+  args: { variant: 'attacking-third', orientation: 'portrait', showPattern: true },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '200px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('viewBox')).toBe('0 0 100 33.33');
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
   },
 };

@@ -16,6 +16,7 @@ const meta = {
     markerContent: { control: 'select', options: ['number', 'headshot'] },
     showNames: { control: 'boolean' },
     editable: { control: 'boolean' },
+    orientation: { control: 'select', options: ['landscape', 'portrait'] },
   },
   decorators: [
     (Story) => (
@@ -238,6 +239,116 @@ export const DragToSwap: Story = {
   },
 };
 
+/**
+ * Drag-to-swap in `portrait`. Identical gesture coverage to {@link DragToSwap}
+ * (mouse drag between two filled markers, a plain tap still opening the
+ * picker, a touch drag, and a drag onto an empty slot) — proof the gesture
+ * math is genuinely orientation-oblivious rather than re-tuned per
+ * orientation: `toPitchPoint` converts the pointer's screen position back to
+ * normalized pitch space via `fromScreen` before any hit-testing runs, so
+ * every downstream calculation (`nearestSlotIndex`, the accumulated
+ * `dx`/`dy` offset) is byte-identical code to the landscape gesture. The
+ * same `centerOf(el)` + `getBoundingClientRect()` approach the landscape
+ * story uses works unchanged here too, since it always operates in real
+ * screen pixels regardless of how the pitch is internally laid out.
+ */
+export const PortraitDragToSwap: Story = {
+  args: { slots: [], editable: true, formation: '4-3-3', orientation: 'portrait' },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '360px', padding: '24px', background: '#121212', borderRadius: 12 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: function PortraitDragToSwapStory() {
+    const [slots, setSlots] = useState<LineupSlot[]>(() =>
+      templateSlots('4-3-3').map((slot, i) =>
+        i < 10
+          ? { ...slot, player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 } }
+          : slot
+      )
+    );
+    const [lastTap, setLastTap] = useState('none');
+
+    const handleSlotsSwap = (fromIndex: number, toIndex: number) => {
+      setSlots((prev) => {
+        const next = [...prev];
+        const fromPlayer = next[fromIndex].player;
+        next[fromIndex] = { ...next[fromIndex], player: next[toIndex].player };
+        next[toIndex] = { ...next[toIndex], player: fromPlayer };
+        return next;
+      });
+    };
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div data-testid="last-tap" style={{ fontSize: 12, color: 'white', opacity: 0.7 }}>
+          Last tap: {lastTap}
+        </div>
+        <LineupPitch
+          slots={slots}
+          teamName="Arsenal"
+          teamShortName="Arsenal"
+          formation="4-3-3"
+          teamColor="#eb0000"
+          editable
+          orientation="portrait"
+          onSlotClick={(index) => setLastTap(slots[index]?.player?.name ?? `empty #${index}`)}
+          onSlotsSwap={handleSlotsSwap}
+        />
+      </div>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const centerOf = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    };
+
+    // Mouse drag: GK (Raya, now at the BOTTOM of the box) onto the CB slot
+    // (Gabriel) — a swap between two filled markers, same as the landscape
+    // story, just at portrait screen positions.
+    const gk = await canvas.findByRole('button', { name: 'Raya' });
+    const cb = await canvas.findByRole('button', { name: 'Gabriel' });
+    await userEvent.pointer([
+      { keys: '[MouseLeft>]', target: gk, coords: centerOf(gk) },
+      { target: gk, coords: centerOf(cb) },
+      { keys: '[/MouseLeft]', target: gk, coords: centerOf(cb) },
+    ]);
+    await expect(gk).toHaveAttribute('aria-label', 'Gabriel');
+    await expect(cb).toHaveAttribute('aria-label', 'Raya');
+    await expect(canvas.getByTestId('last-tap')).toHaveTextContent('Last tap: none');
+
+    // A plain tap still opens the picker, unchanged.
+    const saka = await canvas.findByRole('button', { name: 'Saka' });
+    await userEvent.click(saka);
+    await expect(canvas.getByTestId('last-tap')).toHaveTextContent('Last tap: Saka');
+
+    // Touch drag (Pointer Events).
+    const lw = await canvas.findByRole('button', { name: 'Saliba' });
+    const st = await canvas.findByRole('button', { name: 'Calafiori' });
+    await userEvent.pointer([
+      { keys: '[TouchA>]', target: lw, coords: centerOf(lw) },
+      { pointerName: 'TouchA', target: lw, coords: centerOf(st) },
+      { keys: '[/TouchA]', target: lw, coords: centerOf(st) },
+    ]);
+    await expect(lw).toHaveAttribute('aria-label', 'Calafiori');
+    await expect(st).toHaveAttribute('aria-label', 'Saliba');
+
+    // Drag onto an EMPTY slot is a valid move.
+    const merino = await canvas.findByRole('button', { name: 'Merino' });
+    const emptySlot = await canvas.findByRole('button', { name: /^Add /i });
+    await userEvent.pointer([
+      { keys: '[MouseLeft>]', target: merino, coords: centerOf(merino) },
+      { target: merino, coords: centerOf(emptySlot) },
+      { keys: '[/MouseLeft]', target: merino, coords: centerOf(emptySlot) },
+    ]);
+    await expect(emptySlot).toHaveAttribute('aria-label', 'Merino');
+  },
+};
+
 /** A fully-populated, read-only XI — how a published lineup renders in the reader. */
 export const Reader: Story = {
   args: {
@@ -251,6 +362,65 @@ export const Reader: Story = {
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
     })),
+  },
+};
+
+/**
+ * Portrait orientation, read-only — the pitch rotated a quarter-turn so the
+ * own goal (and the goalkeeper) sit at the BOTTOM of the box and the front
+ * line at the TOP, attacking up the screen, for a lineup that needs to fill
+ * a phone-shaped viewport. Marker CONTENT (numbers, names) stays upright —
+ * only each marker's ANCHOR POINT moves. Locks both: the GK renders visually
+ * below every front-line player, and no marker or label carries a rotate
+ * transform.
+ */
+export const PortraitReader: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-3-3',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    orientation: 'portrait',
+    slots: templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '320px', padding: '24px', background: '#121212', borderRadius: 12 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
+
+    // GK (Raya, slot 0 of the 4-3-3 template) sits at the BOTTOM of the box:
+    // its marker's screen `cy` is visually BELOW (a larger y) every
+    // front-line player (the wide forwards + the striker).
+    const gk = canvasElement.querySelector('[aria-label="Raya"]');
+    expect(gk, 'GK marker present').not.toBeNull();
+    const gkY = Number(gk!.querySelector('circle')!.getAttribute('cy'));
+
+    for (const name of ['Saka', 'Havertz', 'Martinelli']) {
+      const marker = canvasElement.querySelector(`[aria-label="${name}"]`);
+      expect(marker, `${name} marker present`).not.toBeNull();
+      const forwardY = Number(marker!.querySelector('circle')!.getAttribute('cy'));
+      expect(gkY, `GK renders below ${name} (larger screen y)`).toBeGreaterThan(forwardY);
+    }
+
+    // Marker content stays upright in both orientations: no marker group or
+    // its text carries an SVG rotate transform — only the anchor point
+    // (cx/cy) moves, per the module doc's "content never rotates" contract.
+    expect(gk!.getAttribute('transform'), 'GK marker group unrotated').toBeNull();
+    const gkNumber = gk!.querySelector('text');
+    expect(gkNumber, 'GK number glyph present').not.toBeNull();
+    expect(gkNumber!.getAttribute('transform'), 'number glyph unrotated').toBeNull();
   },
 };
 

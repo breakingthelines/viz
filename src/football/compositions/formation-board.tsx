@@ -1,6 +1,6 @@
 import { cn } from '#/lib/utils';
-import { Pitch } from '#/football/primitives/pitch';
-import type { PitchTheme } from '#/football/primitives/pitch';
+import { Pitch, toScreen } from '#/football/primitives/pitch';
+import type { PitchTheme, PitchOrientation } from '#/football/primitives/pitch';
 import { PlayerMarker } from '#/football/primitives/player-marker';
 import type { Formation, FormationPosition } from '#/football/types';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
@@ -34,6 +34,17 @@ export interface FormationBoardProps {
    * SCHEDULED match's Lineups tab).
    */
   markerVariant?: 'confirmed' | 'predicted';
+  /**
+   * Pitch orientation. Defaults to `landscape` — every existing consumer
+   * renders identically to today. `portrait` rotates the pitch a
+   * quarter-turn so the own goal sits at the bottom and the front line at
+   * the top. Forwarded to the underlying {@link Pitch}; applied AFTER
+   * `flip`, so the two compose exactly as their names suggest — `flip`
+   * mirrors which end of the (still-normalized) pitch a team is shown
+   * attacking, `orientation` then places that normalized pitch on screen.
+   * Marker content (numbers, names) is never rotated, only repositioned.
+   */
+  orientation?: PitchOrientation;
 }
 
 /**
@@ -51,15 +62,17 @@ export function FormationBoard({
   selectedPlayerId,
   flip = false,
   markerVariant = 'confirmed',
+  orientation = 'landscape',
 }: FormationBoardProps) {
   const color = teamColor ?? formation.team.primaryColor ?? 'var(--color-team-home)';
 
   const getPosition = (pos: FormationPosition) => {
-    if (!flip) return pos.position;
-    return {
-      x: 100 - pos.position.x,
-      y: 100 - pos.position.y,
-    };
+    // `flip` operates in normalized pitch space first (unchanged logic);
+    // `toScreen` then places that normalized point on screen for the
+    // requested orientation — identity in `landscape`, so this returns
+    // exactly what `flip` alone produced before this prop existed.
+    const semantic = flip ? { x: 100 - pos.position.x, y: 100 - pos.position.y } : pos.position;
+    return toScreen(semantic.x, semantic.y, orientation);
   };
 
   return (
@@ -81,7 +94,7 @@ export function FormationBoard({
           </span>
         ) : null}
       </div>
-      <Pitch variant="full" theme={theme}>
+      <Pitch variant="full" theme={theme} orientation={orientation}>
         {formation.positions.map((pos) => {
           const position = getPosition(pos);
           const isSelected = pos.player.id === selectedPlayerId;

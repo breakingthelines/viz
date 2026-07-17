@@ -1,8 +1,9 @@
 // Football - Primitives
-export { Pitch, PlayerMarker, Arrow } from './football/primitives/index';
+export { Pitch, PlayerMarker, Arrow, toScreen, fromScreen } from './football/primitives/index';
 export type {
   PitchProps,
   PitchVariant,
+  PitchOrientation,
   PlayerMarkerProps,
   ArrowProps,
 } from './football/primitives/index';
