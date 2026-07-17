@@ -1,6 +1,12 @@
 // Primitives
-export { Pitch, PlayerMarker, Arrow } from './primitives/index';
-export type { PitchProps, PitchVariant, PlayerMarkerProps, ArrowProps } from './primitives/index';
+export { Pitch, PlayerMarker, Arrow, toScreen, fromScreen } from './primitives/index';
+export type {
+  PitchProps,
+  PitchVariant,
+  PitchOrientation,
+  PlayerMarkerProps,
+  ArrowProps,
+} from './primitives/index';
 
 // Compositions
 export { ShotMap, FormationBoard } from './compositions/index';

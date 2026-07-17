@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
+import { expect } from 'storybook/test';
 import { FormationBoard } from './formation-board';
 import { argentinaFormation, franceFormation } from '#/test/fixtures/statsbomb-open';
 import type { FormationPosition } from '#/football/types';
@@ -27,6 +28,10 @@ const meta = {
     },
     flip: {
       control: 'boolean',
+    },
+    orientation: {
+      control: 'select',
+      options: ['landscape', 'portrait'],
     },
   },
   decorators: [
@@ -137,4 +142,53 @@ export const BothTeams: Story = {
     </div>
   ),
   decorators: [],
+};
+
+/**
+ * Portrait orientation — the pitch rotated a quarter-turn so the GK (E.
+ * Martínez, `x: 5` — near the own goal) renders at the BOTTOM and the
+ * forward line (Di María/Messi/Álvarez, `x: 60–65` — near the opposition
+ * goal) at the TOP. `orientation` composes with `flip` cleanly since it
+ * applies AFTER it (see {@link FormationBoardProps.orientation}) — this
+ * story doesn't flip, but the ordering is what lets a future caller combine
+ * both without a special case. Marker content (numbers) stays upright.
+ */
+export const Portrait: Story = {
+  args: {
+    formation: argentinaFormation,
+    theme: 'dark',
+    orientation: 'portrait',
+    showNumbers: true,
+    markerSize: 3,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '320px', background: '#0d0d0d', padding: '16px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
+
+    const gk = canvasElement.querySelector('[aria-label="E. Martínez"]');
+    expect(gk, 'GK marker present').not.toBeNull();
+    const gkY = Number(gk!.querySelector('circle')!.getAttribute('cy'));
+
+    for (const name of ['Á. Di María', 'L. Messi', 'J. Álvarez']) {
+      const marker = canvasElement.querySelector(`[aria-label="${name}"]`);
+      expect(marker, `${name} marker present`).not.toBeNull();
+      const forwardY = Number(marker!.querySelector('circle')!.getAttribute('cy'));
+      expect(gkY, `GK renders below ${name} (larger screen y)`).toBeGreaterThan(forwardY);
+    }
+
+    // Marker content stays upright: no rotate transform on the GK's group or
+    // its shirt-number text.
+    expect(gk!.getAttribute('transform'), 'GK marker group unrotated').toBeNull();
+    const gkNumber = gk!.querySelector('text');
+    expect(gkNumber, 'GK number glyph present').not.toBeNull();
+    expect(gkNumber!.getAttribute('transform'), 'number glyph unrotated').toBeNull();
+  },
 };
