@@ -476,3 +476,51 @@ export const ReaderWithPlayerLinks: Story = {
     );
   },
 };
+
+/**
+ * `grassColor`/`lineColor` — forwarded verbatim to the underlying `Pitch` (the
+ * editor's pitch-colour picker sets these; see `PitchColorDropdown` there).
+ * Also doubles as a regression guard that `fillEdgeToEdge` and a custom
+ * background colour compose cleanly: the grass rect must fill the ENTIRE
+ * (non-square) viewBox — a leftover square-shaped fill under a non-square
+ * viewBox would show as the OLD grass colour bleeding through two corners.
+ */
+export const CustomPitchColor: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-3-3',
+    teamColor: '#ffffff',
+    numberColor: '#1f6e3f',
+    grassColor: '#1f6e3f',
+    lineColor: 'rgba(255,255,255,0.4)',
+    editable: false,
+    showNames: true,
+    slots: templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+
+    // Still the fillEdgeToEdge viewBox (letterbox fix) — a custom colour must
+    // not fall back to the classic square one.
+    expect(svg!.getAttribute('viewBox')).toBe('0 0 100 66.66666666666666');
+
+    const rects = Array.from(svg!.querySelectorAll('rect'));
+    const background = rects[0];
+    expect(background?.getAttribute('fill'), 'grass fill is the custom colour').toBe('#1f6e3f');
+    // The background rect spans the full viewBox extent (see `fullExtent` in
+    // `Pitch`) — not just the OLD hardcoded "100 100", which would leave two
+    // corners of a non-square viewBox unpainted.
+    expect(background?.getAttribute('width')).toBe('100');
+    expect(background?.getAttribute('height')).toBe('66.66666666666666');
+
+    const outline = rects[1];
+    expect(outline?.parentElement?.getAttribute('stroke'), 'line colour is the custom pair').toBe(
+      'rgba(255,255,255,0.4)'
+    );
+  },
+};
