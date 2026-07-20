@@ -50,6 +50,19 @@ export interface LineupPitchProps {
   numberColor?: string;
   /** Pitch theme. Defaults to `dark` (the editor / reader surface). */
   theme?: PitchTheme;
+  /**
+   * Pitch background (grass) colour. Forwarded verbatim to viz `Pitch`'s own
+   * `grassColor` prop, overriding the theme default.
+   */
+  grassColor?: string;
+  /**
+   * Pitch line colour. Forwarded verbatim to viz `Pitch`'s own `lineColor`
+   * prop, overriding the theme default. `LineupPitch` has no auto-contrast
+   * logic of its own — pass a colour that stays readable against whatever
+   * `grassColor` is set to (the editor's pitch-colour presets each carry a
+   * paired/derived line colour for exactly this).
+   */
+  lineColor?: string;
   /** Additional CSS classes. */
   className?: string;
   /** Marker radius in viewBox units. */
@@ -143,11 +156,14 @@ const DRAG_THRESHOLD_PX = 6;
  * — via the element's screen CTM, then {@link fromScreen} to undo the
  * `orientation` remap. This is what keeps the drag tracking correct
  * regardless of how large the `aspect-[3/2]`/`aspect-[2/3]` box is rendered
- * at (a mobile card vs. the desktop builder), however the SVG is
- * letterboxed within it, AND regardless of orientation — everything
- * downstream (`nearestSlotIndex`, the accumulated `dx`/`dy` offset) reads
- * this result and stays written purely in terms of `slot.x`/`slot.y`,
- * without ever needing to know which orientation is active.
+ * at (a mobile card vs. the desktop builder), AND regardless of
+ * orientation — everything downstream (`nearestSlotIndex`, the accumulated
+ * `dx`/`dy` offset) reads this result and stays written purely in terms of
+ * `slot.x`/`slot.y`, without ever needing to know which orientation is
+ * active. The `fromScreen` call's trailing `true` undoes the SAME
+ * `fillEdgeToEdge` compression this pitch always renders with (see the
+ * `<Pitch>` call below) — omitting it here would leave every drag hit-test
+ * off by that compression's ratio.
  */
 function toPitchPoint(
   svg: SVGSVGElement,
@@ -158,7 +174,7 @@ function toPitchPoint(
   const ctm = svg.getScreenCTM();
   if (!ctm) return { x: clientX, y: clientY };
   const { x, y } = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
-  return fromScreen(x, y, orientation);
+  return fromScreen(x, y, orientation, true);
 }
 
 /** The slot whose (x, y) is closest to a pitch-space point — the pending drop target. */
@@ -273,6 +289,16 @@ function MarkerGlyph({
  * `orientation="portrait"` for a vertical pitch (own goal at the bottom,
  * attacking up the screen) that fills a phone-shaped viewport — see
  * {@link LineupPitchProps.orientation}.
+ *
+ * Always renders its underlying `Pitch` with `fillEdgeToEdge` — a real pitch
+ * is ~3:2 (landscape) / ~2:3 (portrait), not square, so this fills the
+ * `aspect-[3/2]`/`aspect-[2/3]` card edge-to-edge instead of `Pitch`'s
+ * classic square-viewBox letterbox. Every position this component computes
+ * (marking geometry inside `Pitch` itself, each slot's marker via
+ * `toScreen`, the drag ghost, the pointer-to-pitch-space conversion for
+ * drag-to-swap via `toPitchPoint`/`fromScreen`) already funnels through
+ * those shared functions, so this is one consistent remap with nothing left
+ * positioned in the old square space.
  */
 export function LineupPitch({
   slots,
@@ -282,6 +308,8 @@ export function LineupPitch({
   teamColor,
   numberColor = 'white',
   theme = 'dark',
+  grassColor,
+  lineColor,
   className,
   markerSize: markerSizeRaw,
   markerContent = 'number',
@@ -401,7 +429,15 @@ export function LineupPitch({
         </div>
       )}
 
-      <Pitch variant="full" theme={theme} fit={fit} orientation={orientation}>
+      <Pitch
+        variant="full"
+        theme={theme}
+        grassColor={grassColor}
+        lineColor={lineColor}
+        fit={fit}
+        orientation={orientation}
+        fillEdgeToEdge
+      >
         {slots.map((slot, index) => {
           // `position` is SCREEN space (post-`toScreen`) — every render usage
           // below (marker glyph, rings, name/role labels) draws directly at
@@ -409,8 +445,10 @@ export function LineupPitch({
           // before this prop existed. `slot.x`/`slot.y` themselves stay
           // untouched, normalized pitch-space values throughout — the
           // formation data never changes with orientation, only where it
-          // lands on screen.
-          const position = toScreen(finite(slot.x), finite(slot.y), orientation);
+          // lands on screen. The trailing `true` matches this pitch's
+          // `fillEdgeToEdge` above, so markers land in the same (non-square)
+          // screen space the pitch markings themselves now render in.
+          const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
           const isSelected = selectedSlotIndex === index;
           // In the builder (`editable`), every slot click opens the assignment
           // picker. In the reader, only FILLED slots can be interactive, and
@@ -645,11 +683,13 @@ export function LineupPitch({
             // `DragGesture`'s doc comment) — add them to the origin slot's
             // own normalized position, THEN convert to screen space for
             // rendering, so the ghost tracks the pointer correctly in
-            // either orientation.
+            // either orientation. `true`: same `fillEdgeToEdge` remap as the
+            // in-place marker's `position` above.
             const ghost = toScreen(
               finite(origin.x) + drag.dx,
               finite(origin.y) + drag.dy,
-              orientation
+              orientation,
+              true
             );
             return (
               <g style={{ pointerEvents: 'none' }} className="drop-shadow-lg">
