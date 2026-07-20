@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { cn } from '#/lib/utils';
 import {
   captureElementToPng,
@@ -11,6 +11,22 @@ import {
 export interface ImageSaveOptions extends Pick<ExportOptions, 'backgroundColor'> {
   /** File name WITHOUT extension; `.png` is appended. */
   fileName: string;
+  /**
+   * Show the overlay on EVERY pointer type, not just touch. A caller opts
+   * into this when its own capture needs the overlay's UI regardless of
+   * device — e.g. the Lineup card's share sheet, which now also carries an
+   * in-modal orientation toggle a mouse user needs the SAME preview-and-pick
+   * surface to reach. Fine-pointer callers that don't pass this keep the
+   * original instant-download behaviour unchanged.
+   */
+  forcePreview?: boolean;
+  /**
+   * Extra controls rendered inside the overlay, between the captured image
+   * and the Share/Download row (e.g. an orientation toggle). The hook itself
+   * stays block-agnostic — it just hosts whatever `ReactNode` the caller
+   * hands it once a preview is open.
+   */
+  extraControls?: ReactNode;
 }
 
 export interface UseImageSaveResult {
@@ -19,12 +35,16 @@ export interface UseImageSaveResult {
    * (no-ops) so a caller can pass a possibly-unmounted ref directly.
    *
    * - Fine pointer (desktop/mouse): downloads immediately, unchanged from
-   *   the pre-existing behaviour.
-   * - Coarse pointer (touch): captures first, then opens `overlay` showing
-   *   the rendered PNG with Share/Download buttons. The overlay's Share
-   *   button is what actually calls `navigator.share()` — synchronously,
-   *   off ITS OWN tap — so iOS Safari's transient activation is fresh. This
-   *   function only gets the image ready; it does not call `share()`.
+   *   the pre-existing behaviour — unless `options.forcePreview` is set, in
+   *   which case it opens the SAME overlay a touch device gets (a caller
+   *   asking for the share/save modal regardless of pointer type).
+   * - Coarse pointer (touch), or any pointer with `forcePreview`: captures
+   *   first, then opens `overlay` showing the rendered PNG with Share/
+   *   Download buttons (plus `options.extraControls`, if given). The
+   *   overlay's Share button is what actually calls `navigator.share()` —
+   *   synchronously, off ITS OWN tap — so iOS Safari's transient activation
+   *   is fresh. This function only gets the image ready; it does not call
+   *   `share()`.
    */
   save: (element: HTMLElement | null, options: ImageSaveOptions) => Promise<void>;
   /** Renders the touch-path overlay when open; `null` otherwise. Always safe to render — mount it unconditionally. */
@@ -59,12 +79,20 @@ function isTouchDevice(): boolean {
  * long-press "Save to Photos", and a Download button is always available as
  * a fallback that never depends on Share.
  *
- * Desktop is untouched: a fine pointer downloads immediately, exactly like
- * before.
+ * Desktop is untouched by default: a fine pointer downloads immediately,
+ * exactly like before. A caller can opt a specific capture INTO the overlay
+ * on every pointer type via `options.forcePreview` (e.g. the Lineup card,
+ * whose share modal also carries an orientation toggle — see
+ * `options.extraControls` — that only makes sense inside the preview
+ * surface, not behind an instant download).
  */
 export function useImageSave(): UseImageSaveResult {
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<{ dataUrl: string; fileName: string } | null>(null);
+  const [preview, setPreview] = useState<{
+    dataUrl: string;
+    fileName: string;
+    extraControls?: ReactNode;
+  } | null>(null);
 
   // Deliberately NOT calling `preloadImageExport()` here. It exists as an
   // exported, opt-in utility a host can call itself (e.g. once, near the app
@@ -82,13 +110,13 @@ export function useImageSave(): UseImageSaveResult {
   const save = useCallback(
     async (element: HTMLElement | null, options: ImageSaveOptions): Promise<void> => {
       if (!element) return;
-      const { fileName, backgroundColor } = options;
+      const { fileName, backgroundColor, forcePreview, extraControls } = options;
 
       setSaving(true);
       try {
         const dataUrl = await captureElementToPng(element, { backgroundColor, fileName });
-        if (isTouchDevice()) {
-          setPreview({ dataUrl, fileName: `${fileName}.png` });
+        if (forcePreview || isTouchDevice()) {
+          setPreview({ dataUrl, fileName: `${fileName}.png`, extraControls });
         } else {
           downloadDataUrl(dataUrl, `${fileName}.png`);
         }
@@ -167,9 +195,7 @@ export function useImageSave(): UseImageSaveResult {
             className="max-h-[70vh] w-auto max-w-full rounded-[10px] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.6)]"
           />
 
-          <p className="text-center text-[12px] text-white/55">
-            Press and hold the image to save it.
-          </p>
+          {preview.extraControls}
 
           <div className="flex w-full items-center gap-2.5">
             {canShare && (
