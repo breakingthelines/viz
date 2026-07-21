@@ -424,6 +424,54 @@ export const PortraitReader: Story = {
   },
 };
 
+/**
+ * A 5-man-midfield formation (4-5-1), read-only — the other end of the
+ * stylistic-formations spread from the default 4-3-3's midfield-3 triangle:
+ * a flat-looking band that's actually staggered in depth (the two wide
+ * mids pushed forward to x~53/y~12/88, the lone pivot dropped to x~39,
+ * either side of it at x~51) so five markers don't collide or read as a
+ * straight line. Landscape; see {@link FiveManMidfieldPortraitReader} for
+ * the portrait counterpart.
+ */
+export const FiveManMidfieldReader: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-5-1',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    slots: templateSlots('4-5-1').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+};
+
+/** {@link FiveManMidfieldReader}, rotated to `portrait` — same formation, own goal at the bottom. */
+export const FiveManMidfieldPortraitReader: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-5-1',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    orientation: 'portrait',
+    slots: templateSlots('4-5-1').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '320px', padding: '24px', background: '#121212', borderRadius: 12 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 /** Headshot markers (monogram fallback shown here, as the sample has no photos). */
 export const Headshots: Story = {
   args: {
@@ -478,12 +526,15 @@ export const ReaderWithPlayerLinks: Story = {
 };
 
 /**
- * `grassColor`/`lineColor` — forwarded verbatim to the underlying `Pitch` (the
- * editor's pitch-colour picker sets these; see `PitchColorDropdown` there).
- * Also doubles as a regression guard that `fillEdgeToEdge` and a custom
- * background colour compose cleanly: the grass rect must fill the ENTIRE
- * (non-square) viewBox — a leftover square-shaped fill under a non-square
- * viewBox would show as the OLD grass colour bleeding through two corners.
+ * `grassColor`/`lineColor`/`labelColor` — forwarded verbatim to the underlying
+ * `Pitch` (the editor's Colours panel sets these; see `pitchLineColorFor` /
+ * `resolveLineupColors` there — `LineupPitch` itself has no auto-contrast
+ * logic, it just renders whatever concrete colours it's given). Also doubles
+ * as a regression guard that `fillEdgeToEdge` + the `padding={7}` safe-area
+ * gutter + a custom background colour all compose cleanly: the grass rect
+ * must fill the ENTIRE (non-square) viewBox — a leftover square-shaped fill
+ * under a non-square viewBox would show as the OLD grass colour bleeding
+ * through two corners.
  */
 export const CustomPitchColor: Story = {
   args: {
@@ -494,6 +545,7 @@ export const CustomPitchColor: Story = {
     numberColor: '#1f6e3f',
     grassColor: '#1f6e3f',
     lineColor: 'rgba(255,255,255,0.4)',
+    labelColor: '#ffcc00',
     editable: false,
     showNames: true,
     slots: templateSlots('4-3-3').map((slot, i) => ({
@@ -505,16 +557,22 @@ export const CustomPitchColor: Story = {
     const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
     expect(svg, 'pitch SVG present').not.toBeNull();
 
-    // Still the fillEdgeToEdge viewBox (letterbox fix) — a custom colour must
-    // not fall back to the classic square one.
-    expect(svg!.getAttribute('viewBox')).toBe('0 0 100 66.66666666666666');
+    // Still the fillEdgeToEdge viewBox (letterbox fix), now grown by the
+    // aspect-PRESERVING `padding={7}` LineupPitch always passes (the
+    // safe-area gutter) — a custom colour must not fall back to the classic
+    // square one, and the pad must not have thrown the ~3:2 aspect off (that
+    // would reintroduce a letterbox): (121)/(80.66666666666666) ≈ 1.5, same
+    // ~3:2 as the unpadded 100/66.66666666666666.
+    expect(svg!.getAttribute('viewBox')).toBe('-10.500000000000002 -7 121 80.66666666666666');
 
     const rects = Array.from(svg!.querySelectorAll('rect'));
     const background = rects[0];
     expect(background?.getAttribute('fill'), 'grass fill is the custom colour').toBe('#1f6e3f');
-    // The background rect spans the full viewBox extent (see `fullExtent` in
-    // `Pitch`) — not just the OLD hardcoded "100 100", which would leave two
-    // corners of a non-square viewBox unpainted.
+    // The background rect spans the full (unpadded) pitch extent (see
+    // `fullExtent` in `Pitch`) — padding only grows the viewBox AROUND it, so
+    // this stays "100"/"66.66666666666666" regardless of padding — not just
+    // the OLD hardcoded "100 100", which would leave two corners of a
+    // non-square viewBox unpainted.
     expect(background?.getAttribute('width')).toBe('100');
     expect(background?.getAttribute('height')).toBe('66.66666666666666');
 
@@ -522,5 +580,12 @@ export const CustomPitchColor: Story = {
     expect(outline?.parentElement?.getAttribute('stroke'), 'line colour is the custom pair').toBe(
       'rgba(255,255,255,0.4)'
     );
+
+    // labelColor threads through to both the name label (filled slots) and
+    // the role label (empty slots, none here since every slot is filled) —
+    // the fix for "white pitch makes labels vanish": a caller can now pin a
+    // readable label colour independent of the marker/number colours above.
+    const nameLabel = svg!.querySelector('text[font-weight="600"]');
+    expect(nameLabel?.getAttribute('fill'), 'name label uses labelColor').toBe('#ffcc00');
   },
 };

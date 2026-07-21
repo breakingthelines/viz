@@ -48,6 +48,15 @@ export interface LineupPitchProps {
   teamColor?: string;
   /** Kit-number / monogram text colour. Defaults to white. */
   numberColor?: string;
+  /**
+   * Colour for the player NAME label (under a filled marker) and the
+   * empty-slot ROLE label. Defaults to `'white'` — today's hardcoded colour,
+   * so every existing caller renders identically. A caller pairing this with
+   * a light `grassColor` should pass a dark value here (and to `lineColor`)
+   * for contrast — `LineupPitch` itself has no auto-contrast logic; see the
+   * `lineColor` doc above for the same contract.
+   */
+  labelColor?: string;
   /** Pitch theme. Defaults to `dark` (the editor / reader surface). */
   theme?: PitchTheme;
   /**
@@ -307,6 +316,7 @@ export function LineupPitch({
   formation,
   teamColor,
   numberColor = 'white',
+  labelColor = 'white',
   theme = 'dark',
   grassColor,
   lineColor,
@@ -328,15 +338,21 @@ export function LineupPitch({
   const formationLabel = formatFormationLabel(formation);
   // An explicit `markerSize` always wins; otherwise `fullscreen` requests the
   // pre-tuned touch-optimised size; otherwise the classic inline-card default.
-  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 5.6), 5.6);
+  // 4.6 (was 5.6) — the safe-area/stylistic-formations redesign: smaller
+  // markers read as better-proportioned against the tighter, edge-to-edge
+  // pitch fit (see `padding` on the `<Pitch>` call below), verified in
+  // `scratchpad/formations-all.html` across all 9 formations x both
+  // orientations.
+  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 4.6), 4.6);
   // Name / role-label sizing stays PROPORTIONAL to markerSize (derived, not a
   // second hardcoded constant) so a fullscreen or custom marker size scales
   // the whole marker+label unit together instead of the label lagging behind
-  // at its old fixed px size. Ratios preserve today's look exactly at the
-  // classic default (5.6 → 4.0 name font / 9.1 label baseline / 3.6 role font).
-  const nameFontSize = markerSize * 0.714;
-  const labelBaselineOffset = markerSize * 1.625;
-  const roleFontSize = markerSize * 0.643;
+  // at its old fixed px size. Ratios re-tuned for the smaller 4.6 default
+  // (name font / label baseline / role font all scaled down to match) —
+  // verified in `scratchpad/formations-all.html`.
+  const nameFontSize = markerSize * 0.62;
+  const labelBaselineOffset = markerSize * 1.5;
+  const roleFontSize = markerSize * 0.6;
 
   // Drag-to-swap is opt-in and purely additive: without `onSlotsSwap`, filled
   // markers behave exactly as they did before this feature existed (a plain
@@ -437,6 +453,7 @@ export function LineupPitch({
         fit={fit}
         orientation={orientation}
         fillEdgeToEdge
+        padding={7}
       >
         {slots.map((slot, index) => {
           // `position` is SCREEN space (post-`toScreen`) — every render usage
@@ -574,7 +591,7 @@ export function LineupPitch({
                     x={position.x}
                     y={position.y + labelBaselineOffset}
                     textAnchor="middle"
-                    fill="white"
+                    fill={labelColor}
                     fontSize={nameFontSize}
                     fontWeight="600"
                     opacity="0.9"
@@ -654,7 +671,7 @@ export function LineupPitch({
                   x={position.x}
                   y={position.y + labelBaselineOffset}
                   textAnchor="middle"
-                  fill="white"
+                  fill={labelColor}
                   fontSize={roleFontSize}
                   fontWeight="600"
                   opacity="0.55"
