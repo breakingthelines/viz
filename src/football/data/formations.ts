@@ -9,6 +9,18 @@
  *
  * These are starting positions, not gospel — the editor fills them with
  * players; a future iteration may let creators drag a slot to nudge it.
+ *
+ * Positions are hand-authored (not procedurally generated) to a deliberate
+ * stylistic system, verified across all 9 formations x both orientations
+ * against `scratchpad/formations-all.html` before landing here: a deep
+ * keeper (x: 5); bowed back lines (fullbacks/wingbacks pushed forward and
+ * wide relative to the centre-backs); midfield-3s as triangles (the pivot
+ * drops deepest); central midfielders staggered in depth even within a flat
+ * band (so they separate horizontally rather than stacking in landscape);
+ * front lines as an arrowhead (the central striker highest and most central,
+ * wingers wide and slightly deeper); midfield bands run narrower than the
+ * attack. Role labels are unchanged from the previous procedurally-generated
+ * layout.
  */
 export interface FormationSlotTemplate {
   /** x on the 0–100 pitch scale (low = own half). */
@@ -19,87 +31,130 @@ export interface FormationSlotTemplate {
   role: string;
 }
 
-/**
- * Evenly spread `n` players across the width of the pitch, keeping wide
- * players off the touchline. Narrower bands (1–3 players) hug the centre.
- */
-function line(n: number): number[] {
-  if (n <= 0) return [];
-  if (n === 1) return [50];
-  const margin = n <= 2 ? 32 : n === 3 ? 24 : 14;
-  const span = 100 - margin * 2;
-  return Array.from({ length: n }, (_, i) => Number((margin + (span * i) / (n - 1)).toFixed(1)));
-}
-
-/** Build a horizontal band of slots at depth `x` with the given role labels. */
-function band(x: number, roles: string[]): FormationSlotTemplate[] {
-  const ys = line(roles.length);
-  return roles.map((role, i) => ({ x, y: ys[i], role }));
-}
-
-const GK: FormationSlotTemplate = { x: 6, y: 50, role: 'GK' };
+const GK: FormationSlotTemplate = { x: 5, y: 50, role: 'GK' };
 
 /**
  * The supported formations. Keys are the canonical "4-3-3" strings shown in the
- * formation picker; values are the full 11-slot layout (GK + outfield bands).
+ * formation picker; values are the full 11-slot layout (GK + outfield), hand
+ * placed per the stylistic system described above.
  */
 const FORMATIONS: Record<string, FormationSlotTemplate[]> = {
   '4-3-3': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(48, ['CM', 'CM', 'CM']),
-    ...band(80, ['LW', 'ST', 'RW']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 40, y: 50, role: 'CM' }, // pivot, drops
+    { x: 54, y: 34, role: 'CM' }, // advanced 8s, narrow
+    { x: 54, y: 66, role: 'CM' },
+    { x: 76, y: 18, role: 'LW' }, // arrowhead
+    { x: 84, y: 50, role: 'ST' },
+    { x: 76, y: 82, role: 'RW' },
   ],
   '4-4-2': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(50, ['LM', 'CM', 'CM', 'RM']),
-    ...band(82, ['ST', 'ST']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 50, y: 15, role: 'LM' },
+    { x: 47, y: 35, role: 'CM' },
+    { x: 47, y: 65, role: 'CM' },
+    { x: 50, y: 85, role: 'RM' },
+    { x: 82, y: 39, role: 'ST' },
+    { x: 82, y: 61, role: 'ST' },
   ],
   '4-2-3-1': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(42, ['CDM', 'CDM']),
-    ...band(62, ['LW', 'CAM', 'RW']),
-    ...band(84, ['ST']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 36, y: 38, role: 'CDM' },
+    { x: 36, y: 62, role: 'CDM' },
+    { x: 60, y: 18, role: 'LW' },
+    { x: 63, y: 50, role: 'CAM' },
+    { x: 60, y: 82, role: 'RW' },
+    { x: 85, y: 50, role: 'ST' },
   ],
   '4-3-1-2': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(44, ['CM', 'CM', 'CM']),
-    ...band(62, ['CAM']),
-    ...band(83, ['ST', 'ST']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 45, y: 30, role: 'CM' }, // triangle, middle drops
+    { x: 36, y: 50, role: 'CM' },
+    { x: 45, y: 70, role: 'CM' },
+    { x: 62, y: 50, role: 'CAM' },
+    { x: 82, y: 38, role: 'ST' },
+    { x: 82, y: 62, role: 'ST' },
   ],
   '4-1-4-1': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(40, ['CDM']),
-    ...band(60, ['LM', 'CM', 'CM', 'RM']),
-    ...band(84, ['ST']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 34, y: 50, role: 'CDM' },
+    { x: 54, y: 15, role: 'LM' },
+    { x: 53, y: 35, role: 'CM' },
+    { x: 53, y: 65, role: 'CM' },
+    { x: 54, y: 85, role: 'RM' },
+    { x: 85, y: 50, role: 'ST' },
   ],
   '3-5-2': [
     GK,
-    ...band(22, ['CB', 'CB', 'CB']),
-    ...band(50, ['LWB', 'CM', 'CM', 'CM', 'RWB']),
-    ...band(83, ['ST', 'ST']),
+    { x: 22, y: 26, role: 'CB' },
+    { x: 20, y: 50, role: 'CB' },
+    { x: 22, y: 74, role: 'CB' },
+    { x: 49, y: 11, role: 'LWB' },
+    { x: 50, y: 33, role: 'CM' },
+    { x: 39, y: 50, role: 'CM' },
+    { x: 50, y: 67, role: 'CM' },
+    { x: 49, y: 89, role: 'RWB' },
+    { x: 82, y: 39, role: 'ST' },
+    { x: 82, y: 61, role: 'ST' },
   ],
   '3-4-3': [
     GK,
-    ...band(22, ['CB', 'CB', 'CB']),
-    ...band(50, ['LM', 'CM', 'CM', 'RM']),
-    ...band(80, ['LW', 'ST', 'RW']),
+    { x: 22, y: 26, role: 'CB' },
+    { x: 20, y: 50, role: 'CB' },
+    { x: 22, y: 74, role: 'CB' },
+    { x: 49, y: 15, role: 'LM' },
+    { x: 46, y: 35, role: 'CM' },
+    { x: 46, y: 65, role: 'CM' },
+    { x: 49, y: 85, role: 'RM' },
+    { x: 76, y: 18, role: 'LW' },
+    { x: 84, y: 50, role: 'ST' },
+    { x: 76, y: 82, role: 'RW' },
   ],
   '5-3-2': [
     GK,
-    ...band(22, ['LWB', 'CB', 'CB', 'CB', 'RWB']),
-    ...band(50, ['CM', 'CM', 'CM']),
-    ...band(83, ['ST', 'ST']),
+    { x: 28, y: 10, role: 'LWB' },
+    { x: 22, y: 29, role: 'CB' },
+    { x: 20, y: 50, role: 'CB' },
+    { x: 22, y: 71, role: 'CB' },
+    { x: 28, y: 90, role: 'RWB' },
+    { x: 40, y: 50, role: 'CM' },
+    { x: 55, y: 33, role: 'CM' },
+    { x: 55, y: 67, role: 'CM' },
+    { x: 82, y: 39, role: 'ST' },
+    { x: 82, y: 61, role: 'ST' },
   ],
   '4-5-1': [
     GK,
-    ...band(22, ['LB', 'CB', 'CB', 'RB']),
-    ...band(52, ['LM', 'CM', 'CM', 'CM', 'RM']),
-    ...band(85, ['ST']),
+    { x: 25, y: 15, role: 'LB' },
+    { x: 21, y: 37, role: 'CB' },
+    { x: 21, y: 63, role: 'CB' },
+    { x: 25, y: 85, role: 'RB' },
+    { x: 53, y: 12, role: 'LM' },
+    { x: 51, y: 33, role: 'CM' },
+    { x: 39, y: 50, role: 'CM' },
+    { x: 51, y: 67, role: 'CM' },
+    { x: 53, y: 88, role: 'RM' },
+    { x: 86, y: 50, role: 'ST' },
   ],
 };
 

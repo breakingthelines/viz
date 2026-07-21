@@ -197,6 +197,72 @@ export const DefaultPaddingUnchanged: Story = {
 };
 
 /**
+ * `padding` + `fillEdgeToEdge` together (the Lineup safe-area fit): padding
+ * must grow the viewBox ASPECT-PRESERVINGLY here, not by an equal pitch-unit
+ * pad on every side — `fillEdgeToEdge` has already squashed the viewBox to
+ * match the outer `aspect-[3/2]` box exactly, so an equal pad would throw
+ * that match off and reintroduce the very letterbox `fillEdgeToEdge` exists
+ * to remove. Locks the exact padded viewBox (landscape long/goal axis gets
+ * `padding * 1.5`, short/touchline axis gets `padding`) AND that its aspect
+ * ratio still matches `aspect-[3/2]` to within float rounding — the
+ * regression this guards is subtle enough (both a letterbox AND a squashed
+ * pitch look "basically fine" in a quick glance, not a broken render) that a
+ * numeric lock matters more than it would for most visual props.
+ */
+export const FillEdgeToEdgeWithPadding: Story = {
+  args: { variant: 'full', theme: 'dark', fillEdgeToEdge: true, padding: 7 },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '600px', background: '#0a0a0a', padding: '16px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('viewBox')).toBe('-10.500000000000002 -7 121 80.66666666666666');
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[3/2]');
+
+    const [, , w, h] = svg!.getAttribute('viewBox')!.split(' ').map(Number);
+    expect(w / h, 'padded viewBox keeps the outer 3:2 aspect — no letterbox').toBeCloseTo(1.5, 5);
+  },
+};
+
+/**
+ * Same combination, `portrait` — the axis that gets the bigger (`* 1.5`) pad
+ * swaps with the orientation (screen X in portrait, since the quarter-turn
+ * already swapped which logical axis lands on which screen axis), so this
+ * locks the SWAPPED viewBox rather than assuming the landscape one transposes
+ * trivially.
+ */
+export const PortraitFillEdgeToEdgeWithPadding: Story = {
+  args: {
+    variant: 'full',
+    theme: 'dark',
+    orientation: 'portrait',
+    fillEdgeToEdge: true,
+    padding: 7,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '300px', background: '#0a0a0a', padding: '16px' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    expect(svg!.getAttribute('viewBox')).toBe('-7 -10.500000000000002 80.66666666666666 121');
+    expect(svg!.getAttribute('class') ?? '').toContain('aspect-[2/3]');
+
+    const [, , w, h] = svg!.getAttribute('viewBox')!.split(' ').map(Number);
+    expect(h / w, 'padded viewBox keeps the outer 2:3 aspect — no letterbox').toBeCloseTo(1.5, 5);
+  },
+};
+
+/**
  * Portrait orientation — the pitch rotated a quarter-turn so the own goal
  * sits at the BOTTOM and the opposition goal at the TOP (attacking UP the
  * screen), for a lineup that needs to fill a phone-shaped viewport. Locks:

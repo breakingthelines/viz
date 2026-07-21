@@ -182,16 +182,24 @@ export interface PitchProps {
    */
   showPattern?: boolean;
   /**
-   * Extra viewBox margin, in pitch units, added symmetrically on all four sides
-   * so children placed ON the pitch boundary — a corner-taker at the flag, a
-   * player on the goal line, plus their headshot bubbles and name labels — render
-   * fully inside the frame instead of being clipped by the SVG's edge. The pitch
-   * markings stay at their 0–100 (or 50–100) coordinates; the viewBox simply
-   * grows outward by `padding`, insetting the pitch within the rendered box and
-   * leaving a quiet gutter for edge markers. Defaults to `0` (the pitch fills the
-   * box edge-to-edge, the original behaviour). The marker layer also gets
+   * Extra viewBox margin, in pitch units, so children placed ON the pitch
+   * boundary — a corner-taker at the flag, a player on the goal line, plus
+   * their headshot bubbles and name labels — render fully inside the frame
+   * instead of being clipped by the SVG's edge. The pitch markings stay at
+   * their 0–100 (or 50–100) coordinates; the viewBox simply grows outward by
+   * `padding`, insetting the pitch within the rendered box and leaving a
+   * quiet gutter for edge markers. Defaults to `0` (the pitch fills the box
+   * edge-to-edge, the original behaviour). The marker layer also gets
    * `overflow: visible`, so anything reaching just past the padded box still
    * paints rather than being cut.
+   *
+   * Added symmetrically on all four sides when {@link fillEdgeToEdge} is
+   * `false` (or unset) — today's exact behaviour. When `fillEdgeToEdge` is
+   * `true`, the growth is instead scaled PER AXIS so the padded box keeps the
+   * exact same aspect ratio `fillEdgeToEdge` already matched to the outer
+   * `aspect-[3/2]`/`aspect-[2/3]` box — an even VISUAL gutter with no
+   * letterbox, rather than a symmetric pitch-unit pad that would throw that
+   * aspect back off. See the `padX`/`padY` computation below.
    */
   padding?: number;
   /**
@@ -309,7 +317,26 @@ export function Pitch({
   // today's `base` for the default orientation.
   const screenBase = screenRect(base.x, base.y, base.w, base.h, orientation, fillEdgeToEdge);
   const pad = Number.isFinite(padding) ? Math.max(0, padding) : 0;
-  const viewBox = `${screenBase.x - pad} ${screenBase.y - pad} ${screenBase.width + pad * 2} ${screenBase.height + pad * 2}`;
+  // Padding normally grows the viewBox by the same `pad` on every side. Under
+  // `fillEdgeToEdge`, `screenBase` has already been squashed to match the
+  // outer `aspect-[3/2]`/`aspect-[2/3]` box exactly (see `fillEdgeToEdge`'s
+  // doc comment) — adding an EQUAL pad to both axes would grow a box whose
+  // axes are no longer in that same ~3:2 ratio, i.e. it would reintroduce a
+  // letterbox gutter on one axis once `preserveAspectRatio="xMidYMid meet"`
+  // re-fits the now-mismatched viewBox into the still-~3:2 outer box.
+  // Scaling `pad` per axis by that SAME screenBase.width:height ratio keeps
+  // `screenBase`'s aspect exactly preserved after padding — `norm` is the
+  // pitch's full (compressed) WIDTH-axis extent, so `pad * axisExtent / norm`
+  // is `pad` itself on the axis that's already at `norm` (the width axis:
+  // screen Y in landscape, screen X in portrait) and `pad * 1.5` on the axis
+  // still at its native 0–100 extent (the length axis) — an even VISUAL
+  // gutter once the axes are unsquashed back to real proportions. When
+  // `fillEdgeToEdge` is false this is a no-op (`padX`/`padY` both fall back
+  // to plain `pad`), leaving today's symmetric growth byte-for-byte.
+  const norm = 100 * PITCH_WIDTH_RATIO;
+  const padX = fillEdgeToEdge ? (pad * screenBase.width) / norm : pad;
+  const padY = fillEdgeToEdge ? (pad * screenBase.height) / norm : pad;
+  const viewBox = `${screenBase.x - padX} ${screenBase.y - padY} ${screenBase.width + padX * 2} ${screenBase.height + padY * 2}`;
   // The FULL pitch's extent — always the whole `0 0 100 100` authored square,
   // regardless of `variant` (the background/outline below are the whole
   // grass rect + pitch boundary even for `half`/`attacking-third`, which just
