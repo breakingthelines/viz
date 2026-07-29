@@ -366,6 +366,78 @@ export const Reader: Story = {
 };
 
 /**
+ * Regression guard for the name-chip fix. Before the restyle, player names
+ * rendered as bare white SVG `<text>` and collided badly with the pitch
+ * markings underneath — in production the GK ("Pickford") sat across the
+ * six-yard box, a CM pivot ("Wharton") sat across the centre circle, and the
+ * ST ("Kane") sat across the penalty arc. This story recreates those same
+ * three collision spots (the CM pivot nudged from its usual x:40 onto the
+ * exact x:50 centre-circle centre for a guaranteed overlap) and swaps in the
+ * longest ("Jude Bellingham", 'Nico O’Reilly' — an apostrophe name too) and
+ * shortest ("Harry Kane") sample surnames at them, so the chip's width
+ * estimate is exercised at both ends specifically where it used to fail.
+ */
+const NAME_COLLISION_PLAYERS = [
+  'Jude Bellingham', // GK — six-yard box collision; longest name
+  'Rico Lewis',
+  'Marc Guéhi',
+  'Ezri Konsa',
+  'Tino Livramento',
+  'Nico O’Reilly', // CM pivot, nudged onto the centre-circle collision; longest + apostrophe
+  'Declan Rice',
+  'Morgan Gibbs-White',
+  'Anthony Gordon',
+  'Harry Kane', // ST — penalty-arc collision; shortest name
+  'Bukayo Saka',
+];
+
+export const NameCollisions: Story = {
+  args: {
+    teamName: 'England',
+    teamShortName: 'England',
+    formation: '4-3-3',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    slots: getFormationTemplate('4-3-3').map((t, i) => ({
+      x: i === 5 ? 50 : t.x, // CM pivot: x 40 → 50, dead-centre of the centre circle
+      y: t.y,
+      role: t.role,
+      player: { id: `p${i}`, name: NAME_COLLISION_PLAYERS[i], shirtNumber: i + 1 },
+    })),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // For each collision-spot surname, the chip `<rect>` (rendered directly
+    // before the `<text>`, as a sibling in the same marker `<g>`) must be at
+    // least as wide as the REAL rendered glyph run — measured via the
+    // browser's own `getComputedTextLength`, not our estimate — so the fix is
+    // checked against actual metrics, not just re-asserting the same formula
+    // the component uses. An upper bound also guards the short name isn't
+    // wildly over-padded.
+    const checkChip = async (surname: string) => {
+      const text = (await canvas.findByText(surname)) as unknown as SVGTextElement;
+      const rect = text.previousElementSibling;
+      expect(rect, `${surname} chip <rect> present`).not.toBeNull();
+      expect(rect!.tagName.toLowerCase()).toBe('rect');
+      const chipWidth = Number(rect!.getAttribute('width'));
+      const glyphWidth = text.getComputedTextLength();
+      expect(chipWidth, `${surname} chip fully contains its glyph run`).toBeGreaterThanOrEqual(
+        glyphWidth
+      );
+      expect(chipWidth, `${surname} chip isn't wildly over-padded`).toBeLessThan(
+        glyphWidth * 1.6 + 10
+      );
+    };
+
+    await checkChip('Bellingham');
+    await checkChip('O’Reilly');
+    await checkChip('Kane');
+  },
+};
+
+/**
  * Portrait orientation, read-only — the pitch rotated a quarter-turn so the
  * own goal (and the goalkeeper) sit at the BOTTOM of the box and the front
  * line at the TOP, attacking up the screen, for a lineup that needs to fill
@@ -585,7 +657,9 @@ export const CustomPitchColor: Story = {
     // the role label (empty slots, none here since every slot is filled) —
     // the fix for "white pitch makes labels vanish": a caller can now pin a
     // readable label colour independent of the marker/number colours above.
-    const nameLabel = svg!.querySelector('text[font-weight="600"]');
+    // `font-weight="400"` (Regular) — was 600/Semibold before the Figma
+    // restyle dropped the weight now that the name chip carries the contrast.
+    const nameLabel = svg!.querySelector('text[font-weight="400"]');
     expect(nameLabel?.getAttribute('fill'), 'name label uses labelColor').toBe('#ffcc00');
   },
 };
