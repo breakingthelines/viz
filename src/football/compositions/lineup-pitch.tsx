@@ -711,32 +711,8 @@ export function LineupPitch({
                   pointerEvents="auto"
                 />
 
-                {showNames && (
-                  <>
-                    <NameChip
-                      x={position.x}
-                      y={position.y + labelBaselineOffset}
-                      label={surname(player.name)}
-                      fontSize={nameFontSize}
-                    />
-                    <text
-                      x={position.x}
-                      y={position.y + labelBaselineOffset}
-                      textAnchor="middle"
-                      fill={labelColor}
-                      fontSize={nameFontSize}
-                      // Regular (was 600/Semibold) — now that the chip
-                      // behind it carries the contrast, the Figma label
-                      // itself is Inter Regular, with a slight negative
-                      // tracking (`-0.66px` at 22px ≈ `-0.03em`).
-                      fontWeight="400"
-                      opacity="0.9"
-                      style={{ pointerEvents: 'none', letterSpacing: '-0.03em' }}
-                    >
-                      {surname(player.name)}
-                    </text>
-                  </>
-                )}
+                {/* The name chip is NOT drawn here — see the second pass below
+                    this map for why it has to outlive its own slot's <g>. */}
               </g>
             );
           }
@@ -820,6 +796,49 @@ export function LineupPitch({
             </g>
           );
         })}
+
+        {/* Name chips — a SECOND pass, deliberately after every marker.
+            SVG has no z-index; paint order is document order. Drawing a chip
+            inside its own slot's <g> means the NEXT slot's marker paints over
+            it, and in a packed formation neighbouring markers sit close enough
+            to slice through a chip — the exact failure the chip exists to
+            prevent, made worse than bare text because a chip is opaque, so a
+            marker cuts a visible notch out of it. Rendering every chip after
+            every marker makes a name unoccludable by another player.
+            Labels are `pointer-events: none`, so lifting them out of the slot
+            <g> costs no interactivity — the marker still owns the gesture. */}
+        {showNames &&
+          slots.map((slot, index) => {
+            if (!slot.player) return null;
+            const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
+            const label = surname(slot.player.name);
+            return (
+              <g key={`name-${index}`} style={{ pointerEvents: 'none' }}>
+                <NameChip
+                  x={position.x}
+                  y={position.y + labelBaselineOffset}
+                  label={label}
+                  fontSize={nameFontSize}
+                />
+                <text
+                  x={position.x}
+                  y={position.y + labelBaselineOffset}
+                  textAnchor="middle"
+                  fill={labelColor}
+                  fontSize={nameFontSize}
+                  // Regular (was 600/Semibold) — now that the chip behind it
+                  // carries the contrast, the Figma label itself is Inter
+                  // Regular, with a slight negative tracking
+                  // (`-0.66px` at 22px ≈ `-0.03em`).
+                  fontWeight="400"
+                  opacity="0.9"
+                  style={{ pointerEvents: 'none', letterSpacing: '-0.03em' }}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
 
         {/* Drag ghost: the dragged player's marker, floating at the live pointer
             position — rendered LAST so it paints on top of every slot (SVG has
