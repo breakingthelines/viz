@@ -190,13 +190,24 @@ export async function captureElementToPng(
   // indefinitely rasterising an SVG that references external images. Restored
   // afterwards so the live DOM keeps its original hrefs.
   const restoreSvgImages = await inlineSvgImageHrefs(element);
+  // Rasterise any HTML <img> whose SOURCE is an SVG (e.g. custom club-crest
+  // uploads on career tables) to a PNG data URL — html-to-image inlines raster
+  // <img> but does NOT reliably rasterise an SVG-sourced <img> onto the canvas,
+  // so those come out blank. Restored afterwards.
+  const restoreImgSvgs = await inlineImgSvgSources(element);
   // Collapse export-ignored chrome (e.g. the save button) so its siblings
   // reflow flush before capture. Restored afterwards.
   const restoreHidden = hideExportIgnored(element);
+  // Expand any horizontal-scroll container (e.g. a wide multi-column career
+  // table in an overflow-x-auto box) so the WHOLE table is captured, not just
+  // the visible width. Must run before buildCaptureOptions measures the box.
+  const restoreExpand = expandForCapture(element);
   try {
     return await toPng(element, buildCaptureOptions(element, options));
   } finally {
+    restoreExpand();
     restoreHidden();
+    restoreImgSvgs();
     restoreSvgImages();
   }
 }
@@ -270,6 +281,135 @@ async function inlineSvgImageHrefs(element: HTMLElement): Promise<() => void> {
       }
     })
   );
+  return () => {
+    for (const restore of restores) restore();
+  };
+}
+
+/** True if a URL's path (ignoring query/fragment) is an SVG, or it's an inline SVG data URL. */
+function isSvgSource(src: string): boolean {
+  if (src.startsWith('data:image/svg')) return true;
+  const path = src.split(/[?#]/, 1)[0];
+  return /\.svg$/i.test(path);
+}
+
+/** Load a URL into an HTMLImageElement, resolving once decoded. */
+function loadImageEl(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = src;
+  });
+}
+
+/**
+ * Rasterise every HTML `<img>` whose source is an SVG to a PNG `data:` URL,
+ * returning a restore function. `html-to-image` inlines raster `<img>` sources
+ * fine but does NOT reliably draw an SVG-sourced `<img>` onto the export canvas
+ * (unlike a real raster it just comes out blank) — which is why custom SVG
+ * club-crest uploads on career tables vanish in the saved PNG while api-sports
+ * PNG crests survive. We fetch the SVG (CORS + no-cache, same as the capture's
+ * own image re-fetch), draw it into a canvas sized to the element's RENDERED
+ * box × 2 (crisp, and forces a concrete size even for a viewBox-only SVG with
+ * no intrinsic width/height), and swap the `<img>` src to the resulting PNG for
+ * the duration of the capture. Best-effort per node: a fetch/draw failure
+ * leaves that img untouched rather than aborting the whole capture.
+ */
+async function inlineImgSvgSources(element: HTMLElement): Promise<() => void> {
+  const imgs = Array.from(element.querySelectorAll('img'));
+  const restores: Array<() => void> = [];
+  await Promise.all(
+    imgs.map(async (img) => {
+      const src = img.currentSrc || img.src;
+      if (!src || !isSvgSource(src)) return;
+      let objectUrl: string | null = null;
+      try {
+        let drawableSrc = src;
+        if (!src.startsWith('data:')) {
+          const resp = await fetch(src, { mode: 'cors', cache: 'no-cache' });
+          if (!resp.ok) return;
+          objectUrl = URL.createObjectURL(await resp.blob());
+          drawableSrc = objectUrl;
+        }
+        const svgImg = await loadImageEl(drawableSrc);
+        const rect = img.getBoundingClientRect();
+        const scale = 2;
+        const w = Math.max(1, Math.round((rect.width || svgImg.naturalWidth || 64) * scale));
+        const h = Math.max(1, Math.round((rect.height || svgImg.naturalHeight || 64) * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(svgImg, 0, 0, w, h);
+        const png = canvas.toDataURL('image/png');
+        const original = img.getAttribute('src');
+        img.setAttribute('src', png);
+        restores.push(() => {
+          if (original != null) img.setAttribute('src', original);
+          else img.removeAttribute('src');
+        });
+      } catch {
+        /* leave this img's src as-is */
+      } finally {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      }
+    })
+  );
+  return () => {
+    for (const restore of restores) restore();
+  };
+}
+
+/**
+ * Temporarily open every horizontally-scrollable descendant (and grow the
+ * captured element to match) so a wide multi-column table is captured in FULL
+ * rather than clipped to its visible width, returning a restore function.
+ *
+ * The career-table reader renders its table inside an `overflow-x-auto` box
+ * (`min-w-[600px]` + N stat columns), so on a narrow column the extra columns
+ * are scrolled out of view. `buildCaptureOptions` sizes the canvas from
+ * `getBoundingClientRect().width` = that VISIBLE width, cutting the overflow.
+ * Here we set each scroller to `overflow: visible; width: <scrollWidth>` and
+ * then size the captured root to its resulting full `scrollWidth`, so the
+ * subsequent measurement covers the whole table. All inline styles are
+ * restored immediately after the capture. A no-op when nothing overflows.
+ */
+function expandForCapture(element: HTMLElement): () => void {
+  const restores: Array<() => void> = [];
+  const scrollers = Array.from(element.querySelectorAll<HTMLElement>('*')).filter((el) => {
+    const overflowX = getComputedStyle(el).overflowX;
+    return (overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth + 1;
+  });
+  for (const el of scrollers) {
+    const prev = {
+      overflowX: el.style.overflowX,
+      width: el.style.width,
+      maxWidth: el.style.maxWidth,
+    };
+    const full = el.scrollWidth;
+    el.style.overflowX = 'visible';
+    el.style.width = `${full}px`;
+    el.style.maxWidth = 'none';
+    restores.push(() => {
+      el.style.overflowX = prev.overflowX;
+      el.style.width = prev.width;
+      el.style.maxWidth = prev.maxWidth;
+    });
+  }
+  if (scrollers.length > 0) {
+    const prev = { width: element.style.width, maxWidth: element.style.maxWidth };
+    // Reading scrollWidth flushes layout with the scrollers now expanded, so
+    // this reflects the true full content width the capture must cover.
+    const full = element.scrollWidth;
+    element.style.width = `${full}px`;
+    element.style.maxWidth = 'none';
+    restores.push(() => {
+      element.style.width = prev.width;
+      element.style.maxWidth = prev.maxWidth;
+    });
+  }
   return () => {
     for (const restore of restores) restore();
   };
