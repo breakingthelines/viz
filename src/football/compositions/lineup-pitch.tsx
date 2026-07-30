@@ -511,14 +511,14 @@ export function LineupPitch({
   // The Figma ratio measured correct and read too small in practice. At the
   // reader plate's typical 590px-wide pitch the name chips rendered at 9.69
   // CSS px — legible up close, not legible in a feed or in a shared image,
-  // which is most of where a lineup is actually seen. 0.687 puts them at
-  // ~11.2px there, the +1.5px asked for after looking at real cards.
+  // which is most of where a lineup is actually seen. 0.718 puts them at
+  // ~11.7px there, +2px on the original, judged against real cards.
   //
   // Still PROPORTIONAL to markerSize rather than a second hardcoded constant,
   // so a fullscreen or custom marker size scales the whole marker+label unit
   // together. The chip geometry derives from this too (see the NAME_CHIP_*
   // ratios), so the chip grows with the text and needs no separate change.
-  const nameFontSize = markerSize * 0.687;
+  const nameFontSize = markerSize * 0.718;
   const labelBaselineOffset = markerSize * 1.5;
   const roleFontSize = markerSize * 0.6;
 
