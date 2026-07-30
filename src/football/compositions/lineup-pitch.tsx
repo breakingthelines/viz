@@ -468,14 +468,19 @@ export function LineupPitch({
   // pitch fit (see `padding` on the `<Pitch>` call below), verified in
   // `scratchpad/formations-all.html` across all 9 formations x both
   // orientations.
-  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 4.6), 4.6);
+  // 3.34, from the Figma card's own geometry: a 74px headshot on a 1109px-wide
+  // pitch is 6.67% of the width, and markerSize is the RADIUS, so 3.34. The
+  // previous 4.6 rendered markers roughly a third larger than the design and
+  // crowded the pitch. Fullscreen keeps its own touch-target size.
+  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 3.34), 3.34);
   // Name / role-label sizing stays PROPORTIONAL to markerSize (derived, not a
   // second hardcoded constant) so a fullscreen or custom marker size scales
   // the whole marker+label unit together instead of the label lagging behind
-  // at its old fixed px size. Ratios re-tuned for the smaller 4.6 default
-  // (name font / label baseline / role font all scaled down to match) —
-  // verified in `scratchpad/formations-all.html`.
-  const nameFontSize = markerSize * 0.62;
+  // at its old fixed px size.
+  //
+  // 0.595 is the Figma's own ratio: 22px label against a 74px headshot, i.e.
+  // 1.98 units of label against a 3.34 radius.
+  const nameFontSize = markerSize * 0.595;
   const labelBaselineOffset = markerSize * 1.5;
   const roleFontSize = markerSize * 0.6;
 
