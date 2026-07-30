@@ -96,6 +96,17 @@ export interface ExportOptions {
    */
   fitToContent?: boolean;
   /**
+   * Explicit capture size in CSS px, before `scale`. Overrides `fitToContent`
+   * for whichever axis is given.
+   *
+   * `fitToContent` derives the canvas from the element, so its aspect is
+   * whatever the content happens to be — which can never land on a fixed
+   * target like a 1080x1080 or 1080x1350 social frame. Pass these to capture a
+   * composition authored at an exact size instead.
+   */
+  width?: number;
+  height?: number;
+  /**
    * Style overrides applied to the cloned node before capture, merged over
    * the built-in `{ boxShadow: 'none' }` (which neutralises any selection
    * ring/outline a host may have put on the live element — box-shadow alone
@@ -124,6 +135,8 @@ function buildCaptureOptions(element: HTMLElement, options: ExportOptions) {
     cacheBust = false,
     imagePlaceholder = TRANSPARENT_PIXEL,
     fitToContent = true,
+    width: explicitWidth,
+    height: explicitHeight,
     style,
   } = options;
 
@@ -136,13 +149,23 @@ function buildCaptureOptions(element: HTMLElement, options: ExportOptions) {
         }
       : undefined;
 
-  let width: number | undefined;
-  let height: number | undefined;
-  if (fitToContent) {
-    const rect = element.getBoundingClientRect();
-    const padBottom = parseFloat(getComputedStyle(element).paddingBottom) || 0;
-    width = Math.ceil(rect.width);
-    height = Math.ceil(rect.height) + Math.ceil(padBottom);
+  let width: number | undefined = explicitWidth;
+  let height: number | undefined = explicitHeight;
+  if (fitToContent && (width === undefined || height === undefined)) {
+    // `offsetWidth`/`offsetHeight`, NOT `getBoundingClientRect()`. The rect is
+    // the TRANSFORMED box, so any ancestor scale or 3D tilt inflates it — and
+    // the clone renders flat, so those extra pixels come out as dead
+    // background. The lineup card is the case in point: its save button sits
+    // inside a tilt wrapper, so the pointer is necessarily over the card when
+    // you click, and the export silently grew by ~24x14px that varied with
+    // cursor position. The layout box is transform-free and is what the clone
+    // actually lays out to.
+    //
+    // Both are integers already, so only `paddingBottom` needs rounding.
+    const cs = getComputedStyle(element);
+    const padBottom = parseFloat(cs.paddingBottom) || 0;
+    if (width === undefined) width = element.offsetWidth;
+    if (height === undefined) height = element.offsetHeight + Math.ceil(padBottom);
   }
 
   return {
@@ -194,7 +217,7 @@ export async function captureElementToPng(
   // uploads on career tables) to a PNG data URL — html-to-image inlines raster
   // <img> but does NOT reliably rasterise an SVG-sourced <img> onto the canvas,
   // so those come out blank. Restored afterwards.
-  const restoreImgSvgs = await inlineImgSvgSources(element);
+  const restoreImgSvgs = await inlineImgSvgSources(element, options.scale ?? 2);
   // Collapse export-ignored chrome (e.g. the save button) so its siblings
   // reflow flush before capture. Restored afterwards.
   const restoreHidden = hideExportIgnored(element);
@@ -311,12 +334,18 @@ function loadImageEl(src: string): Promise<HTMLImageElement> {
  * club-crest uploads on career tables vanish in the saved PNG while api-sports
  * PNG crests survive. We fetch the SVG (CORS + no-cache, same as the capture's
  * own image re-fetch), draw it into a canvas sized to the element's RENDERED
- * box × 2 (crisp, and forces a concrete size even for a viewBox-only SVG with
- * no intrinsic width/height), and swap the `<img>` src to the resulting PNG for
- * the duration of the capture. Best-effort per node: a fetch/draw failure
- * leaves that img untouched rather than aborting the whole capture.
+ * box × the CAPTURE SCALE (crisp, and forces a concrete size even for a
+ * viewBox-only SVG with no intrinsic width/height), and swap the `<img>` src to
+ * the resulting PNG for the duration of the capture. Best-effort per node: a
+ * fetch/draw failure leaves that img untouched rather than aborting the whole
+ * capture.
+ *
+ * The scale must be threaded in rather than hardcoded: baking at 2x and then
+ * letting the capture upscale to 3x or 4x is exactly the blur this rasterising
+ * exists to avoid, and it would hit precisely the assets a creator cares most
+ * about — their own uploaded club crest.
  */
-async function inlineImgSvgSources(element: HTMLElement): Promise<() => void> {
+async function inlineImgSvgSources(element: HTMLElement, scale = 2): Promise<() => void> {
   const imgs = Array.from(element.querySelectorAll('img'));
   const restores: Array<() => void> = [];
   await Promise.all(
@@ -334,7 +363,6 @@ async function inlineImgSvgSources(element: HTMLElement): Promise<() => void> {
         }
         const svgImg = await loadImageEl(drawableSrc);
         const rect = img.getBoundingClientRect();
-        const scale = 2;
         const w = Math.max(1, Math.round((rect.width || svgImg.naturalWidth || 64) * scale));
         const h = Math.max(1, Math.round((rect.height || svgImg.naturalHeight || 64) * scale));
         const canvas = document.createElement('canvas');

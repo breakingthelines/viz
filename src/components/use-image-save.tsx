@@ -8,7 +8,8 @@ import {
 } from '#/utils/export';
 
 /** Options accepted by `save()`, layered over the plain capture options. */
-export interface ImageSaveOptions extends Pick<ExportOptions, 'backgroundColor'> {
+export interface ImageSaveOptions
+  extends Pick<ExportOptions, 'backgroundColor' | 'scale' | 'width' | 'height' | 'fitToContent'> {
   /** File name WITHOUT extension; `.png` is appended. */
   fileName: string;
   /**
@@ -110,11 +111,24 @@ export function useImageSave(): UseImageSaveResult {
   const save = useCallback(
     async (element: HTMLElement | null, options: ImageSaveOptions): Promise<void> => {
       if (!element) return;
-      const { fileName, backgroundColor, forcePreview, extraControls } = options;
+      const { fileName, backgroundColor, scale, width, height, fitToContent, forcePreview, extraControls } =
+        options;
 
       setSaving(true);
       try {
-        const dataUrl = await captureElementToPng(element, { backgroundColor, fileName });
+        const dataUrl = await captureElementToPng(element, {
+          backgroundColor,
+          fileName,
+          // Forwarded, not defaulted here: a caller that says nothing still
+          // gets `captureElementToPng`'s own defaults. Until these were passed
+          // through, no consumer could raise export resolution at all — the
+          // hook accepted only a background colour, so every saved card was
+          // pinned at 2x whatever the on-screen CSS width happened to be.
+          ...(scale !== undefined ? { scale } : {}),
+          ...(width !== undefined ? { width } : {}),
+          ...(height !== undefined ? { height } : {}),
+          ...(fitToContent !== undefined ? { fitToContent } : {}),
+        });
         if (forcePreview || isTouchDevice()) {
           setPreview({ dataUrl, fileName: `${fileName}.png`, extraControls });
         } else {
