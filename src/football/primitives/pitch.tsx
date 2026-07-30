@@ -388,20 +388,95 @@ export function Pitch({
   // `toScreen` / `screenRect` / `arcPath` are what place those authored
   // numbers on screen for `portrait`, and are the identity in `landscape`,
   // so this is exactly today's geometry when the prop isn't passed.
+  // Box / six-yard-box / D / centre-circle geometry — RE-MEASURED against the
+  // Figma lineup restyle (node 3047:11125), replacing the previous
+  // real-world-football numbers (16.5m box depth, 9.15m arc radius, etc.).
+  // That file draws a deliberately STYLISED pitch, not a broadcast-accurate
+  // one — its penalty area is notably SHALLOWER and its centre circle
+  // notably BIGGER than regulation 105m×68m proportions scaled the same
+  // way — so matching it means pulling ratios directly from its own
+  // 1109px(length)×716px(width) pitch box, the same methodology the dark
+  // theme's marking stroke width (0.36 = 4/1109×100) already used, not
+  // eyeballing a "realistic" pitch. The goal-mouth rects below (`ownGoal`/
+  // `oppGoal`) are NOT re-measured — Figma's illustration has no distinct
+  // element for them (too small to matter at this scale either way), and
+  // they're locked exactly by `pitch.stories.tsx`'s `Portrait` story.
+  const BOX_DEPTH = 11.18; // 124/1109 × 100 — was 16.5
+  const BOX_WIDTH = 60.06; // 430/716 × 100 — was 57.8
+  const BOX_Y = (100 - BOX_WIDTH) / 2;
+  const SIX_YARD_DEPTH = 3.88; // 43/1109 × 100 — was 5.5
+  const SIX_YARD_WIDTH = 27.65; // 198/716 × 100 — was 26.4
+  const SIX_YARD_Y = (100 - SIX_YARD_WIDTH) / 2;
+  // Penalty spot: Figma draws it as a small dot (node 3047:11125's
+  // Ellipse414/415) 83px into the 1109px pitch — 83/1109 × 100. Not itself
+  // named in the brief, but a required consequence of the shallower box
+  // above: left at the old depth-proportional spot (x=11, ~2/3 of the old
+  // 16.5-deep box), it would now sit almost ON the new box's edge.
+  const PENALTY_SPOT_X = 7.48;
+  // The "D": Figma draws it as a rounded-rectangle bulge flush against the
+  // box's own edge — corner radius ~73px on a 74px-wide, 146px-tall box,
+  // i.e. close enough to a TRUE semicircle (radius = half the 146 chord)
+  // that `arcPath` (a real circular arc) reproduces it exactly: radius
+  // 73/1109 × 100, its chord centred on the pitch's own vertical centre.
+  const ARC_RADIUS = 6.58;
+  // Centre circle: a literal 257px-diameter circle against the 1109px pitch
+  // — (257/2)/1109 × 100 — noticeably bigger than a real 9.15m radius
+  // scaled the same way; the file wins over realism here, per the brief.
+  const CENTER_CIRCLE_RADIUS = 11.59;
+
   const halfwayLine = {
     p1: toScreen(50, 0, orientation, fillEdgeToEdge),
     p2: toScreen(50, 100, orientation, fillEdgeToEdge),
   };
   const centerSpot = toScreen(50, 50, orientation, fillEdgeToEdge);
-  const ownBox = screenRect(0, 21.1, 16.5, 57.8, orientation, fillEdgeToEdge);
-  const ownSixYardBox = screenRect(0, 36.8, 5.5, 26.4, orientation, fillEdgeToEdge);
-  const ownPenaltySpot = toScreen(11, 50, orientation, fillEdgeToEdge);
-  const ownArc = arcPath(16.5, 40.1, 9.15, 1, 16.5, 59.9, orientation, fillEdgeToEdge);
+  const ownBox = screenRect(0, BOX_Y, BOX_DEPTH, BOX_WIDTH, orientation, fillEdgeToEdge);
+  const ownSixYardBox = screenRect(
+    0,
+    SIX_YARD_Y,
+    SIX_YARD_DEPTH,
+    SIX_YARD_WIDTH,
+    orientation,
+    fillEdgeToEdge
+  );
+  const ownPenaltySpot = toScreen(PENALTY_SPOT_X, 50, orientation, fillEdgeToEdge);
+  const ownArc = arcPath(
+    BOX_DEPTH,
+    50 - ARC_RADIUS,
+    ARC_RADIUS,
+    1,
+    BOX_DEPTH,
+    50 + ARC_RADIUS,
+    orientation,
+    fillEdgeToEdge
+  );
   const ownGoal = screenRect(-2, 45.2, 2, 9.6, orientation, fillEdgeToEdge);
-  const oppBox = screenRect(83.5, 21.1, 16.5, 57.8, orientation, fillEdgeToEdge);
-  const oppSixYardBox = screenRect(94.5, 36.8, 5.5, 26.4, orientation, fillEdgeToEdge);
-  const oppPenaltySpot = toScreen(89, 50, orientation, fillEdgeToEdge);
-  const oppArc = arcPath(83.5, 40.1, 9.15, 0, 83.5, 59.9, orientation, fillEdgeToEdge);
+  const oppBox = screenRect(
+    100 - BOX_DEPTH,
+    BOX_Y,
+    BOX_DEPTH,
+    BOX_WIDTH,
+    orientation,
+    fillEdgeToEdge
+  );
+  const oppSixYardBox = screenRect(
+    100 - SIX_YARD_DEPTH,
+    SIX_YARD_Y,
+    SIX_YARD_DEPTH,
+    SIX_YARD_WIDTH,
+    orientation,
+    fillEdgeToEdge
+  );
+  const oppPenaltySpot = toScreen(100 - PENALTY_SPOT_X, 50, orientation, fillEdgeToEdge);
+  const oppArc = arcPath(
+    100 - BOX_DEPTH,
+    50 - ARC_RADIUS,
+    ARC_RADIUS,
+    0,
+    100 - BOX_DEPTH,
+    50 + ARC_RADIUS,
+    orientation,
+    fillEdgeToEdge
+  );
   const oppGoal = screenRect(100, 45.2, 2, 9.6, orientation, fillEdgeToEdge);
   const cornerArcs = [
     arcPath(0, 1, 1, 0, 1, 0, orientation, fillEdgeToEdge),
@@ -498,7 +573,7 @@ export function Pitch({
 
         {/* Center circle — (50, 50) is `toScreen`'s fixed point, so this stays
             centred in both orientations, as a circle with no "direction" must. */}
-        <circle cx={centerSpot.x} cy={centerSpot.y} r="9.15" />
+        <circle cx={centerSpot.x} cy={centerSpot.y} r={CENTER_CIRCLE_RADIUS} />
         <circle cx={centerSpot.x} cy={centerSpot.y} r="0.6" fill={resolvedLines} stroke="none" />
 
         {/* Own penalty area (own goal at x=0 → bottom of the box in portrait) */}

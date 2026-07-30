@@ -663,3 +663,85 @@ export const CustomPitchColor: Story = {
     expect(nameLabel?.getAttribute('fill'), 'name label uses labelColor').toBe('#ffcc00');
   },
 };
+
+/**
+ * Regression lock for the Figma lineup restyle's (node 3047:11125) pitch
+ * surface + marking geometry + formation-label fixes — cross-checked
+ * against the FILE'S OWN pixel ratios (its 1109×716 pitch box), not just
+ * re-asserting this component's own rounded constants:
+ *  - the default (unset `grassColor`) `dark`-theme background is the
+ *    Figma's `#1f1f1f`, NOT the shared near-black `--color-pitch-grass-dark`
+ *    token every OTHER dark pitch in the package still defaults to (that
+ *    token is untouched — see `Pitch`'s own theme doc);
+ *  - the penalty box / six-yard box are re-measured against Figma's own
+ *    124/430/43/198px shapes (a deliberately shallower box, wider six-yard
+ *    box than a "realistic" pitch);
+ *  - the centre circle radius matches Figma's 257px-diameter circle;
+ *  - the formation label is a clean "4-3-3" (plain hyphens, not the
+ *    previous en-dash substitution) and reads as prominent (bold,
+ *    near-full-opacity), not the chip's faintest element.
+ */
+export const FigmaMarkingGeometry: Story = {
+  args: {
+    teamName: 'England',
+    teamShortName: 'England',
+    formation: '4-3-3',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: false,
+    slots: templateSlots('4-3-3'),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+
+    const rects = [...svg!.querySelectorAll('rect')];
+    expect(rects[0]?.getAttribute('fill'), 'default dark grass is #1f1f1f').toBe('#1f1f1f');
+
+    // Independently re-derived from the Figma file's own pixel measurements
+    // (not this component's rounded constants) — `fillEdgeToEdge` compresses
+    // the Y (touchline/width) axis by 2/3 on render; the X (goal-to-goal
+    // depth) axis is untouched in `landscape`.
+    const L = 1109;
+    const W = 716;
+    const boxDepth = (124 / L) * 100;
+    const boxWidth = ((430 / W) * 100 * 2) / 3;
+    const sixDepth = (43 / L) * 100;
+    const sixWidth = ((198 / W) * 100 * 2) / 3;
+    const centerCircleR = (128.5 / L) * 100;
+
+    // rects[0]/[1] are the background/outline (see `CustomPitchColor` above);
+    // [2]/[3] are the own penalty box / six-yard box, in JSX order.
+    const ownBox = rects[2];
+    expect(Number(ownBox?.getAttribute('width')), 'penalty box depth').toBeCloseTo(boxDepth, 1);
+    expect(Number(ownBox?.getAttribute('height')), 'penalty box width').toBeCloseTo(boxWidth, 1);
+
+    const ownSixYard = rects[3];
+    expect(Number(ownSixYard?.getAttribute('width')), 'six-yard box depth').toBeCloseTo(
+      sixDepth,
+      1
+    );
+    expect(Number(ownSixYard?.getAttribute('height')), 'six-yard box width').toBeCloseTo(
+      sixWidth,
+      1
+    );
+
+    // The centre circle is the only circle with a radius bigger than any
+    // marker/spot (spots r=0.6, empty-slot markers r≈3.34) — a robust way to
+    // find it without depending on attribute order.
+    const circles = [...svg!.querySelectorAll('circle')];
+    const centreCircle = circles.find((c) => Number(c.getAttribute('r')) > 5);
+    expect(centreCircle, 'centre circle present').not.toBeUndefined();
+    expect(Number(centreCircle?.getAttribute('r')), 'centre circle radius').toBeCloseTo(
+      centerCircleR,
+      1
+    );
+
+    // Formation label: plain hyphens (not "4–3–3"), bold + near-full-opacity
+    // — no longer the chip's faintest element.
+    const formationSpan = await canvas.findByText('4-3-3');
+    expect(formationSpan.className).toContain('font-semibold');
+    expect(formationSpan.className).toContain('text-white/80');
+  },
+};

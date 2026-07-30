@@ -60,8 +60,12 @@ export interface LineupPitchProps {
   /** Pitch theme. Defaults to `dark` (the editor / reader surface). */
   theme?: PitchTheme;
   /**
-   * Pitch background (grass) colour. Forwarded verbatim to viz `Pitch`'s own
-   * `grassColor` prop, overriding the theme default.
+   * Pitch background (grass) colour. Forwarded to viz `Pitch`'s own
+   * `grassColor` prop, overriding the default. **Unset, under the `dark`
+   * theme** resolves to `#1f1f1f` (the Figma lineup restyle's own card-scoped
+   * default — see the `resolvedGrassColor` comment in the component body),
+   * NOT `Pitch`'s shared near-black `--color-pitch-grass-dark` token every
+   * other dark pitch in the package defaults to.
    */
   grassColor?: string;
   /**
@@ -459,7 +463,30 @@ export function LineupPitch({
   orientation = 'landscape',
 }: LineupPitchProps) {
   const color = teamColor ?? 'var(--color-team-home)';
+  // Figma lineup restyle (node 3047:11125): the dark pitch reads as a DARK
+  // GREY (`#1f1f1f`, "grey-100") rather than the near-black
+  // `--color-pitch-grass-dark` token every OTHER dark-themed block (heat
+  // maps, shot maps, pass networks, `FormationBoard` — see `Pitch`'s own
+  // `PitchTheme` doc) shares. That token is deliberately pinned to match the
+  // page's own `#0d0d0d` so a BARE data-overlay block blends into the page
+  // it sits directly on — the opposite relationship this composition needs:
+  // it sits inside a bordered CARD (the editor's Lineup panel / the
+  // published reader's `ReaderPlate`) and has to read as a distinct field
+  // against that card's chrome, lighter than the surrounding card, exactly
+  // as the Figma file draws it (`#1f1f1f` pitch inside a `#151515` card).
+  // Scoped to `LineupPitch` alone — NOT a change to the shared token, which
+  // would relighten every one of those other blocks along with it — via
+  // this default rather than a `Pitch`-level change; an explicit
+  // `grassColor` (the editor Colours panel's presets, or a caller's own
+  // override) always wins, exactly as before this default existed. Only
+  // applies to `dark`; a `grass` theme keeps `Pitch`'s own classic green
+  // default untouched.
+  const resolvedGrassColor = grassColor ?? (theme === 'dark' ? '#1f1f1f' : undefined);
   const chipLabel = teamShortName ?? teamName;
+  // Figma lineup restyle (node 3047:11125): "4-3-3" renders as a clean,
+  // prominent element (bold, near-full-opacity), not a whisper-quiet
+  // afterthought — see `formatFormationLabel` for the matching separator
+  // fix (plain hyphens, not en-dashes).
   const formationLabel = formatFormationLabel(formation);
   // An explicit `markerSize` always wins; otherwise `fullscreen` requests the
   // pre-tuned touch-optimised size; otherwise the classic inline-card default.
@@ -571,14 +598,16 @@ export function LineupPitch({
           className="pointer-events-none mb-2 flex items-baseline justify-center gap-1.5 text-[12px] tracking-tight"
         >
           {chipLabel && <span className="font-semibold text-white/90">{chipLabel}</span>}
-          {formationLabel && <span className="tabular-nums text-white/55">{formationLabel}</span>}
+          {formationLabel && (
+            <span className="font-semibold tabular-nums text-white/80">{formationLabel}</span>
+          )}
         </div>
       )}
 
       <Pitch
         variant="full"
         theme={theme}
-        grassColor={grassColor}
+        grassColor={resolvedGrassColor}
         lineColor={lineColor}
         fit={fit}
         orientation={orientation}
