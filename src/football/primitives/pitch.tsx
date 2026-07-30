@@ -292,9 +292,33 @@ export function Pitch({
   // Theme defaults, each overridable by an explicit prop.
   const resolvedGrass =
     grassColor ?? (isDark ? 'var(--color-pitch-grass-dark)' : 'var(--color-pitch-grass)');
-  const resolvedLines =
-    lineColor ?? (isDark ? 'var(--color-pitch-lines-dark)' : 'var(--color-pitch-lines)');
+  // `dark`'s line colour is a literal, not the `--color-pitch-lines-dark`
+  // token (a semi-transparent WHITE — right for the heavier line other dark
+  // blocks draw under their own data overlays). The Figma lineup restyle
+  // (node 3047:11125) instead draws the markings as a SOLID low-contrast
+  // grey (`#2b2b2b`, "grey-300") against the pitch's near-black `#1f1f1f`
+  // ("grey-100") backing — pulled directly from that file, not eyeballed —
+  // so the fainting here comes from the colour's own low contrast rather
+  // than from opacity.
+  const resolvedLines = lineColor ?? (isDark ? '#2b2b2b' : 'var(--color-pitch-lines)');
   const resolvedShowPattern = showPattern ?? !isDark;
+  // Rounded pitch-boundary corners — the Figma restyle of the `dark` Match
+  // Centre/lineup surface (a soft card, not a broadcast graphic). Scoped to
+  // `dark` only: the `grass` theme keeps its classic sharp rectangular
+  // boundary (a real pitch), matching every other grass-theme consumer
+  // (ShotMap, HeatMap, PassNetwork, FormationBoard's grass mode) unchanged.
+  // In the SAME 0–100 (length-axis) units as `fullExtent` below — ~16px
+  // against the Figma card's ~1180px width, i.e. ~1.36 of the pitch's
+  // 100-unit length axis. Deliberately NOT 1.4 (rounded from that 1.36):
+  // several blocks' hover callouts (ShotMap, Progression) draw their own
+  // accent `<rect rx={1.4}>` and detect "is a callout open" purely by
+  // querying `rect[rx="1.4"]` — a `dark` Pitch's own background/outline
+  // would always match that selector too, permanently reading as "callout
+  // open" (see `progression.stories.tsx`'s `TooltipClearsOnLeave`, which
+  // this collision broke). 1.6 keeps the same visual weight while staying
+  // clear of every existing `rx` convention in the football blocks (0.4,
+  // 1.2, 1.4 are all already spoken for) — confirmed by rendering.
+  const cornerRadius = isDark ? 1.6 : 0;
 
   // The pitch markings span this box in pitch units (full vs half/third). The
   // padded viewBox grows outward from it by `padding` on every side, so edge
@@ -398,13 +422,16 @@ export function Pitch({
       xmlns="http://www.w3.org/2000/svg"
     >
       {/* Background — spans the FULL pitch (see `fullExtent` above), not just
-          this `variant`'s cropped `viewBox` region. */}
+          this `variant`'s cropped `viewBox` region. `rx`/`ry` only round
+          anything for the `dark` theme — see `cornerRadius` above. */}
       <rect
         x={fullExtent.x}
         y={fullExtent.y}
         width={fullExtent.width}
         height={fullExtent.height}
         fill={resolvedGrass}
+        rx={cornerRadius}
+        ry={cornerRadius}
       />
 
       {/* Grass pattern stripes — perpendicular to the direction of play in
@@ -431,25 +458,34 @@ export function Pitch({
       )}
 
       {/*
-       * Pitch markings. The stroke width is set per-theme: the dark theme uses a
-       * slightly heavier line (0.45 ≈ 1.3–1.5px at the blocks' render size) so
-       * the semi-transparent white markings stay legible behind/under the
-       * screen-blend data layers the blocks paint on top. `vectorEffect`
-       * non-scaling-stroke is deliberately NOT used — the markings should scale
-       * with the pitch so half-pitch variants keep their proportions.
+       * Pitch markings. Stroke width is set per-theme. `grass` is untouched
+       * (0.3 — the classic broadcast-graphic look). `dark` was RE-TUNED for
+       * the Figma lineup restyle: ~0.36 (was 0.45), matching the Figma
+       * card's 4px box-outline stroke against its ~1109px pitch-box width
+       * (4/1109 × 100 ≈ 0.36). The FAINT look itself comes from
+       * `resolvedLines`'s solid low-contrast grey above, not from opacity —
+       * unlike the previous semi-transparent-white treatment (tuned for
+       * legibility under the screen-blend data layers other blocks paint on
+       * top), the Match Centre/lineup surface has no such overlay.
+       * `vectorEffect` non-scaling-stroke is deliberately NOT used — the
+       * markings should scale with the pitch so half-pitch variants keep
+       * their proportions.
        */}
       <g
         stroke={resolvedLines}
-        strokeWidth={isDark ? 0.45 : 0.3}
+        strokeWidth={isDark ? 0.36 : 0.3}
         fill="none"
         strokeLinejoin="round"
       >
-        {/* Pitch outline — see `fullExtent` above. */}
+        {/* Pitch outline — see `fullExtent` above. Rounded corners only under
+            `dark` — see `cornerRadius` above. */}
         <rect
           x={fullExtent.x}
           y={fullExtent.y}
           width={fullExtent.width}
           height={fullExtent.height}
+          rx={cornerRadius}
+          ry={cornerRadius}
         />
 
         {/* Halfway line */}
@@ -488,7 +524,7 @@ export function Pitch({
           y={ownGoal.y}
           width={ownGoal.width}
           height={ownGoal.height}
-          strokeWidth={isDark ? 0.35 : 0.2}
+          strokeWidth={isDark ? 0.28 : 0.2}
         />
 
         {/* Opposition penalty area (opposition goal at x=100 → top of the box in portrait) */}
@@ -514,7 +550,7 @@ export function Pitch({
           y={oppGoal.y}
           width={oppGoal.width}
           height={oppGoal.height}
-          strokeWidth={isDark ? 0.35 : 0.2}
+          strokeWidth={isDark ? 0.28 : 0.2}
         />
 
         {/* Corner arcs */}

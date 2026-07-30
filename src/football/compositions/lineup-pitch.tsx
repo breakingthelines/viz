@@ -160,6 +160,22 @@ export interface LineupPitchProps {
 const DRAG_THRESHOLD_PX = 6;
 
 /**
+ * Headshot ring stroke width, as a fraction of the marker's own radius
+ * (`markerSize`) — pulled from the Figma restyle's headshot: a 1.321px ring
+ * on a 74px-diameter (r 37px) circle, 1.321 / 37 ≈ 0.0357. Proportional
+ * (rather than a flat constant) so it stays the same relative hairline
+ * across `fullscreen`/custom `markerSize` values, not just the inline-card
+ * default.
+ */
+const HEADSHOT_RING_WIDTH_RATIO = 0.036;
+/**
+ * Headshot ring opacity — the Figma ring is `rgba(255,255,255,0.05)`, a
+ * near-invisible hairline rather than a solid stroke; matched here exactly
+ * rather than brightened, per the Figma reference.
+ */
+const HEADSHOT_RING_OPACITY = 0.05;
+
+/**
  * Project a pointer event's screen position into the pitch's own 0–100
  * normalized user-space — the same space `slot.x` / `slot.y` already live in
  * — via the element's screen CTM, then {@link fromScreen} to undo the
@@ -251,8 +267,19 @@ function MarkerGlyph({
         name={player.name}
         imageUrl={player.imageUrl}
         color={color}
-        ringColor={ringColor ?? color}
-        ringWidth={0.5}
+        // Figma restyle (node 3047:11125): a hairline WHITE ring at ~5%
+        // opacity — was the team `color` itself at near-full opacity, which
+        // read as a second, competing rim of colour around a headshot
+        // that's already backed by that same colour. Width is proportional
+        // to `markerSize` (not a flat constant like the old 0.5) at the
+        // ratio pulled from the Figma headshot: a 1.321px ring on a 74px
+        // (r=37) circle, 1.321/37 ≈ 0.036 of the radius — see
+        // `HEADSHOT_RING_WIDTH_RATIO`. The drag ghost still explicitly
+        // forwards `ringColor="white"`, so this is a no-op for it and only
+        // changes the in-place, non-ghost marker.
+        ringColor={ringColor ?? 'white'}
+        ringWidth={markerSize * HEADSHOT_RING_WIDTH_RATIO}
+        ringOpacity={HEADSHOT_RING_OPACITY}
         monogramFill={numberColor}
         monogramSizeRatio={0.8}
         fallbackStroke="white"
@@ -278,6 +305,104 @@ function MarkerGlyph({
         {player.shirtNumber !== undefined ? player.shirtNumber : monogram(player.name)}
       </text>
     </>
+  );
+}
+
+/**
+ * Average per-character advance for the name chip's width estimate, as a
+ * fraction of `nameFontSize`. SVG `<text>` has no layout box to measure
+ * against before paint, so the chip can't size itself off the real glyph
+ * run the way an HTML `<span>` could — this fixed advance is the
+ * alternative (the Figma file itself has no equivalent number to pull — its
+ * chip is a real text layout box, not an estimate — so this one constant is
+ * still tuned by rendering, unlike the ratios below it). Inter's mixed-case
+ * running-text advance averages a bit under 0.6em; this is deliberately a
+ * little OVER that (bias toward roomier rather than clipped) since the
+ * estimate has to cover both narrow runs ("Rice") and wide ones
+ * ("Bellingham", "O'Reilly") with one constant. Tuned by rendering
+ * `lineup-pitch.stories.tsx`'s `NameCollisions` story (longest/shortest
+ * surnames over the six-yard box and centre circle) and checking the chip
+ * visually contains the text at both ends without ballooning around short
+ * names — see that story for the exact cases.
+ */
+const NAME_CHIP_CHAR_ADVANCE = 0.62;
+/**
+ * Horizontal chip padding, EACH side, as a fraction of `nameFontSize` — the
+ * Figma chip pads 8px around 22px text (8/22 ≈ 0.364).
+ */
+const NAME_CHIP_PAD_X = 8 / 22;
+/**
+ * Chip height as a multiple of `nameFontSize` — the Figma chip is 22px text
+ * (≈ 26.4px line box at Inter's ~1.2 line-height) plus 6px padding top and
+ * bottom: (26.4 + 6 × 2) / 22 ≈ 1.75.
+ */
+const NAME_CHIP_HEIGHT_RATIO = 1.75;
+/**
+ * Chip corner radius as a fraction of `nameFontSize` — the Figma chip's
+ * radius is a flat 6px against its 22px text (6/22 ≈ 0.27), not scaled off
+ * the chip's own height.
+ */
+const NAME_CHIP_RADIUS_RATIO = 6 / 22;
+/**
+ * Chip border stroke width, as a fraction of `nameFontSize` — the Figma
+ * chip's hairline border is 1.429px against its 22px text (1.429/22 ≈
+ * 0.065).
+ */
+const NAME_CHIP_BORDER_RATIO = 1.429 / 22;
+/**
+ * The name `<text>` is drawn at its alphabetic baseline (no `dominantBaseline`
+ * override — unchanged from before the chip existed, so existing snapshots of
+ * the text node itself stay identical). The chip rect instead needs to centre
+ * on the text's visual middle, which sits ABOVE that baseline by roughly this
+ * fraction of the font size for cap-height Latin surnames (no descenders in
+ * the sample data) — a small, deliberately-conservative fudge verified by
+ * rendering, not derived from font metrics (the Figma file has no equivalent
+ * number for this — it's an artifact of SVG's baseline-anchored `<text>`,
+ * not something a real text layout box needs).
+ */
+const NAME_CHIP_BASELINE_TO_CENTER = 0.32;
+
+/** Backing chip fill — the Figma chip's `#2b2b2b` ("grey-300"), solid. */
+const NAME_CHIP_FILL = '#2b2b2b';
+/** Backing chip border colour — the Figma chip's hairline `rgba(255,255,255,0.05)`. */
+const NAME_CHIP_BORDER_COLOR = 'rgba(255, 255, 255, 0.05)';
+
+/**
+ * A solid, rounded backing chip sized to `label` so a player's name never has
+ * to compete with the pitch markings under it (the six-yard box, the centre
+ * circle, the penalty arc all used to run straight through bare white text —
+ * see the module doc's Figma reference, node 3047:11125). Width is an
+ * ESTIMATE (see {@link NAME_CHIP_CHAR_ADVANCE}'s doc for why), not a
+ * measurement — this stays a plain, synchronous render with no post-paint
+ * measure/resize pass, which matters for the export/capture path
+ * (`utils/export.ts`) that rasterises the SVG as-is on first render.
+ */
+function NameChip({
+  x,
+  y,
+  label,
+  fontSize,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  fontSize: number;
+}) {
+  const width = label.length * fontSize * NAME_CHIP_CHAR_ADVANCE + fontSize * NAME_CHIP_PAD_X * 2;
+  const height = fontSize * NAME_CHIP_HEIGHT_RATIO;
+  const centerY = y - fontSize * NAME_CHIP_BASELINE_TO_CENTER;
+  return (
+    <rect
+      x={x - width / 2}
+      y={centerY - height / 2}
+      width={width}
+      height={height}
+      rx={fontSize * NAME_CHIP_RADIUS_RATIO}
+      fill={NAME_CHIP_FILL}
+      stroke={NAME_CHIP_BORDER_COLOR}
+      strokeWidth={fontSize * NAME_CHIP_BORDER_RATIO}
+      style={{ pointerEvents: 'none' }}
+    />
   );
 }
 
@@ -343,14 +468,19 @@ export function LineupPitch({
   // pitch fit (see `padding` on the `<Pitch>` call below), verified in
   // `scratchpad/formations-all.html` across all 9 formations x both
   // orientations.
-  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 4.6), 4.6);
+  // 3.34, from the Figma card's own geometry: a 74px headshot on a 1109px-wide
+  // pitch is 6.67% of the width, and markerSize is the RADIUS, so 3.34. The
+  // previous 4.6 rendered markers roughly a third larger than the design and
+  // crowded the pitch. Fullscreen keeps its own touch-target size.
+  const markerSize = finitePositive(markerSizeRaw ?? (fullscreen ? 8.5 : 3.34), 3.34);
   // Name / role-label sizing stays PROPORTIONAL to markerSize (derived, not a
   // second hardcoded constant) so a fullscreen or custom marker size scales
   // the whole marker+label unit together instead of the label lagging behind
-  // at its old fixed px size. Ratios re-tuned for the smaller 4.6 default
-  // (name font / label baseline / role font all scaled down to match) —
-  // verified in `scratchpad/formations-all.html`.
-  const nameFontSize = markerSize * 0.62;
+  // at its old fixed px size.
+  //
+  // 0.595 is the Figma's own ratio: 22px label against a 74px headshot, i.e.
+  // 1.98 units of label against a 3.34 radius.
+  const nameFontSize = markerSize * 0.595;
   const labelBaselineOffset = markerSize * 1.5;
   const roleFontSize = markerSize * 0.6;
 
@@ -586,20 +716,8 @@ export function LineupPitch({
                   pointerEvents="auto"
                 />
 
-                {showNames && (
-                  <text
-                    x={position.x}
-                    y={position.y + labelBaselineOffset}
-                    textAnchor="middle"
-                    fill={labelColor}
-                    fontSize={nameFontSize}
-                    fontWeight="600"
-                    opacity="0.9"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {surname(player.name)}
-                  </text>
-                )}
+                {/* The name chip is NOT drawn here — see the second pass below
+                    this map for why it has to outlive its own slot's <g>. */}
               </g>
             );
           }
@@ -683,6 +801,49 @@ export function LineupPitch({
             </g>
           );
         })}
+
+        {/* Name chips — a SECOND pass, deliberately after every marker.
+            SVG has no z-index; paint order is document order. Drawing a chip
+            inside its own slot's <g> means the NEXT slot's marker paints over
+            it, and in a packed formation neighbouring markers sit close enough
+            to slice through a chip — the exact failure the chip exists to
+            prevent, made worse than bare text because a chip is opaque, so a
+            marker cuts a visible notch out of it. Rendering every chip after
+            every marker makes a name unoccludable by another player.
+            Labels are `pointer-events: none`, so lifting them out of the slot
+            <g> costs no interactivity — the marker still owns the gesture. */}
+        {showNames &&
+          slots.map((slot, index) => {
+            if (!slot.player) return null;
+            const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
+            const label = surname(slot.player.name);
+            return (
+              <g key={`name-${index}`} style={{ pointerEvents: 'none' }}>
+                <NameChip
+                  x={position.x}
+                  y={position.y + labelBaselineOffset}
+                  label={label}
+                  fontSize={nameFontSize}
+                />
+                <text
+                  x={position.x}
+                  y={position.y + labelBaselineOffset}
+                  textAnchor="middle"
+                  fill={labelColor}
+                  fontSize={nameFontSize}
+                  // Regular (was 600/Semibold) — now that the chip behind it
+                  // carries the contrast, the Figma label itself is Inter
+                  // Regular, with a slight negative tracking
+                  // (`-0.66px` at 22px ≈ `-0.03em`).
+                  fontWeight="400"
+                  opacity="0.9"
+                  style={{ pointerEvents: 'none', letterSpacing: '-0.03em' }}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
 
         {/* Drag ghost: the dragged player's marker, floating at the live pointer
             position — rendered LAST so it paints on top of every slot (SVG has
