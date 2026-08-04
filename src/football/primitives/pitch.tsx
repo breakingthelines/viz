@@ -113,6 +113,63 @@ export function fromScreen(
 }
 
 /**
+ * Per-axis viewBox gutter for a screen-space box of `width` x `height`.
+ *
+ * Extracted so the frame a pitch actually renders and the frame a CALLER
+ * reasons about (see {@link fullPitchFrame}) can never be computed two
+ * slightly different ways — the padding is not a plain `pad` on both axes
+ * under `fillEdgeToEdge`, and a second hand-rolled copy of that rule would be
+ * wrong in exactly the case it matters. See the comment at the `viewBox`
+ * construction for why the per-axis scaling is what keeps the aspect exact.
+ */
+function axisPadding(
+  width: number,
+  height: number,
+  pad: number,
+  fillEdgeToEdge: boolean
+): { x: number; y: number } {
+  if (!fillEdgeToEdge) return { x: pad, y: pad };
+  const norm = 100 * PITCH_WIDTH_RATIO;
+  return { x: (pad * width) / norm, y: (pad * height) / norm };
+}
+
+/**
+ * The screen-space box a FULL pitch is drawn into, gutter included — i.e. the
+ * padded viewBox, and so the region inside which a child of `Pitch` is
+ * guaranteed not to be cut off by the frame.
+ *
+ * Exists for children that have to FIT themselves to the pitch rather than
+ * merely be positioned on it — `LineupPitch`'s name chips, which are as wide
+ * as the surname they carry and must not be allowed to run out of the frame.
+ * Such a child cannot derive this itself: the gutter is scaled per axis under
+ * `fillEdgeToEdge` (see {@link axisPadding}), so a caller guessing at `padding`
+ * on both axes would be wrong on one of them.
+ *
+ * Deliberately the padded frame rather than the pitch MARKINGS. The gutter is
+ * there precisely so a marker sitting on a touchline, or a label hanging below
+ * a goal line, can overhang the pitch outline without being clipped — that is
+ * its stated job (see {@link PitchProps.padding}), and a caller that clamped
+ * to the outline instead would take that room away from the one element it was
+ * reserved for. Where a surface wants the two to coincide it sets `padding` to
+ * `0`, and then this returns the pitch itself.
+ */
+export function fullPitchFrame(
+  orientation: PitchOrientation = 'landscape',
+  padding = 0,
+  fillEdgeToEdge = false
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  const extent = screenRect(0, 0, 100, 100, orientation, fillEdgeToEdge);
+  const pad = Number.isFinite(padding) ? Math.max(0, padding) : 0;
+  const { x: padX, y: padY } = axisPadding(extent.width, extent.height, pad, fillEdgeToEdge);
+  return {
+    minX: extent.x - padX,
+    minY: extent.y - padY,
+    maxX: extent.x + extent.width + padX,
+    maxY: extent.y + extent.height + padY,
+  };
+}
+
+/**
  * Map an axis-aligned rectangle authored in normalized pitch space to its
  * axis-aligned screen-space equivalent, via {@link toScreen} on its two
  * opposite corners. Every pitch marking drawn as an SVG `<rect>` (goal
@@ -357,9 +414,12 @@ export function Pitch({
   // gutter once the axes are unsquashed back to real proportions. When
   // `fillEdgeToEdge` is false this is a no-op (`padX`/`padY` both fall back
   // to plain `pad`), leaving today's symmetric growth byte-for-byte.
-  const norm = 100 * PITCH_WIDTH_RATIO;
-  const padX = fillEdgeToEdge ? (pad * screenBase.width) / norm : pad;
-  const padY = fillEdgeToEdge ? (pad * screenBase.height) / norm : pad;
+  const { x: padX, y: padY } = axisPadding(
+    screenBase.width,
+    screenBase.height,
+    pad,
+    fillEdgeToEdge
+  );
   const viewBox = `${screenBase.x - padX} ${screenBase.y - padY} ${screenBase.width + padX * 2} ${screenBase.height + padY * 2}`;
   // The FULL pitch's extent — always the whole `0 0 100 100` authored square,
   // regardless of `variant` (the background/outline below are the whole

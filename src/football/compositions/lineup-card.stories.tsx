@@ -98,7 +98,7 @@ const ENGLAND_XI: LineupSlotPlayer[] = [
 ];
 
 /**
- * The same XI laid onto a 4-3-3, for the pitch body.
+ * Lay an XI onto the `4-3-3` the card's pitch frame draws.
  *
  * `x` is MIRRORED (`100 - x`) so the keeper sits at the TOP of the pitch and
  * the front three at the bottom, which is how the Figma pitch frame draws it.
@@ -114,9 +114,18 @@ const ENGLAND_XI: LineupSlotPlayer[] = [
  * Only the XI's own coordinates change — the formation template itself is
  * untouched, and `LineupPitch` is unmodified.
  */
+function slotsFor(xi: LineupSlotPlayer[]): LineupSlot[] {
+  return getFormationTemplate('4-3-3').map((slot, i) => ({
+    x: 100 - slot.x,
+    y: slot.y,
+    role: slot.role,
+    player: xi[i],
+  }));
+}
+
+/** The Figma's sample XI laid onto the 4-3-3 its pitch frame draws. */
 function englandSlots(): LineupSlot[] {
-  const template = getFormationTemplate('4-3-3');
-  const order = [
+  return slotsFor([
     ENGLAND_XI[0],
     ENGLAND_XI[1],
     ENGLAND_XI[2],
@@ -128,13 +137,114 @@ function englandSlots(): LineupSlot[] {
     ENGLAND_XI[7],
     ENGLAND_XI[9],
     ENGLAND_XI[10],
-  ];
-  return template.map((slot, i) => ({
-    x: 100 - slot.x,
-    y: slot.y,
-    role: slot.role,
-    player: order[i],
-  }));
+  ]);
+}
+
+/**
+ * A realistic worst-case XI — the fixture the 0.11.0 collision guard was
+ * missing, and the reason it passed over a visibly broken card.
+ *
+ * `ENGLAND_XI` above is the Figma file's own sample, and every surname in it
+ * is short: James, Stones, Rice, Kane, Saka. That is a fine subject for a
+ * design match and a useless one for a layout guard — the chips it produces
+ * are so narrow that no plausible font size collides them, so the assertions
+ * built on it measured a case that could not fail. A published card carrying
+ * "Alexander-Arnold" was broken in four places while the suite stayed green.
+ *
+ * This XI is chosen to be the hardest lineup viz can actually be handed,
+ * rather than a merely longer one:
+ *
+ *  - **The longest surname sits at the widest position.** In `4-3-3` the full
+ *    backs are the touchline slots (`y` 15 and 85), which is where horizontal
+ *    space runs out first — a chip there has the pitch edge on one side and a
+ *    centre back on the other. "Alexander-Arnold" is placed at right back
+ *    deliberately, so the containment and collision constraints bite on the
+ *    SAME chip instead of on two comfortable ones.
+ *  - **Hyphenated and double-barrelled**, which no averaged advance and no
+ *    "surnames are one short word" assumption survives.
+ *  - **Accented Latin throughout** (Militão, Koundé, Tchouaméni, Diomandé,
+ *    Mbappé) — combining marks change the measured run and the ink extents
+ *    `getBoundingClientRect` reports, so a guard that has only ever seen ASCII
+ *    has not seen the font stack this actually renders in.
+ *  - **A packed back four AND a packed midfield three**, so the row with the
+ *    least room per player is not the only row under test.
+ *
+ * Headshots are reused from the placeholder set above — the images are
+ * abstract stand-ins either way, and this fixture exists to stress the TEXT.
+ */
+const LONG_NAME_XI: LineupSlotPlayer[] = [
+  { id: 'courtois', name: 'Thibaut Courtois', shirtNumber: 1, imageUrl: HEADSHOT.pickford },
+  { id: 'cucurella', name: 'Marc Cucurella', shirtNumber: 3, imageUrl: HEADSHOT.colwill },
+  { id: 'militao', name: 'Éder Militão', shirtNumber: 3, imageUrl: HEADSHOT.stones },
+  { id: 'kounde', name: 'Jules Koundé', shirtNumber: 5, imageUrl: HEADSHOT.oreilly },
+  {
+    id: 'alexander-arnold',
+    name: 'Trent Alexander-Arnold',
+    shirtNumber: 12,
+    isCaptain: true,
+    imageUrl: HEADSHOT.james,
+  },
+  { id: 'tchouameni', name: 'Aurélien Tchouaméni', shirtNumber: 18, imageUrl: HEADSHOT.rice },
+  { id: 'bellingham', name: 'Jude Bellingham', shirtNumber: 5, imageUrl: HEADSHOT.bellingham },
+  { id: 'diomande', name: 'Sinaly Diomandé', shirtNumber: 24, imageUrl: HEADSHOT.wharton },
+  { id: 'silva', name: 'Bernardo Silva', shirtNumber: 20, imageUrl: HEADSHOT.palmer },
+  { id: 'mbappe', name: 'Kylian Mbappé', shirtNumber: 9, imageUrl: HEADSHOT.kane },
+  { id: 'mastantuono', name: 'Franco Mastantuono', shirtNumber: 30, imageUrl: HEADSHOT.saka },
+];
+
+/** The worst-case XI on the same 4-3-3 — long names at the touchline slots. */
+function longNameSlots(): LineupSlot[] {
+  return slotsFor(LONG_NAME_XI);
+}
+
+/**
+ * An XI past what the type size alone can absorb — the fixture that exercises
+ * the FIT MECHANISM rather than the size chosen for it.
+ *
+ * `LONG_NAME_XI` proves the card copes with the hardest lineup a real team
+ * sheet produces: at 16px every one of its names, "Alexander-Arnold" included,
+ * renders in full with room to spare. That is the right outcome, and it leaves
+ * `nameChipBudgets` unexercised on this surface — a guard that only ever sees
+ * chips which comfortably fit cannot tell whether the thing keeping them
+ * inside the pitch still works. Deleting the clamp entirely would not have
+ * failed a single assertion built on that XI, which is the same blind spot
+ * this whole change exists to close, one level up.
+ *
+ * So this XI is deliberately past the line, and it is not a synthetic one:
+ * every surname here belongs to a real player, and the editor additionally
+ * lets an author type a CUSTOM name of any length into a slot, so labels wider
+ * than the space a marker owns are a reachable production input rather than a
+ * hypothetical.
+ *
+ * The names are placed to load each half of the budget rule separately:
+ *
+ *  - **"Oxlade-Chamberlain" at left back** — a touchline slot, whose nearest
+ *    same-row rival is too far away to bind. Only the PITCH EDGE constrains
+ *    it, so a regression that dropped the edge term would put this chip
+ *    outside the pitch and nothing else would notice.
+ *  - **"Alexander-Arnold" and "Papastathopoulos" as the centre-back pair** —
+ *    the two markers closest together on any row, and far enough from either
+ *    touchline that the edge never binds. Only the ROW-NEIGHBOUR term keeps
+ *    these two apart, so dropping it collides them and leaves the edge
+ *    assertions green.
+ */
+const OVERLONG_XI: LineupSlotPlayer[] = [
+  { id: 'donnarumma', name: 'Gianluigi Donnarumma', shirtNumber: 1, imageUrl: HEADSHOT.pickford },
+  { id: 'oxlade', name: 'Alex Oxlade-Chamberlain', shirtNumber: 15, imageUrl: HEADSHOT.colwill },
+  { id: 'taa', name: 'Trent Alexander-Arnold', shirtNumber: 66, imageUrl: HEADSHOT.james },
+  { id: 'sokratis', name: 'Sokratis Papastathopoulos', shirtNumber: 5, imageUrl: HEADSHOT.stones },
+  { id: 'loftus', name: 'Ruben Loftus-Cheek', shirtNumber: 8, imageUrl: HEADSHOT.oreilly },
+  { id: 'macallister', name: 'Alexis Mac Allister', shirtNumber: 10, imageUrl: HEADSHOT.rice },
+  { id: 'bellingham', name: 'Jude Bellingham', shirtNumber: 5, imageUrl: HEADSHOT.bellingham },
+  { id: 'szoboszlai', name: 'Dominik Szoboszlai', shirtNumber: 8, imageUrl: HEADSHOT.wharton },
+  { id: 'mastantuono', name: 'Franco Mastantuono', shirtNumber: 30, imageUrl: HEADSHOT.palmer },
+  { id: 'lewandowski', name: 'Robert Lewandowski', shirtNumber: 9, imageUrl: HEADSHOT.kane },
+  { id: 'aubameyang', name: 'Pierre Aubameyang', shirtNumber: 14, imageUrl: HEADSHOT.saka },
+];
+
+/** The over-long XI on the same 4-3-3 — see {@link OVERLONG_XI}. */
+function overlongSlots(): LineupSlot[] {
+  return slotsFor(OVERLONG_XI);
 }
 
 /**
@@ -165,10 +275,10 @@ function englandSlots(): LineupSlot[] {
  * `shrink-0` stops the flex slot from squeezing the pitch: without it the
  * pitch collapses to ~420px wide and floats in the middle of the slot.
  */
-function CardPitch() {
+function CardPitch({ slots = englandSlots() }: { slots?: LineupSlot[] } = {}) {
   return (
     <LineupPitch
-      slots={englandSlots()}
+      slots={slots}
       orientation="portrait"
       markerContent="headshot"
       showNames
@@ -193,14 +303,27 @@ function CardPitch() {
       // collided the back four's chips. At 4.354 the labels land at 22.98px.
       //
       markerSize={4.354}
-      // 2.993 units = the file's own 22px label, at the same 7.344 px/unit.
-      // Pinned rather than derived: `nameFontSize`'s default ratio (0.718)
-      // would put it at 22.98px, and that ratio is the reader plate's
-      // deliberate legibility bump from 0.9.1/0.9.2 — right for a lineup read
-      // in a feed, but this card is a design match to a fixed artboard. See
-      // the prop's own doc for why the card states the size instead of the two
-      // surfaces fighting over one ratio.
-      nameFontSize={2.993}
+      // 2.177 units = 16px at the same 7.344 px/unit — HALF the marker radius,
+      // so the name is set at a quarter of the 64px headshot's diameter.
+      //
+      // A deliberate departure from the Figma, which sets 22px (2.993 units).
+      // It is recorded here rather than buried: the file's own value is 27%
+      // larger, and 0.11.0 matched it on purpose. What the file could not show
+      // is a real team sheet — its sample XI is James, Stones, Rice, Kane,
+      // Saka, and at that length 22px looks correct. Against the names cards
+      // are actually published with, the same 22px reads as heavy chips
+      // crowding the photographs they are supposed to caption (the owner's
+      // report on a published card), and it is the size at which the back
+      // four's chips start competing for room at all — see
+      // `nameChipBudgets`. At 16px the whole of `LONG_NAME_XI` renders in
+      // full, including "Alexander-Arnold", with nothing truncated and
+      // nothing clamped; `SquarePitchLongNamesGeometry` is what holds that.
+      //
+      // The MARKER is untouched at the file's 64px. This is a change to the
+      // type only, which is what `nameFontSize` was added for in 0.11.0 —
+      // sizing the label independently of the disc, instead of shrinking the
+      // photographs to control the text hanging under them.
+      nameFontSize={2.177}
       // Neutral `#2b2b2b` (the file's own chip grey) rather than the default
       // team blue, which would be the only saturated colour on an otherwise
       // monochrome card. It backs each headshot and shows through a
@@ -629,6 +752,88 @@ function intersection(a: DOMRect, b: DOMRect) {
 }
 
 /**
+ * The DRAWN pitch — the grass rect, whose edges ARE the touchlines and goal
+ * lines. Deliberately not the SVG's own box: inside the card those happen to
+ * coincide (`pitchPadding` is 0), but on every other surface the SVG carries a
+ * gutter around the drawing, and "inside the pitch" has to mean inside the
+ * thing a reader can see, on all of them.
+ */
+function pitchBounds(svg: SVGSVGElement): DOMRect {
+  return svg.querySelector('rect')!.getBoundingClientRect();
+}
+
+/**
+ * The geometry contract the card's pitch body owes EVERY XI, asserted against
+ * whichever one the calling story renders.
+ *
+ * Extracted so the realistic fixture and the Figma's own sample are held to
+ * one identical standard. 0.11.0's assertions lived inline in a single story
+ * bound to a single sample XI, which is precisely how a guard ends up
+ * measuring only the case that cannot fail — see `LONG_NAME_XI`'s doc.
+ *
+ * The three clauses are not independent, and none of them can be dropped:
+ *
+ *  - **(1) No two chips intersect** is the reported defect stated directly.
+ *    Alone, it is satisfiable by shrinking chips until their text spills out.
+ *  - **(2) Every chip contains its own text** closes that, pinning the chip to
+ *    its label from the other side.
+ *  - **(3) No chip leaves the drawn pitch.** Alone, (1) and (2) are both
+ *    satisfied by a chip hanging off the touchline into the card's margin —
+ *    which is exactly what "Alexander-Arnold" did on the reported card, and
+ *    what nothing in 0.11.0 looked at.
+ */
+function assertChipGeometry(svg: SVGSVGElement, chips: ReturnType<typeof nameChips>) {
+  // (1) NO TWO NAME CHIPS INTERSECT. The defect, as a measurement.
+  for (let i = 0; i < chips.length; i++) {
+    for (let j = i + 1; j < chips.length; j++) {
+      const a = chips[i]!;
+      const b = chips[j]!;
+      const { x, y } = intersection(a.rect, b.rect);
+      expect(
+        x > 0 && y > 0,
+        `name chips "${a.label}" and "${b.label}" must not overlap — they intersect by ${x.toFixed(1)}x${y.toFixed(1)}px`
+      ).toBe(false);
+    }
+  }
+
+  // (2) Every chip still CONTAINS its own label. Without this, (1) could be
+  // passed by shrinking chips until the text spills out of them.
+  for (const { label, rect, text } of chips) {
+    expect(
+      text.left >= rect.left && text.right <= rect.right,
+      `name chip for "${label}" must contain its text — chip [${rect.left.toFixed(1)}, ${rect.right.toFixed(1)}], text [${text.left.toFixed(1)}, ${text.right.toFixed(1)}]`
+    ).toBe(true);
+  }
+
+  // (3) NOTHING LEAVES THE PITCH. Stated on all four edges rather than just
+  // the two the reported card happened to break, so a formation that pushes a
+  // chip off the goal line is caught by the same assertion.
+  //
+  // The 0.5px tolerance is anti-aliasing on the grass rect's own edge, not
+  // slack in the claim — the failure this guards against was 30px+.
+  const pitch = pitchBounds(svg);
+  const EDGE_TOLERANCE = 0.5;
+  for (const { label, rect } of chips) {
+    expect(
+      rect.left,
+      `name chip for "${label}" must not run off the LEFT touchline — chip left ${rect.left.toFixed(1)}, pitch left ${pitch.left.toFixed(1)}`
+    ).toBeGreaterThanOrEqual(pitch.left - EDGE_TOLERANCE);
+    expect(
+      rect.right,
+      `name chip for "${label}" must not run off the RIGHT touchline — chip right ${rect.right.toFixed(1)}, pitch right ${pitch.right.toFixed(1)}`
+    ).toBeLessThanOrEqual(pitch.right + EDGE_TOLERANCE);
+    expect(
+      rect.top,
+      `name chip for "${label}" must not run off the TOP goal line — chip top ${rect.top.toFixed(1)}, pitch top ${pitch.top.toFixed(1)}`
+    ).toBeGreaterThanOrEqual(pitch.top - EDGE_TOLERANCE);
+    expect(
+      rect.bottom,
+      `name chip for "${label}" must not run off the BOTTOM goal line — chip bottom ${rect.bottom.toFixed(1)}, pitch bottom ${pitch.bottom.toFixed(1)}`
+    ).toBeLessThanOrEqual(pitch.bottom + EDGE_TOLERANCE);
+  }
+}
+
+/**
  * Verification story (not a product story): the pitch frame's marker and label
  * geometry, measured against the Figma file's own numbers.
  *
@@ -685,69 +890,176 @@ export const SquarePitchGeometry: Story = {
     const chips = nameChips(svg);
     expect(chips, 'one name chip per player').toHaveLength(11);
 
-    // (2) NO TWO NAME CHIPS INTERSECT. The defect, as a measurement.
-    for (let i = 0; i < chips.length; i++) {
-      for (let j = i + 1; j < chips.length; j++) {
-        const a = chips[i]!;
-        const b = chips[j]!;
-        const { x, y } = intersection(a.rect, b.rect);
-        expect(
-          x > 0 && y > 0,
-          `name chips "${a.label}" and "${b.label}" must not overlap — they intersect by ${x.toFixed(1)}x${y.toFixed(1)}px`
-        ).toBe(false);
-      }
-    }
+    // (2, 3) No collisions, every chip holds its text, nothing leaves the
+    // pitch — the contract shared with `SquarePitchLongNamesGeometry`, which
+    // holds the same component to the same standard against a far harder XI.
+    assertChipGeometry(svg, chips);
 
-    // (3) Every chip still CONTAINS its own label. Without this, (2) could be
-    // passed by shrinking chips until the text spills out of them.
-    for (const { label, rect, text } of chips) {
-      expect(
-        text.left >= rect.left && text.right <= rect.right,
-        `name chip for "${label}" must contain its text — chip [${rect.left.toFixed(1)}, ${rect.right.toFixed(1)}], text [${text.left.toFixed(1)}, ${text.right.toFixed(1)}]`
-      ).toBe(true);
-    }
-
-    // (4) The file's own numbers: a 64px headshot and a 22px label. Both are
-    // what (2) and (3) are measured against, and both were wrong in 0.10.0.
+    // (4) The MARKER is the file's own 64px, unchanged and deliberately so —
+    // it was the discs that 0.10.0 got wrong (73.5px), 0.11.0 that fixed
+    // them, and nothing since has had cause to move them.
     const markers = Array.from(svg.querySelectorAll('image'));
     expect(markers, 'every marker renders a headshot image').toHaveLength(11);
     for (const marker of markers) {
       const box = marker.getBoundingClientRect();
       expect(box.width, 'Figma 3048:11311 draws a 64px headshot').toBeCloseTo(64, 0);
     }
+
+    // (5) The name TYPE is 16px, a QUARTER of that 64px marker — and a
+    // deliberate 27% departure from the file's own 22px. See `CardPitch` for
+    // the reasoning; it is asserted here so the divergence is a stated,
+    // reviewable number rather than something a later reader has to discover
+    // by diffing against Figma.
+    //
     // `font-size` on an SVG node is in USER UNITS, so it has to go through the
-    // viewBox scale before it can be compared with a figure from the file.
+    // viewBox scale before it can be compared with a figure in pixels.
     const pxPerUnit = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+    const CHIP_FONT_PX = 16;
     for (const text of chipTexts(svg)) {
       expect(
         parseFloat(getComputedStyle(text).fontSize) * pxPerUnit,
-        'Figma 3048:11311 sets the name chip in 22px type'
-      ).toBeCloseTo(22, 1);
+        'the name chip is set in 16px type — a quarter of the 64px marker, and NOT the file’s 22px'
+      ).toBeCloseTo(CHIP_FONT_PX, 1);
     }
 
-    // (5) Chip padding is the file's flat 8px each side, which is what proves
-    // the chip is sized to the MEASURED glyph run rather than to an estimate.
+    // (6) Chip padding is the file's flat 8px each side SCALED WITH THE TYPE
+    // (8/22 of the font size, so 5.82px at 16px) — the chip keeps the Figma's
+    // proportions, it is only smaller. This is what proves the chip is sized
+    // to the MEASURED glyph run rather than to an estimate.
     //
     // The tolerance is 1.5px, and generous on purpose without being loose. Two
     // sub-pixel effects sit under this number: the SVG advance carries the
-    // -3% tracking AFTER its final character (so a centred label sits ~0.33px
-    // right of the chip's true centre at 22px), and `getBoundingClientRect`
-    // on a `<text>` reports ink extents, which differ slightly between
-    // rasterisers — measured 8.05px on macOS and 8.50px on CI's Linux for the
-    // same render. Neither is drift worth failing over.
+    // -3% tracking AFTER its final character (so a centred label sits slightly
+    // right of the chip's true centre), and `getBoundingClientRect` on a
+    // `<text>` reports ink extents, which differ slightly between rasterisers
+    // — measured 8.05px on macOS and 8.50px on CI's Linux for the same render
+    // at the old 22px. Neither is drift worth failing over.
     //
     // It still discriminates decisively, which is the point: the estimate this
     // replaced padded "Colwill" by 25.2px and "Rice" by 15.0px against the
-    // same 8px target. Nothing that sizes a chip by counting characters lands
+    // same target. Nothing that sizes a chip by counting characters lands
     // inside this window on every name at once.
     const PAD_TOLERANCE = 1.5;
+    const expectedPad = (CHIP_FONT_PX * 8) / 22;
     for (const { label, rect, text } of chips) {
       const pad = text.left - rect.left;
       expect(
-        Math.abs(pad - 8),
-        `name chip for "${label}" pads ~8px to the left of its text (Figma 3048:11311), got ${pad.toFixed(2)}px`
+        Math.abs(pad - expectedPad),
+        `name chip for "${label}" pads ~${expectedPad.toFixed(2)}px to the left of its text (Figma 3048:11311's 8/22 ratio at 16px), got ${pad.toFixed(2)}px`
       ).toBeLessThanOrEqual(PAD_TOLERANCE);
     }
+  },
+};
+
+/**
+ * Verification story (not a product story): the SAME geometry contract, against
+ * a lineup of real, long, accented names.
+ *
+ * This is the guard that was missing. `SquarePitchGeometry` above has measured
+ * chip collisions since 0.11.0 and has passed continuously — over a card that a
+ * reader reported as broken in four separate places, because the only XI it had
+ * ever been handed was the Figma's own sample of short English surnames. A
+ * measurement is only as good as the input it is taken on, and that one could
+ * not fail: the widest chip it produces is "Bellingham", which at the card's
+ * scale is comfortably narrower than the space between two markers.
+ *
+ * So the fixture is the fix here, and the layout change is downstream of it.
+ * `LONG_NAME_XI` is built to break the previous build — see its own doc for
+ * why each name is in it — and against 0.12.0 it does, exactly as reported:
+ * the back four's chips overlap each other and "Alexander-Arnold" hangs off
+ * the right touchline into the card's margin.
+ *
+ * It asserts through `assertChipGeometry`, the identical function
+ * `SquarePitchGeometry` calls, rather than a parallel copy — a second set of
+ * assertions that could drift from the first would reintroduce the same class
+ * of blind spot one level up.
+ */
+export const SquarePitchLongNamesGeometry: Story = {
+  args: {
+    frame: 'square',
+    title: 'Long-name stress XI',
+    eyebrow: 'Lineup',
+    heroImageUrl: HERO_COOL,
+    children: null,
+  },
+  render: (args) => (
+    <LineupCard {...args}>
+      <CardPitch slots={longNameSlots()} />
+    </LineupCard>
+  ),
+  play: async ({ canvasElement }) => {
+    await settled();
+    const card = canvasElement.querySelector<HTMLElement>('[data-slot="lineup-card"]')!;
+    const svg = pitchSvg(card);
+
+    const chips = nameChips(svg);
+    expect(chips, 'one name chip per player').toHaveLength(11);
+
+    // The fixture is only worth anything if it really is the hard case, so the
+    // names it is built around are named here. A future edit that quietly
+    // swaps "Alexander-Arnold" for something shorter — the exact way this bug
+    // got through the first time — fails on this line rather than silently
+    // going back to measuring nothing.
+    const labels = chips.map((chip) => chip.label);
+    for (const required of ['Alexander-Arnold', 'Tchouaméni', 'Mastantuono', 'Cucurella']) {
+      expect(labels, `the stress fixture must keep carrying "${required}"`).toContain(required);
+    }
+  },
+};
+
+/**
+ * Verification story (not a product story): names too long for the room they
+ * are given are FITTED — and the fitting is what holds the geometry, not the
+ * type size.
+ *
+ * Same contract as the two stories above, against `OVERLONG_XI` — see its doc
+ * for how each name is placed to load one half of `nameChipBudgets` on its
+ * own. The extra assertion here is that the clamp actually ENGAGED: without
+ * it, a future type change that happened to make every label fit would leave
+ * this story passing while testing nothing, which is precisely how the
+ * original bug survived a green suite.
+ */
+export const SquarePitchOverlongNamesAreFitted: Story = {
+  args: {
+    frame: 'square',
+    title: 'Over-long name XI',
+    eyebrow: 'Lineup',
+    heroImageUrl: HERO_COOL,
+    children: null,
+  },
+  render: (args) => (
+    <LineupCard {...args}>
+      <CardPitch slots={overlongSlots()} />
+    </LineupCard>
+  ),
+  play: async ({ canvasElement }) => {
+    await settled();
+    const card = canvasElement.querySelector<HTMLElement>('[data-slot="lineup-card"]')!;
+    const svg = pitchSvg(card);
+
+    const chips = nameChips(svg);
+    expect(chips, 'one name chip per player').toHaveLength(11);
+
+    // The contract itself — no collisions, chips hold their text, nothing
+    // leaves the pitch — under labels that cannot all be honoured in full.
+    assertChipGeometry(svg, chips);
+
+    // The clamp engaged. A chip that had to be cut is the observable proof
+    // that `nameChipBudgets` is doing the work here, rather than the geometry
+    // happening to come out right because everything fitted anyway.
+    const truncated = chips.filter((chip) => chip.label.endsWith('…'));
+    expect(
+      truncated.length,
+      `at least one over-long name must be fitted with an ellipsis — got ${chips.map((c) => c.label).join(', ')}`
+    ).toBeGreaterThan(0);
+
+    // Truncation is a LAST resort, not the normal path: the names that do fit
+    // are still printed whole. Without this, a clamp that cut every label to a
+    // couple of characters would satisfy everything above it.
+    expect(
+      chips.filter((chip) => !chip.label.endsWith('…')).length,
+      'names that fit are still printed in full'
+    ).toBeGreaterThanOrEqual(6);
   },
 };
 
@@ -1318,6 +1630,80 @@ export const PitchFitsCardBodySlot: Story = {
     // is narrower than the column. A distorted pitch would sit at 515 wide.
     expect(pitch.width / pitch.height, 'pitch stays a true 2:3, undistorted').toBeCloseTo(2 / 3, 3);
     expect(pitch.width, 'which makes it 489.6 wide, not the column’s 515').toBeCloseTo(489.6, 0);
+  },
+};
+
+/**
+ * Verification story (not a product story): the chip fit reaches the SHARED
+ * surfaces too, and is supposed to.
+ *
+ * `nameChipBudgets` lives in `LineupPitch`, not in the card, so it applies to
+ * the editor's builder, the published reader and Match Centre as well. That is
+ * deliberate and worth stating rather than discovering: handed the same
+ * realistic XI, Match Centre's portrait board had the same defect the card was
+ * reported for — measured on `origin/main` at 0.12.0, "Koundé" and
+ * "Alexander-Arnold" overlapped by 0.54 x 0.20 user units (2.8 x 1.0 px at the
+ * 420px width Match Centre renders), because the full backs sit only four
+ * units off the centre backs and a chip is taller than that gap.
+ *
+ * Every OTHER chip on every other standalone host is byte-for-byte what it was
+ * before — verified by diffing the rendered `x`/`width` of all 11 chips across
+ * the reader plate, Match Centre and the fullscreen builder, on both the short
+ * and long XIs. The fit only acts where a chip would otherwise collide or
+ * leave the frame, so nothing already-correct moves. `StandaloneFitIsUnchanged`
+ * below pins the other half of that boundary — the pitch's own box.
+ */
+export const StandaloneLongNamesStayClear: Story = {
+  args: { frame: 'square', title: 'unused', children: null },
+  render: () => (
+    <div>
+      <div data-host="reader" style={{ width: 590 }}>
+        <LineupPitch slots={longNameSlots()} formation="4-3-3" teamName="Madrid" />
+      </div>
+      <div data-host="portrait" style={{ width: 420 }}>
+        <LineupPitch
+          slots={longNameSlots()}
+          orientation="portrait"
+          markerContent="headshot"
+          showNames
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await settled();
+
+    for (const host of ['reader', 'portrait']) {
+      const root = canvasElement.querySelector<HTMLElement>(`[data-host="${host}"]`)!;
+      const svg = pitchSvg(root);
+      const chips = nameChips(svg);
+      expect(chips, `${host}: one name chip per player`).toHaveLength(11);
+
+      for (let i = 0; i < chips.length; i++) {
+        for (let j = i + 1; j < chips.length; j++) {
+          const a = chips[i]!;
+          const b = chips[j]!;
+          const { x, y } = intersection(a.rect, b.rect);
+          expect(
+            x > 0 && y > 0,
+            `${host}: "${a.label}" and "${b.label}" must not overlap — they intersect by ${x.toFixed(1)}x${y.toFixed(1)}px`
+          ).toBe(false);
+        }
+      }
+
+      // Contained by the pitch's rendered FRAME here, not by its markings —
+      // the gutter these surfaces carry exists so an edge label can overhang
+      // the touchline, and taking that back would truncate names (the
+      // goalkeeper's, every time) to fix a card that is not theirs. See
+      // `fullPitchFrame`.
+      const frame = svg.getBoundingClientRect();
+      for (const { label, rect } of chips) {
+        expect(
+          rect.left >= frame.left - 0.5 && rect.right <= frame.right + 0.5,
+          `${host}: "${label}" must stay inside the pitch frame — chip [${rect.left.toFixed(1)}, ${rect.right.toFixed(1)}], frame [${frame.left.toFixed(1)}, ${frame.right.toFixed(1)}]`
+        ).toBe(true);
+      }
+    }
   },
 };
 
