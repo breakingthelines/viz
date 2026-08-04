@@ -15,6 +15,22 @@ export const BTL_RED = '#E20613';
 const BTL_RED_LIGHT = '#E5332A';
 
 /**
+ * The BTL brand black — the page ground every dark BTL surface is drawn on,
+ * and the package's single source for "BTL black".
+ *
+ * Lives beside {@link BTL_RED} because this module is already where the
+ * package keeps a brand colour that surfaces away from the logo have to agree
+ * on, and this one now has exactly the same problem: `LineupCard` needs it
+ * twice over — as the tint its hero shade is mixed from, and as the fill the
+ * portrait frame falls back to when a card carries no photograph — and those
+ * two must not drift apart. It is the same value `--color-pitch-grass-dark`
+ * is pinned to (see `styles/globals.css`), written as a literal here because
+ * viz ships as a standalone package whose consumers may not load its
+ * stylesheet.
+ */
+export const BTL_BLACK = '#0d0d0d';
+
+/**
  * The BTL bracket mark — two red-gradient brackets, viewBox `0 0 29.09 28.02`.
  *
  * viz is a standalone AGPL package with NO design-system dependency, so the

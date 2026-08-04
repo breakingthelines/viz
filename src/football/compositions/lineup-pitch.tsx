@@ -8,6 +8,7 @@ import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { BTL_RED } from '#/football/lib/btl-logo';
+import { useLineupFrame } from '#/football/compositions/lineup-card';
 import { measureLabelEm, useFontsReady } from '#/football/lib/text-width';
 
 /** A player assigned to a lineup slot. */
@@ -123,7 +124,9 @@ export interface LineupPitchProps {
   /**
    * Gutter around the pitch markings, in pitch units, forwarded to `Pitch`'s
    * own `padding`. Defaults to `7` — the value this component has always
-   * hardcoded, so every existing caller renders identically.
+   * hardcoded, so every existing caller renders identically — except inside a
+   * {@link LineupCard}, where it defaults to `0`; see {@link fit} for why the
+   * two defaults travel together.
    *
    * The gutter is what stops a marker sitting ON the touchline (or its name
    * chip hanging below the goal line) from being clipped by the SVG edge, so
@@ -195,12 +198,44 @@ export interface LineupPitchProps {
    */
   fullscreen?: boolean;
   /**
-   * How the pitch fills its container. `'width'` (default) is the classic
+   * How the pitch fills its container. `'width'` is the classic
    * `w-full h-auto` behaviour — the pitch is as wide as its container and the
    * height follows from the 3:2 aspect ratio. `'height'` instead fills the
    * container's height and derives width from it (capped so it never
    * overflows), for a container whose HEIGHT is the binding constraint — a
    * landscape phone viewport, which is wide but short.
+   *
+   * ## The default is `'width'`, except inside a `LineupCard`
+   *
+   * An explicit value always wins. Left unset, this resolves to `'width'` —
+   * today's behaviour for the editor's builder, the published reader and
+   * Match Centre, all of which render this component with no card around it
+   * and must not move — and to `'height'` inside a {@link LineupCard}, whose
+   * body slot is a FIXED 515x734 box rather than a column of free height.
+   *
+   * That slot is why the card is the one surface that has to fit the other
+   * way round. A width-fitted pitch in a 515px-wide slot is 772.5px tall (the
+   * real 2:3 proportion), so its box hung 19px past the slot at top and
+   * bottom — measured, not estimated, in `PitchFitsCardBodySlot`. The Figma
+   * frame draws 515x734 by stretching its pitch graphic to aspect 0.702; a
+   * real pitch is 0.667, so the box can match the slot's width or its height
+   * but not both without distorting the pitch, and the height is the
+   * dimension this composition actually reads. Matching it lands the box at
+   * 489.6x734.4 — inside the slot on both axes, 12.7px of slack each side.
+   *
+   * `pitchPadding` defaults to `0` in the same breath, and the two are one
+   * decision rather than two: the card's slot is the pitch's frame, so the
+   * DRAWING should fill it edge to edge exactly as the Figma does (its 734px
+   * box IS the pitch graphic, with the markers inside it). Fitting the height
+   * without dropping the gutter would shrink the drawing to 466x699 — the box
+   * would fit and the pitch would get smaller, which is not the fix. Together
+   * they leave the visible pitch where it already was (490x735 before,
+   * 489.6x734.4 after, a 0.08% change) and take 38px of empty overhang off
+   * the box.
+   *
+   * Both defaults are scoped through {@link useLineupFrame}, so they are
+   * reached only by a pitch with a card above it — a standalone `LineupPitch`
+   * never sees them. `StandaloneFitIsUnchanged` pins that isolation.
    */
   fit?: 'width' | 'height';
   /**
@@ -601,7 +636,7 @@ export function LineupPitch({
   className,
   markerSize: markerSizeRaw,
   nameFontSize: nameFontSizeRaw,
-  pitchPadding = 7,
+  pitchPadding: pitchPaddingRaw,
   markerContent = 'number',
   showNames = true,
   editable = false,
@@ -610,9 +645,29 @@ export function LineupPitch({
   onSlotsSwap,
   selectedSlotIndex,
   fullscreen = false,
-  fit = 'width',
+  fit: fitRaw,
   orientation = 'landscape',
 }: LineupPitchProps) {
+  // `null` unless a `LineupCard` is rendering this pitch as its body. The
+  // card's body slot is a fixed box rather than a free-height column, which
+  // is the one situation where the pitch has to fit its HEIGHT and run its
+  // drawing edge to edge — see `fit`'s doc for the measurements. Reading it
+  // from context rather than adding a prop is what keeps the change off every
+  // other consumer: the editor's builder, the published reader and Match
+  // Centre have no card above them, so they resolve to the same `'width'` /
+  // `7` they always have. An explicit prop still wins in either case.
+  const inCard = useLineupFrame() !== null;
+  const fit = fitRaw ?? (inCard ? 'height' : 'width');
+  const pitchPadding = pitchPaddingRaw ?? (inCard ? 0 : 7);
+  // A height fit only bites if the box above the SVG has a DEFINITE height:
+  // `h-full` resolves to `auto` against an auto-height parent, which silently
+  // leaves the pitch at its width fit (measured — the class changes and not
+  // one pixel moves). Inside a card the slot is a definite 734px, so passing
+  // the height down the root makes the SVG's own `h-full` resolvable.
+  // `items-center` stops the flex row stretching the `w-auto` SVG back out to
+  // the full slot width, which would letterbox the drawing inside an
+  // oversized box instead of shrinking the box to the drawing.
+  const fillsHeight = inCard && fit === 'height';
   const color = teamColor ?? 'var(--color-team-home)';
   // Figma lineup restyle (node 3047:11125): the dark pitch reads as a DARK
   // GREY (`#1f1f1f`, "grey-100") rather than the near-black
@@ -765,7 +820,10 @@ export function LineupPitch({
   return (
     // Inter-first sans (product decision): opt out of the host page's editorial
     // serif so the chip + the pitch's SVG labels render in Inter.
-    <div className={cn('flex flex-col', className)} style={{ fontFamily: BLOCK_FONT_STACK }}>
+    <div
+      className={cn('flex flex-col', fillsHeight && 'h-full items-center', className)}
+      style={{ fontFamily: BLOCK_FONT_STACK }}
+    >
       {!editable && (chipLabel || formationLabel) && (
         <div
           data-slot="lineup-pitch-chip"
@@ -786,7 +844,7 @@ export function LineupPitch({
         fit={fit}
         orientation={orientation}
         fillEdgeToEdge
-        padding={finite(pitchPadding, 7)}
+        padding={finite(pitchPadding, inCard ? 0 : 7)}
       >
         {slots.map((slot, index) => {
           // `position` is SCREEN space (post-`toScreen`) — every render usage
