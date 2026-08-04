@@ -408,7 +408,15 @@ function CaptainArmband({ x, y, markerSize }: { x: number; y: number; markerSize
   const cx = x + markerSize * CAPTAIN_BADGE_OFFSET;
   const cy = y - markerSize * CAPTAIN_BADGE_OFFSET;
   return (
-    <g data-slot="lineup-captain-badge" style={{ pointerEvents: 'none' }} aria-label="Captain">
+    <g
+      data-slot="lineup-captain-badge"
+      style={{ pointerEvents: 'none' }}
+      // `role` + `aria-label` together, matching `LineupList`'s own captain
+      // badge — a bare `aria-label` on a <g> is not reliably exposed, and the
+      // two bodies should describe the armband the same way.
+      role="img"
+      aria-label="Captain"
+    >
       <circle
         cx={cx}
         cy={cy}
