@@ -35,14 +35,25 @@ export interface FormationBoardProps {
    */
   markerVariant?: 'confirmed' | 'predicted';
   /**
-   * Pitch orientation. Defaults to `landscape` — every existing consumer
-   * renders identically to today. `portrait` rotates the pitch a
-   * quarter-turn so the own goal sits at the bottom and the front line at
+   * Pitch orientation. Defaults to `landscape`. `portrait` rotates the pitch
+   * a quarter-turn so the own goal sits at the bottom and the front line at
    * the top. Forwarded to the underlying {@link Pitch}; applied AFTER
    * `flip`, so the two compose exactly as their names suggest — `flip`
    * mirrors which end of the (still-normalized) pitch a team is shown
    * attacking, `orientation` then places that normalized pitch on screen.
    * Marker content (numbers, names) is never rotated, only repositioned.
+   *
+   * This default deliberately did NOT flip to `portrait` alongside
+   * `LineupPitch`'s in 0.10.0, for two reasons. `FormationBoard` renders its
+   * `Pitch` WITHOUT `fillEdgeToEdge`, so its viewBox stays square: in
+   * portrait the browser's `meet` fit letterboxes that square inside the
+   * `aspect-[2/3]` box and the pitch draws as a square with dead bands above
+   * and below it (see the `Portrait` story, which asserts exactly that
+   * outer box). And unlike `LineupPitch` it has no consumer outside this
+   * package's own stories, so there is no shared-image or phone-viewport
+   * case pulling the default over. Portrait here remains opt-in and
+   * correct-but-letterboxed; making it the default would ship that letterbox
+   * to whoever picks this component up next.
    */
   orientation?: PitchOrientation;
 }

@@ -59,6 +59,7 @@ export const EmptyTemplate: Story = {
     teamName: 'New lineup',
     formation: '4-3-3',
     editable: true,
+    orientation: 'landscape',
   },
 };
 
@@ -120,6 +121,7 @@ export const Builder: Story = {
           formation={formation}
           teamColor="#eb0000"
           editable
+          orientation="landscape"
           onSlotClick={toggleSlot}
         />
       </div>
@@ -172,6 +174,7 @@ export const DragToSwap: Story = {
           formation="4-3-3"
           teamColor="#eb0000"
           editable
+          orientation="landscape"
           onSlotClick={(index) => setLastTap(slots[index]?.player?.name ?? `empty #${index}`)}
           onSlotsSwap={handleSlotsSwap}
         />
@@ -358,6 +361,7 @@ export const Reader: Story = {
     teamColor: '#eb0000',
     editable: false,
     showNames: true,
+    orientation: 'landscape',
     slots: templateSlots('4-3-3').map((slot, i) => ({
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
@@ -398,6 +402,7 @@ export const NameCollisions: Story = {
     formation: '4-3-3',
     teamColor: '#eb0000',
     editable: false,
+    orientation: 'landscape',
     showNames: true,
     slots: getFormationTemplate('4-3-3').map((t, i) => ({
       x: i === 5 ? 50 : t.x, // CM pivot: x 40 → 50, dead-centre of the centre circle
@@ -513,6 +518,7 @@ export const FiveManMidfieldReader: Story = {
     teamColor: '#eb0000',
     editable: false,
     showNames: true,
+    orientation: 'landscape',
     slots: templateSlots('4-5-1').map((slot, i) => ({
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
@@ -554,6 +560,7 @@ export const Headshots: Story = {
     editable: false,
     showNames: true,
     markerContent: 'headshot',
+    orientation: 'landscape',
     slots: templateSlots('4-3-3').map((slot, i) => ({
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
@@ -584,6 +591,7 @@ export const ReaderWithPlayerLinks: Story = {
           formation="4-3-3"
           teamColor="#eb0000"
           editable={false}
+          orientation="landscape"
           onPlayerClick={(player) => setLastClicked(`${player.name} (#${player.shirtNumber})`)}
         />
         <p
@@ -620,6 +628,9 @@ export const CustomPitchColor: Story = {
     labelColor: '#ffcc00',
     editable: false,
     showNames: true,
+    // Explicit: every geometry assertion below is written against the
+    // LANDSCAPE viewBox / extent, which stopped being the default in 0.10.0.
+    orientation: 'landscape',
     slots: templateSlots('4-3-3').map((slot, i) => ({
       ...slot,
       player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
@@ -689,6 +700,9 @@ export const FigmaMarkingGeometry: Story = {
     teamColor: '#eb0000',
     editable: false,
     showNames: false,
+    // Explicit: the marking geometry below is asserted at its LANDSCAPE
+    // screen coordinates, which stopped being the default in 0.10.0.
+    orientation: 'landscape',
     slots: templateSlots('4-3-3'),
   },
   play: async ({ canvasElement }) => {
@@ -743,5 +757,63 @@ export const FigmaMarkingGeometry: Story = {
     const formationSpan = await canvas.findByText('4-3-3');
     expect(formationSpan.className).toContain('font-semibold');
     expect(formationSpan.className).toContain('text-white/80');
+  },
+};
+
+/**
+ * Guard for the 0.10.0 default flip: with NO `orientation` prop at all, the
+ * pitch must render PORTRAIT — own goal at the bottom, attacking up the
+ * screen.
+ *
+ * Deliberately the only story in this file that omits the prop. Every other
+ * one now states its orientation explicitly (the landscape ones because
+ * their geometry assertions are written in landscape screen coordinates, the
+ * portrait ones as before), which is the right thing for a test but leaves
+ * the default itself uncovered — this story is what covers it, so a silent
+ * revert to `landscape` fails here rather than quietly reshaping every
+ * downstream card.
+ */
+export const DefaultOrientationIsPortrait: Story = {
+  args: {
+    teamName: 'Arsenal',
+    teamShortName: 'Arsenal',
+    formation: '4-3-3',
+    teamColor: '#eb0000',
+    editable: false,
+    showNames: true,
+    slots: templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '320px', padding: '24px', background: '#121212', borderRadius: 12 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg') as SVGSVGElement | null;
+    expect(svg, 'pitch SVG present').not.toBeNull();
+    // The outer box is the portrait one — `Pitch` picks `aspect-[2/3]` from
+    // `orientation` alone, so this is the cheapest unambiguous read of which
+    // orientation actually resolved.
+    expect(svg!.getAttribute('class') ?? '', 'portrait outer box').toContain('aspect-[2/3]');
+
+    // ...and the markers agree with it: the GK (authored at x≈5, nearest the
+    // own goal) renders BELOW every front-line player on screen. Asserting
+    // the class alone would pass even if the markers were left on the old
+    // axis, which is precisely the bug the shared `toScreen` remap exists to
+    // prevent.
+    const gk = canvasElement.querySelector('[aria-label="Raya"]');
+    expect(gk, 'GK marker present').not.toBeNull();
+    const gkY = Number(gk!.querySelector('circle')!.getAttribute('cy'));
+    for (const forward of ['Saka', 'Havertz', 'Martinelli']) {
+      const marker = canvasElement.querySelector(`[aria-label="${forward}"]`);
+      expect(marker, `${forward} marker present`).not.toBeNull();
+      const forwardY = Number(marker!.querySelector('circle')!.getAttribute('cy'));
+      expect(gkY, `GK renders below ${forward}`).toBeGreaterThan(forwardY);
+    }
   },
 };

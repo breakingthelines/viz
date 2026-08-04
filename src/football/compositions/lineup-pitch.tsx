@@ -135,27 +135,67 @@ export interface LineupPitchProps {
   /**
    * How the pitch fills its container. `'width'` (default) is the classic
    * `w-full h-auto` behaviour — the pitch is as wide as its container and the
-   * height follows from the 3:2 aspect ratio. `'height'` instead fills the
-   * container's height and derives width from it (capped so it never
-   * overflows), for a container whose HEIGHT is the binding constraint — a
-   * landscape phone viewport, which is wide but short.
+   * height follows from the aspect ratio (3:2 landscape, 2:3 portrait).
+   * `'height'` instead fills the container's height and derives width from it
+   * (capped so it never overflows), for a container whose HEIGHT is the
+   * binding constraint — a landscape phone viewport, which is wide but short.
+   *
+   * This default deliberately did NOT move with `orientation`'s. `fit` is a
+   * statement about the HOST's box, not about the pitch: it asks which of the
+   * container's two axes is the bounded one. Every surface that renders a
+   * lineup today — the editor's Lineup card, the published `ReaderPlate`, the
+   * Match Centre's Lineups column — is a block in a vertically SCROLLING
+   * document, so its width is fixed and its height is free, in either
+   * orientation. `'height'` in an auto-height parent resolves `h-full`
+   * against nothing and collapses the pitch, so making it the default would
+   * break exactly those hosts. The containers that genuinely bound height —
+   * the editor's fullscreen landscape mode, and the fixed-aspect frames the
+   * social export presets compose into — are finite, known, and pass
+   * `fit="height"` themselves.
    */
   fit?: 'width' | 'height';
   /**
-   * Pitch orientation. Defaults to `landscape` — every existing consumer
-   * (the editor's Lineup block, Match Centre) renders identically to today.
-   * `portrait` rotates the pitch a quarter-turn so the own goal sits at the
-   * bottom and the front line at the top — attacking UP the screen — for a
-   * lineup that needs to fill a phone-shaped viewport. Forwarded straight to
-   * the underlying {@link Pitch}; every slot's marker is repositioned via
-   * the same {@link toScreen} remap so markings and markers always agree on
-   * where the pitch is. Marker CONTENT — the number/monogram, the name
-   * label, the headshot, the empty-slot "+" — is never rotated, only its
-   * anchor point moves, so it stays upright and legible in both
-   * orientations. Drag-to-swap (`onSlotsSwap`) also works unchanged in
-   * portrait: the pointer-to-pitch-space conversion accounts for
+   * Pitch orientation. Defaults to `portrait` — own goal at the bottom,
+   * opposition goal at the top, attacking UP the screen, touchlines as the
+   * left/right edges. `landscape` renders the classic goal-to-goal,
+   * left-to-right pitch.
+   *
+   * THIS DEFAULT FLIPPED IN 0.10.0 (it was `landscape`). Portrait is the
+   * shape a lineup is actually consumed in: a phone viewport, and — the
+   * reason it moved — a shared image, since the frames people post to are
+   * tall. Fitted into a 9:16 frame, a 640px-wide lineup card covers 51% of it
+   * in landscape against 73% in portrait (measured on a rendered card, not
+   * derived from the aspect ratios) — so landscape spends about half a story
+   * on background.
+   *
+   * Every consumer in the fleet at the time of the flip (the editor's Lineup
+   * builder and published reader, the Match Centre's Lineups tab) now passes
+   * `orientation` EXPLICITLY, so none of them depends on this default; it
+   * decides what a NEW caller gets, and what an existing one gets if it ever
+   * drops the prop.
+   *
+   * A caller whose container is wide and short — a two-column layout with the
+   * pitch beside a squad list, a fullscreen landscape editing surface —
+   * should keep passing `orientation="landscape"` and, if its height is also
+   * bounded, `fit="height"`.
+   *
+   * Forwarded straight to the underlying {@link Pitch}; every slot's marker
+   * is repositioned via the same {@link toScreen} remap so markings and
+   * markers always agree on where the pitch is. Marker CONTENT — the
+   * number/monogram, the name label, the headshot, the empty-slot "+" — is
+   * never rotated, only its anchor point moves, so it stays upright and
+   * legible in both orientations. Drag-to-swap (`onSlotsSwap`) also works
+   * unchanged in portrait: the pointer-to-pitch-space conversion accounts for
    * orientation via {@link fromScreen} before any hit-testing happens, so
    * the gesture math itself never needs to know which orientation is active.
+   *
+   * Note this is `LineupPitch`'s default only. The underlying {@link Pitch}
+   * primitive still defaults to `landscape`, and must: every StatsBomb block
+   * (shot maps, heat maps, pass networks) places its own children as raw
+   * 0-100 coordinates without routing them through `toScreen`, so rotating
+   * their pitch would leave their data behind on the old axis. `LineupPitch`
+   * can flip precisely because every position it draws already goes through
+   * that remap.
    */
   orientation?: PitchOrientation;
 }
@@ -423,9 +463,10 @@ function NameChip({
  * Pointer Events + `getScreenCTM()` hit-testing rather than a DnD library —
  * see the module doc for why.
  *
- * Renders `landscape` (goal-to-goal left → right) by default; pass
- * `orientation="portrait"` for a vertical pitch (own goal at the bottom,
- * attacking up the screen) that fills a phone-shaped viewport — see
+ * Renders `portrait` by default as of 0.10.0 — own goal at the bottom,
+ * attacking up the screen — the shape a lineup is actually read and shared
+ * in. Pass `orientation="landscape"` for the classic goal-to-goal pitch,
+ * which a wide, short container still wants — see
  * {@link LineupPitchProps.orientation}.
  *
  * Always renders its underlying `Pitch` with `fillEdgeToEdge` — a real pitch
@@ -460,7 +501,7 @@ export function LineupPitch({
   selectedSlotIndex,
   fullscreen = false,
   fit = 'width',
-  orientation = 'landscape',
+  orientation = 'portrait',
 }: LineupPitchProps) {
   const color = teamColor ?? 'var(--color-team-home)';
   // Figma lineup restyle (node 3047:11125): the dark pitch reads as a DARK
