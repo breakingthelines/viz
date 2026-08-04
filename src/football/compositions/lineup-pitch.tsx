@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
-import { Pitch, toScreen, fromScreen } from '#/football/primitives/pitch';
+import { Pitch, toScreen, fromScreen, fullPitchFrame } from '#/football/primitives/pitch';
 import type { PitchTheme, PitchOrientation } from '#/football/primitives/pitch';
 import { formatFormationLabel } from '#/football/compositions/formation-label';
 import { monogram, surname } from '#/football/lib/player-name';
@@ -106,15 +106,24 @@ export interface LineupPitchProps {
    * — the derived size every existing caller gets, so omitting this renders
    * exactly as before.
    *
-   * Exists because the lineup social card is a DESIGN MATCH and the derived
-   * default cannot serve it. The Figma card frame (3048:11311) sets a 22px
-   * label against a 64px headshot — a ratio of 0.6875 — while the default is
-   * 0.718, the deliberate legibility bump shipped in 0.9.1/0.9.2 for the
-   * reader plate, where a lineup is read in a feed rather than composed to a
-   * fixed artboard. Both numbers are right for their own surface, so the card
-   * states the file's size outright instead of the two surfaces fighting over
-   * one ratio (or the card silently reverting a decision made for every other
-   * consumer).
+   * Exists because the lineup social card is composed to a fixed artboard and
+   * the derived default cannot serve it. The default 0.718 is the deliberate
+   * legibility bump shipped in 0.9.1/0.9.2 for the reader plate, where a
+   * lineup is read in a feed; the card instead states a size outright, so the
+   * two surfaces are not forced to share one ratio and neither can silently
+   * revert a decision made for the other.
+   *
+   * Setting this does NOT change the marker — that is the whole point of the
+   * prop. The card sizes its name type well under the derived ratio (a
+   * quarter of the marker's diameter, against the file's own 0.34) while
+   * keeping the headshots at the Figma's 64px; see the card's own call for
+   * why, and note that shrinking the discs to control the labels would have
+   * been the wrong lever.
+   *
+   * Whatever size is chosen, a chip is still fitted to the room its marker
+   * actually owns before it is drawn — see {@link nameChipBudgets}. This prop
+   * sets the type; it does not license a chip to run into its neighbour or out
+   * of the frame.
    *
    * In viewBox units rather than pixels, to match `markerSize`'s own contract
    * — the caller that pins one is invariably pinning both against the same
@@ -543,6 +552,19 @@ const NAME_CHIP_FILL = '#2b2b2b';
 const NAME_CHIP_BORDER_COLOR = 'rgba(255, 255, 255, 0.05)';
 
 /**
+ * Character appended to a surname that cannot fit the horizontal space its
+ * marker owns. A real ellipsis, not three periods — it is one glyph, so it
+ * costs a third of the width at the exact moment width is the problem.
+ */
+const NAME_CHIP_ELLIPSIS = '…';
+
+/** Measured width of `label`'s glyph run, or the per-character estimate. */
+function labelRunWidth(label: string, fontSize: number, fontsReady: boolean): number {
+  const em = measureLabelEm(label, fontsReady);
+  return em !== null ? em * fontSize : label.length * fontSize * NAME_CHIP_CHAR_ADVANCE;
+}
+
+/**
  * Width of the name chip for `label`, in the same user units as `fontSize`.
  *
  * Sizes to the label's REAL measured glyph run plus the Figma chip's flat
@@ -552,9 +574,127 @@ const NAME_CHIP_BORDER_COLOR = 'rgba(255, 255, 255, 0.05)';
  * path (`utils/export.ts`) that rasterises the SVG as-is on first render.
  */
 function nameChipWidth(label: string, fontSize: number, fontsReady: boolean): number {
-  const em = measureLabelEm(label, fontsReady);
-  const textWidth = em !== null ? em * fontSize : label.length * fontSize * NAME_CHIP_CHAR_ADVANCE;
-  return textWidth + fontSize * NAME_CHIP_PAD_X * 2;
+  return labelRunWidth(label, fontSize, fontsReady) + fontSize * NAME_CHIP_PAD_X * 2;
+}
+
+/**
+ * The label to actually draw, and the chip to draw it in, for a marker that
+ * owns `maxWidth` of horizontal space.
+ *
+ * Returns the label untouched whenever it fits, which is the overwhelmingly
+ * common case — a lineup of ordinary surnames never reaches the truncation
+ * branch at all, so this cannot drift the design on the cards it does not need
+ * to act on.
+ *
+ * When a surname genuinely does not fit, it is TRUNCATED rather than set in
+ * smaller type. Both keep the chip inside its budget; they differ in what they
+ * cost. Shrinking one chip's type to fit "Alexander-Arnold" into a full back's
+ * share of a 4-3-3 means setting it around 40% smaller than the ten chips
+ * beside it, and a board carrying five different type sizes reads as broken
+ * typography rather than as a fitted layout — the one thing a design match to
+ * a fixed artboard cannot afford. Truncation keeps a single type size across
+ * the whole board, so the design's rhythm survives, and spends the cost on the
+ * one label that cannot be honoured in full. With the player's own photograph
+ * directly above it and ten team-mates around it, a truncated surname still
+ * identifies who it is.
+ *
+ * The chip HUGS the truncated run rather than filling the budget it was given
+ * — the Figma's flat padding is a property of the chip, not a consequence of
+ * how much room happened to be available, and a chip padded out to its budget
+ * would advertise the constraint instead of absorbing it.
+ */
+function fitNameChip(
+  label: string,
+  fontSize: number,
+  fontsReady: boolean,
+  maxWidth: number
+): { label: string; width: number } {
+  const natural = nameChipWidth(label, fontSize, fontsReady);
+  if (natural <= maxWidth || label.length === 0) return { label, width: natural };
+
+  const textBudget = maxWidth - fontSize * NAME_CHIP_PAD_X * 2;
+  // Longest prefix whose ellipsised run still fits, by binary search over the
+  // label's own length. `measureLabelEm` is cached, so the handful of probes
+  // this costs are measured once per distinct string and never re-measured on
+  // a re-render (a drag re-renders this component on every pointer frame).
+  let lo = 0;
+  let hi = label.length - 1;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const run = labelRunWidth(label.slice(0, mid) + NAME_CHIP_ELLIPSIS, fontSize, fontsReady);
+    if (run <= textBudget) lo = mid;
+    else hi = mid - 1;
+  }
+
+  const fitted = label.slice(0, lo) + NAME_CHIP_ELLIPSIS;
+  return { label: fitted, width: nameChipWidth(fitted, fontSize, fontsReady) };
+}
+
+/**
+ * How much horizontal room each name chip owns, in user units — the mechanism
+ * that stops a long surname running into its neighbour or off the touchline.
+ *
+ * Each chip may extend to whichever comes first: the edge of the pitch's own
+ * rendered frame, or the midpoint between its own marker and the nearest
+ * marker whose chip shares its row. Both bounds are geometric rather than
+ * tuned, which is the point — a chip cannot leave the frame because the frame
+ * is its limit, and two chips cannot intersect because neither may cross the
+ * line halfway between them. No font size can violate either, so this holds
+ * for any XI, any formation and any `nameFontSize` a caller passes, instead of
+ * holding for the one lineup a fixture happened to contain.
+ *
+ * ## Row-sharing, not raw distance
+ *
+ * Only markers whose chips overlap VERTICALLY compete. Every chip hangs the
+ * same distance below its own marker, so two chips share a row exactly when
+ * their markers' screen `y` differ by less than one chip height. Without that
+ * test a deep-lying midfielder would be treated as a rival to a winger
+ * directly above them and both would be clamped for a collision that cannot
+ * happen — in a 4-3-3 that is the pivot against the front three, i.e. the
+ * common case, not an edge case.
+ *
+ * ## The floor
+ *
+ * A chip is never reduced below what its own ellipsis needs. Two markers at
+ * genuinely the same position cannot both be labelled without overlapping, and
+ * a zero-width chip is a worse answer to that than a very narrow one — an
+ * invalid formation should look cramped, not blank.
+ *
+ * ## Which frame
+ *
+ * Bounds come from {@link fullPitchFrame} — the padded viewBox, gutter
+ * included — rather than from the pitch MARKINGS. On the social card the two
+ * are the same box, because the card renders its pitch edge to edge with no
+ * gutter, so there "inside the frame" and "inside the pitch" are one claim and
+ * a name can never leave the grass.
+ *
+ * Everywhere else the gutter exists precisely so an edge marker's label can
+ * overhang the outline without being cut off — `pitchPadding`'s own doc says
+ * so. Clamping to the markings instead would confiscate that room from the one
+ * element it was reserved for: in landscape the goalkeeper stands 5 units off
+ * his own goal line, and his name is wider than that, so the reader plate and
+ * Match Centre would start truncating "Pickford" to fix a card that is not
+ * theirs. Binding to the frame keeps every existing surface rendering exactly
+ * as it does today and still gives the card the stricter guarantee, from one
+ * rule rather than a special case.
+ */
+function nameChipBudgets(
+  anchors: readonly { x: number; y: number }[],
+  chipHeight: number,
+  minWidth: number,
+  pitchMinX: number,
+  pitchMaxX: number
+): number[] {
+  return anchors.map((anchor, index) => {
+    let half = Math.min(anchor.x - pitchMinX, pitchMaxX - anchor.x);
+    for (let other = 0; other < anchors.length; other++) {
+      if (other === index) continue;
+      const rival = anchors[other]!;
+      if (Math.abs(rival.y - anchor.y) >= chipHeight) continue; // different row
+      half = Math.min(half, Math.abs(rival.x - anchor.x) / 2);
+    }
+    return Math.max(half * 2, minWidth);
+  });
 }
 
 /**
@@ -566,17 +706,15 @@ function nameChipWidth(label: string, fontSize: number, fontsReady: boolean): nu
 function NameChip({
   x,
   y,
-  label,
+  width,
   fontSize,
-  fontsReady,
 }: {
   x: number;
   y: number;
-  label: string;
+  /** Already fitted to the marker's own budget — see {@link fitNameChip}. */
+  width: number;
   fontSize: number;
-  fontsReady: boolean;
 }) {
-  const width = nameChipWidth(label, fontSize, fontsReady);
   const height = fontSize * NAME_CHIP_HEIGHT_RATIO;
   const centerY = y - fontSize * NAME_CHIP_BASELINE_TO_CENTER;
   return (
@@ -739,6 +877,54 @@ export function LineupPitch({
   // Name chips size themselves to the REAL measured glyph run, which is only
   // trustworthy once the webfont has arrived — see `text-width.ts`.
   const fontsReady = useFontsReady();
+
+  // Every name chip, resolved in ONE pass before any of them is drawn.
+  //
+  // It has to be one pass because a chip's width is not a property of its own
+  // label alone: how much room a marker owns depends on where its neighbours
+  // are and where the touchline is (`nameChipBudgets`). Sizing each chip
+  // inside its own render callback — which is what this component did until
+  // the back four's chips started overlapping — can only ever see one label at
+  // a time, so it cannot answer the question that actually decides the width.
+  //
+  // Still a plain synchronous computation, deliberately: the capture path
+  // (`utils/export.ts`) rasterises the SVG on its first render and never gives
+  // a post-paint measuring pass a chance to run.
+  const nameChips = (() => {
+    if (!showNames) return [];
+    // The frame the pitch actually renders into, gutter included — asked of
+    // `Pitch` itself rather than re-derived here, because the gutter is scaled
+    // per axis under `fillEdgeToEdge` and a second copy of that rule would be
+    // wrong on one axis. `true` matches the `fillEdgeToEdge` on the `<Pitch>`
+    // below, exactly as every other call in this component does.
+    const frame = fullPitchFrame(orientation, finite(pitchPadding, inCard ? 0 : 7), true);
+
+    const anchors = slots.flatMap((slot, index) => {
+      if (!slot.player) return [];
+      const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
+      return [
+        {
+          index,
+          label: surname(slot.player.name),
+          x: position.x,
+          y: position.y + labelBaselineOffset,
+        },
+      ];
+    });
+
+    const budgets = nameChipBudgets(
+      anchors,
+      nameFontSize * NAME_CHIP_HEIGHT_RATIO,
+      nameChipWidth(NAME_CHIP_ELLIPSIS, nameFontSize, fontsReady),
+      frame.minX,
+      frame.maxX
+    );
+
+    return anchors.map((anchor, i) => {
+      const fitted = fitNameChip(anchor.label, nameFontSize, fontsReady, budgets[i]!);
+      return { ...anchor, label: fitted.label, width: fitted.width };
+    });
+  })();
 
   // Drag-to-swap is opt-in and purely additive: without `onSlotsSwap`, filled
   // markers behave exactly as they did before this feature existed (a plain
@@ -1074,38 +1260,27 @@ export function LineupPitch({
             Labels are `pointer-events: none`, so lifting them out of the slot
             <g> costs no interactivity — the marker still owns the gesture. */}
         {showNames &&
-          slots.map((slot, index) => {
-            if (!slot.player) return null;
-            const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
-            const label = surname(slot.player.name);
-            return (
-              <g key={`name-${index}`} style={{ pointerEvents: 'none' }}>
-                <NameChip
-                  x={position.x}
-                  y={position.y + labelBaselineOffset}
-                  label={label}
-                  fontSize={nameFontSize}
-                  fontsReady={fontsReady}
-                />
-                <text
-                  x={position.x}
-                  y={position.y + labelBaselineOffset}
-                  textAnchor="middle"
-                  fill={labelColor}
-                  fontSize={nameFontSize}
-                  // Regular (was 600/Semibold) — now that the chip behind it
-                  // carries the contrast, the Figma label itself is Inter
-                  // Regular, with a slight negative tracking
-                  // (`-0.66px` at 22px ≈ `-0.03em`).
-                  fontWeight="400"
-                  opacity="0.9"
-                  style={{ pointerEvents: 'none', letterSpacing: '-0.03em' }}
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })}
+          nameChips.map(({ index, x, y, label, width }) => (
+            <g key={`name-${index}`} style={{ pointerEvents: 'none' }}>
+              <NameChip x={x} y={y} width={width} fontSize={nameFontSize} />
+              <text
+                x={x}
+                y={y}
+                textAnchor="middle"
+                fill={labelColor}
+                fontSize={nameFontSize}
+                // Regular (was 600/Semibold) — now that the chip behind it
+                // carries the contrast, the Figma label itself is Inter
+                // Regular, with a slight negative tracking
+                // (`-0.66px` at 22px ≈ `-0.03em`).
+                fontWeight="400"
+                opacity="0.9"
+                style={{ pointerEvents: 'none', letterSpacing: '-0.03em' }}
+              >
+                {label}
+              </text>
+            </g>
+          ))}
 
         {/* Captain armband — a THIRD pass, after the chips.
             Same paint-order reasoning as the chips above (SVG has no z-index),
