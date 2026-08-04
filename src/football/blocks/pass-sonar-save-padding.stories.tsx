@@ -94,6 +94,30 @@ export const MeasuresSymmetricPadding: Story = {
 
     try {
       const saveBtn = await canvas.findByRole('button', { name: /save this block as an image/i });
+      // Save from the state a REAL save tap happens in: webfonts resolved and
+      // the resulting reflow committed. Nothing else in this story changes.
+      //
+      // This is the fix for a genuine race, not a tolerance being widened.
+      // The story clicked "Save as image" the instant the button existed,
+      // which on an unloaded machine happened to be after the panel had
+      // settled and on a loaded one did not. When it did not, the capture
+      // rasterised a panel whose footer had not yet been laid out at its
+      // final position and the bottom padding measured 0 against an expected
+      // ~25 — while `pngH` and `topGap` came back identical, which is why the
+      // failure always looked like a mystery rather than a race.
+      //
+      // It surfaced here because 0.12.0's card work adds enough concurrent
+      // layout to the suite to lose that coin toss: measured 0/8 full-suite
+      // runs failing with this wait, 4/4 and 3/3 failing without it, and
+      // 172/172 green either way under `--no-file-parallelism`. `export.ts`
+      // documents this story as the canary for exactly that sensitivity.
+      //
+      // Every assertion below is untouched — this only stops the measurement
+      // being taken mid-layout, which is the same `document.fonts.ready` plus
+      // double-rAF settle every other measurement story in the package
+      // already performs before reading geometry.
+      await document.fonts.ready;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       saveBtn.click();
       await waitFor(() => expect(captured).toMatch(/^data:image\/png/), { timeout: 15000 });
     } finally {
