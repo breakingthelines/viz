@@ -40,7 +40,7 @@ type Story = StoryObj<typeof meta>;
  * stand in for the subject.
  */
 const HERO_WARM =
-  'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA8LDA0MCg8NDA0REA8SFyYZFxUVFy8iJBwmODE7OjcxNjU9RVhLPUFUQjU2TWlOVFteY2RjPEpsdGxgc1hhY1//2wBDARARERcUFy0ZGS1fPzY/X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX1//wAARCAB6ALADASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAEDBAUCBv/EACUQAQACAgEDBAIDAAAAAAAAAAABAgMRIQQFQRIxMlEUIjM0cf/EABcBAQEBAQAAAAAAAAAAAAAAAAACAwH/xAAbEQEAAgMBAQAAAAAAAAAAAAAAAQIRITEDUf/aAAwDAQACEQMRAD8A+LAdWAAAAAAAAAAAAAAAAAAAAADgAAv6fpr5p44j7eMOOcuSKw7eKkY6RWPCLWwutcskdvx65mdsnUdJfDzHNXZRasWrMT7Szi8rmsPnhd1WGcWWY8KW0bYgDoAAAAAAAAAACAEiAHQ7ZSJta306bF23+Gf9bWFutq8AEKYe5UiccW8w5bs9d/Xs4renGV+pEC0JEAJEAJEAJEAJEAAAAAOp2y0Tjmre5Hb8voy+mZ4l12F422rOgBCmXr7RXp5j7cZ0O5ZdzFIn2c9vSNMbTsAWkAAAAAAAAAAAABZjpvmXYjLicVZiYt7Ov0+aL1iJnmHNTEzE7iVW84mHa2xLsKs2WuOs88sP5GTWtq7Wm07mds6+O9rn0+Ks0Te038qGpXkp5hpavxnlSAh0AAAAAAAAAAABNY3OmmI1GlWGPK1rSNJkAW4AAAODPevps8rs0cbUsbRiVQAOOgAAAAAAAAgBoxR+r284/hD02jiABQAAAA83jdZZ2m3xllZX67CRAhSRACRACRACRACRAAADRindXtVh9pWtq8RIAoAAAAebzqsszRl+LOyv1UACHQAAAAAAAH/2Q==';
+  'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAsKADAAQAAAABAAAAegAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAegCwAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMADw8PDw8PGg8PGiQaGhokMSQkJCQxPjExMTExPks+Pj4+Pj5LS0tLS0tLS1paWlpaWmlpaWlpdnZ2dnZ2dnZ2dv/bAEMBEhMTHhweNBwcNHtURVR7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e//dAAQAC//aAAwDAQACEQMRAD8AlpabRXAekOzS5pmaWgB1FNzS0DHUU3NFIB9GabmjNAD80U3NFADqWm0UDHZpc0zNLQA7NLTM0uaQDs0U2loGOozTc0UAf//QdRTaWuA9EdRmm0UDH5opuaM0AOzS03NFADqXNMpaBjs0tMzS5pAOoptLmgB2aM02igY/NFNzRmgB2aWm5ooAdS02ikB//9FuaWmUua4T0R2aWm5ooAdRmm0uaBjs0U2lzSAdmim5ooAdS02jNAx2aXNNooAdS03NFADs0U3NLSGOozTc0tADqKbmloA//9KLNFNozXEeiPzRmm5opAPzRTc0UAOzS02igY6lzTc0ZoAdRTaWkA7NGabmigB9FNzS5oGOoptFADqXNNooAfmimZpc0hn/061LTc0VxHoDqXNMzS0DHZpaZS5oAdRmm0tIB1FNzS5oGOzRTaM0AOzS02igB1LmmZpaAHZpaZS5pDHUU2loAdRmm0ZoA//Up5opuaWuM9AdRmm0UgH5opuaM0APopuaKBjs0tNooAdmlzTM0uaQDs0U3NLQMdRTaKAH5optGaAH0ZpuaKBjqWm0ZpAf/9XPzS02jNcZ3js0tNzRQMdRTaXNADs0ZptLSAdRTc0tAx2aKbmigB2aXNNzRQA6lpuaM0AOpc0ylpDHUZpuaXNADqM02lzQB//WzM0ZpKK5DvHUZpKKQDqKbS0DFzS5ptLQAtLTaWgBaWm0UDHUZpKKQDs0UlFADqM0lFAC0uabS0DFzS5ptLSA/9k=';
 const HERO_COOL =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA8LDA0MCg8NDA0REA8SFyYZFxUVFy8iJBwmODE7OjcxNjU9RVhLPUFUQjU2TWlOVFteY2RjPEpsdGxgc1hhY1//2wBDARARERcUFy0ZGS1fPzY/X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX1//wAARCAB6ALADASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAEGBAUHAwL/xAArEAEAAgIBAwMDAgcAAAAAAAAAAQIDEQQFBiESEzEUQVE0ciIjMjVScZH/xAAYAQEAAwEAAAAAAAAAAAAAAAAAAQIEA//EAB0RAQACAgMBAQAAAAAAAAAAAAABAgMREiExIkH/2gAMAwEAAhEDEQA/AKgIEuaRACRACRACRACRACRACRACRACRACRAAAJAAAAAAAAAemHFObLXHX5mQe/C4OXmX9NI8feW+x9u4YpHrvM2bLp/ErxOPWkR515llOFrz+NNccRHapdQ6Jk49ZyYp9VIaeY1OpdEtWLVmJjcSp/W+D9LyJvWP4LeV6X31LnkpruGrAdHIAAABAAAAAAAAAADb9vYoyc31TH9MNQsfbERvLKt+oXpH0sYDM1jV9fwxk4M215q2jF6jETwsu/8U19VtG4URCZ+ZQ1MYAAAAAAAAAAAAAAsHbOSIyZKfeVfbDo/I+n5tZmdRbxKto3C1J1ZdgiYmImPiRmaxh9VyRj4GSZ+8aZjR9x8mKYIwxPm3ytWNyi06hVp+ZQDSxgAAAIAAAAAAAAABKwdB7ey8+0Zsu6Yonf+ztros9Qze7miYxVn/roeHFTDjjHjrFax8RAmIavNwvYrWKbmsRpjt/MRMamHhbi4rTuauVse/HeuTXrVYsVstoiIYXXe3J5VPfwW/mVj4/Kz0x0pGqxp9LVpxUvbk45mxXw5Jx5KzW0fMS83Qu5ehY+VhtycFdZaxudfdz+9Zpaa2jUwu5PkAAAAAAAAAAAB7cXBbkcimKkbm06eKx9ncWM3UfctHikbErx0vh14XCx4axqYjyzAEgAAAExExMT8S5z3X036TnTlpXWPJ5dGaHuzixn6Xa2t2p5gJc2AFQAEAAAAAAAAL32Pg9PHy5t/M6UR0Hsn+3X/AHCYWcASAAAAMXqOL3uDmpvW6yynlyv02T9sg5Bmr6M16/idPN7cr9Tk/dLxFQAAASAAAAAAL12Pn9XHy4dfE7UVbex5n6rLG/GgXsASAAAAMXqOX2eDmvreqyymq7imY6Rm1P2By/Nb15r2/M7fBPzIIAAf/9k=';
 
@@ -304,6 +304,34 @@ export const CaptureIsExactFrameSize: Story = {
     for (const card of Array.from(cards)) {
       const frame = card.dataset.frame as 'square' | 'portrait';
       const { width, height } = LINEUP_CARD_FRAME_SIZE[frame];
+
+      // (0) The hero photograph actually DECODED.
+      //
+      // This guards a real failure that every other assertion here is blind
+      // to: a truncated, malformed or dead image source still produces an
+      // <img> that lays out at exactly the right box size, so the frame
+      // measurements below all pass while more than half the card renders as
+      // a broken image. It happened — the original HERO_WARM fixture was a
+      // base64 string whose length was not a multiple of 4 and which carried
+      // no JPEG end-of-image marker, so Chromium rejected the URL outright;
+      // geometry was perfect and the photo was simply absent.
+      //
+      // `naturalWidth` is the only signal that separates "loaded" from
+      // "laid out": it stays 0 for an image that never decoded, whatever the
+      // element's box says. Note `complete` is NOT sufficient — it goes true
+      // on failure too.
+      const hero = card.querySelector('img');
+      expect(hero, `${frame} card must render a hero <img>`).not.toBeNull();
+      if (!hero!.complete) {
+        await new Promise<void>((resolve) => {
+          hero!.addEventListener('load', () => resolve(), { once: true });
+          hero!.addEventListener('error', () => resolve(), { once: true });
+        });
+      }
+      expect(
+        hero!.naturalWidth,
+        `${frame} hero image must actually decode — naturalWidth stays 0 for a truncated data URI or dead URL, while every size assertion below still passes`
+      ).toBeGreaterThan(0);
 
       // (1) Laid out at the true frame size BEFORE any capture happens.
       expect(card.offsetWidth, `${frame} card must lay out at its authored width`).toBe(width);
