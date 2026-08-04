@@ -628,13 +628,27 @@ export const SquarePitchGeometry: Story = {
     }
 
     // (5) Chip padding is the file's flat 8px each side, which is what proves
-    // the chip is sized to the MEASURED glyph run rather than to an estimate:
-    // a per-character guess cannot land within a pixel of it on every name.
+    // the chip is sized to the MEASURED glyph run rather than to an estimate.
+    //
+    // The tolerance is 1.5px, and generous on purpose without being loose. Two
+    // sub-pixel effects sit under this number: the SVG advance carries the
+    // -3% tracking AFTER its final character (so a centred label sits ~0.33px
+    // right of the chip's true centre at 22px), and `getBoundingClientRect`
+    // on a `<text>` reports ink extents, which differ slightly between
+    // rasterisers — measured 8.05px on macOS and 8.50px on CI's Linux for the
+    // same render. Neither is drift worth failing over.
+    //
+    // It still discriminates decisively, which is the point: the estimate this
+    // replaced padded "Colwill" by 25.2px and "Rice" by 15.0px against the
+    // same 8px target. Nothing that sizes a chip by counting characters lands
+    // inside this window on every name at once.
+    const PAD_TOLERANCE = 1.5;
     for (const { label, rect, text } of chips) {
+      const pad = text.left - rect.left;
       expect(
-        text.left - rect.left,
-        `name chip for "${label}" pads 8px to the left of its text (Figma 3048:11311)`
-      ).toBeCloseTo(8, 0);
+        Math.abs(pad - 8),
+        `name chip for "${label}" pads ~8px to the left of its text (Figma 3048:11311), got ${pad.toFixed(2)}px`
+      ).toBeLessThanOrEqual(PAD_TOLERANCE);
     }
   },
 };
