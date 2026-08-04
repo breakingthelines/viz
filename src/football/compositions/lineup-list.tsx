@@ -110,6 +110,10 @@ function CaptainBadge() {
 export function LineupList({ players, frame, className }: LineupListProps) {
   const contextFrame = useLineupFrame();
   const resolvedFrame = frame ?? contextFrame ?? 'portrait';
+  // At most one armband, on the FIRST flagged player — the same rule
+  // `LineupPitch` applies, so the card's two bodies can never disagree about
+  // who the captain is when handed the same XI. See `LineupSlotPlayer.isCaptain`.
+  const captainIndex = players.findIndex((player) => player.isCaptain === true);
 
   return (
     <div
@@ -151,8 +155,8 @@ export function LineupList({ players, frame, className }: LineupListProps) {
           letterSpacing: '-0.04em',
         }}
       >
-        {players.map((player) =>
-          player.isCaptain ? (
+        {players.map((player, index) =>
+          index === captainIndex ? (
             <div key={player.id} className="flex items-center" style={{ gap: 12 }}>
               <div className="whitespace-nowrap" style={capTrim()}>
                 {player.name}

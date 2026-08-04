@@ -7,6 +7,8 @@ import { monogram, surname } from '#/football/lib/player-name';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
+import { BTL_RED } from '#/football/lib/btl-logo';
+import { measureLabelEm, useFontsReady } from '#/football/lib/text-width';
 
 /** A player assigned to a lineup slot. */
 export interface LineupSlotPlayer {
@@ -21,13 +23,19 @@ export interface LineupSlotPlayer {
   /**
    * Marks this player as the team captain.
    *
-   * Consumed today by `LineupList`, which prints a "C" badge after the name
-   * on the social card's team sheet. `LineupPitch` itself does NOT render it
-   * — a formation board's markers are already dense with a headshot, a name
-   * chip and (in `number` mode) a shirt number, and the Figma pitch frame
-   * (3048:11311) shows no armband — so setting it is inert here. It lives on
-   * the shared player shape rather than a list-only one so a single lineup's
-   * data can drive either body without being reshaped in between.
+   * Rendered by BOTH bodies of the lineup social card, from this one field, so
+   * a single lineup's data drives either without being reshaped in between:
+   * `LineupList` prints a "C" badge after the name on the team sheet, and
+   * `LineupPitch` overlays a red armband disc on the player's marker.
+   *
+   * **At most one captain.** A team has one, so both bodies render the badge
+   * for the FIRST flagged player only and silently ignore any others — a
+   * lineup carrying two is caller error, and drawing two armbands would
+   * present invalid data as though it were valid. "First" is in the order the
+   * caller supplies (slot order here, team-sheet order in `LineupList`), so
+   * the choice is deterministic rather than dependent on layout. viz does not
+   * reject the input or warn: the editor enforces exactly one at build time,
+   * and a published card is the wrong place to surface a data error.
    */
   isCaptain?: boolean;
 }
@@ -92,6 +100,26 @@ export interface LineupPitchProps {
   className?: string;
   /** Marker radius in viewBox units. */
   markerSize?: number;
+  /**
+   * Player NAME label size, in viewBox units. Defaults to `markerSize * 0.718`
+   * — the derived size every existing caller gets, so omitting this renders
+   * exactly as before.
+   *
+   * Exists because the lineup social card is a DESIGN MATCH and the derived
+   * default cannot serve it. The Figma card frame (3048:11311) sets a 22px
+   * label against a 64px headshot — a ratio of 0.6875 — while the default is
+   * 0.718, the deliberate legibility bump shipped in 0.9.1/0.9.2 for the
+   * reader plate, where a lineup is read in a feed rather than composed to a
+   * fixed artboard. Both numbers are right for their own surface, so the card
+   * states the file's size outright instead of the two surfaces fighting over
+   * one ratio (or the card silently reverting a decision made for every other
+   * consumer).
+   *
+   * In viewBox units rather than pixels, to match `markerSize`'s own contract
+   * — the caller that pins one is invariably pinning both against the same
+   * px-per-unit scale.
+   */
+  nameFontSize?: number;
   /**
    * Gutter around the pitch markings, in pitch units, forwarded to `Pitch`'s
    * own `padding`. Defaults to `7` — the value this component has always
@@ -347,21 +375,87 @@ function MarkerGlyph({
 }
 
 /**
- * Average per-character advance for the name chip's width estimate, as a
- * fraction of `nameFontSize`. SVG `<text>` has no layout box to measure
- * against before paint, so the chip can't size itself off the real glyph
- * run the way an HTML `<span>` could — this fixed advance is the
- * alternative (the Figma file itself has no equivalent number to pull — its
- * chip is a real text layout box, not an estimate — so this one constant is
- * still tuned by rendering, unlike the ratios below it). Inter's mixed-case
- * running-text advance averages a bit under 0.6em; this is deliberately a
- * little OVER that (bias toward roomier rather than clipped) since the
- * estimate has to cover both narrow runs ("Rice") and wide ones
- * ("Bellingham", "O'Reilly") with one constant. Tuned by rendering
- * `lineup-pitch.stories.tsx`'s `NameCollisions` story (longest/shortest
- * surnames over the six-yard box and centre circle) and checking the chip
- * visually contains the text at both ends without ballooning around short
- * names — see that story for the exact cases.
+ * Captain armband geometry, all as fractions of `markerSize` (the marker
+ * RADIUS) so the badge scales with the marker instead of needing its own size
+ * knob — the same rule the name chip and the headshot ring already follow.
+ *
+ * The badge sits centred ON the marker's rim at 45° up-and-right, half on the
+ * photo and half off it, which is how a real armband reads at a glance: an
+ * attachment to the player rather than a label about them. Up-and-right is the
+ * one quadrant that is structurally free — the name chip always hangs BELOW
+ * the marker (`labelBaselineOffset`), so a top-corner badge can never collide
+ * with the label, at any marker size or font scale. `CaptainBadgeClearsName`
+ * in the stories measures exactly that.
+ */
+const CAPTAIN_BADGE_OFFSET = Math.SQRT1_2;
+/** Badge radius. Big enough to carry a legible "C", small enough not to read as a second marker. */
+const CAPTAIN_BADGE_RADIUS_RATIO = 0.42;
+/** "C" size as a fraction of the badge's own radius. */
+const CAPTAIN_BADGE_FONT_RATIO = 1.25;
+/** Hairline rim, matching the headshot ring's own white-at-low-opacity language. */
+const CAPTAIN_BADGE_RING_RATIO = 0.06;
+
+/**
+ * The captain's armband: a BTL-red disc carrying a white "C", overlaid on the
+ * corner of a player's marker.
+ *
+ * Drawn in the package's own brand red ({@link BTL_RED}) rather than a
+ * one-off hex — on an otherwise monochrome card it is the single saturated
+ * mark, so it has to be the same red as the BTL bracket beside it.
+ */
+function CaptainArmband({ x, y, markerSize }: { x: number; y: number; markerSize: number }) {
+  const r = markerSize * CAPTAIN_BADGE_RADIUS_RATIO;
+  const cx = x + markerSize * CAPTAIN_BADGE_OFFSET;
+  const cy = y - markerSize * CAPTAIN_BADGE_OFFSET;
+  return (
+    <g data-slot="lineup-captain-badge" style={{ pointerEvents: 'none' }} aria-label="Captain">
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill={BTL_RED}
+        stroke="white"
+        strokeWidth={markerSize * CAPTAIN_BADGE_RING_RATIO}
+        strokeOpacity={HEADSHOT_RING_OPACITY}
+      />
+      <text
+        x={cx}
+        y={cy}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="white"
+        fontSize={r * CAPTAIN_BADGE_FONT_RATIO}
+        fontWeight="700"
+        style={{ pointerEvents: 'none' }}
+      >
+        C
+      </text>
+    </g>
+  );
+}
+
+/**
+ * FALLBACK average per-character advance for the name chip's width, as a
+ * fraction of `nameFontSize`, used only where the environment cannot measure
+ * text (server-side rendering, or a canvas context the host refuses) — see
+ * {@link measureLabelEm}, which is the primary path.
+ *
+ * Inter's mixed-case running-text advance averages a bit under 0.6em; this is
+ * deliberately a little OVER that (bias toward roomier rather than clipped)
+ * since a single constant has to cover both narrow runs ("Rice") and wide
+ * ones ("Bellingham", "O'Reilly").
+ *
+ * That bias is exactly why it can only be the fallback. Measured against Inter
+ * at the lineup card's real size, the sample XI's surnames run from 0.451em
+ * per character ("Colwill") to 0.620em ("James") — a 37% spread that no single
+ * number covers. Pinned at the top of the range so nothing clips, this
+ * over-measures most names by up to a third: on the card's 515px pitch it drew
+ * "Colwill" in a 134px chip around an 83px word, and the resulting slack
+ * collided the back four's chips into each other ("Colwill"/"O'Reilly"
+ * overlapped by 34px) where the Figma frame (3048:11311) keeps them clearly
+ * apart. The Figma chip is a real text layout box that hugs its glyph run with
+ * a flat 8px of padding, and {@link measureLabelEm} is how this reproduces
+ * that mechanism rather than approximating it.
  */
 const NAME_CHIP_CHAR_ADVANCE = 0.62;
 /**
@@ -406,27 +500,40 @@ const NAME_CHIP_FILL = '#2b2b2b';
 const NAME_CHIP_BORDER_COLOR = 'rgba(255, 255, 255, 0.05)';
 
 /**
+ * Width of the name chip for `label`, in the same user units as `fontSize`.
+ *
+ * Sizes to the label's REAL measured glyph run plus the Figma chip's flat
+ * padding, falling back to the per-character estimate only where text cannot
+ * be measured at all. Either way this stays a plain, synchronous computation
+ * with no post-paint measure/resize pass, which matters for the export/capture
+ * path (`utils/export.ts`) that rasterises the SVG as-is on first render.
+ */
+function nameChipWidth(label: string, fontSize: number, fontsReady: boolean): number {
+  const em = measureLabelEm(label, fontsReady);
+  const textWidth = em !== null ? em * fontSize : label.length * fontSize * NAME_CHIP_CHAR_ADVANCE;
+  return textWidth + fontSize * NAME_CHIP_PAD_X * 2;
+}
+
+/**
  * A solid, rounded backing chip sized to `label` so a player's name never has
  * to compete with the pitch markings under it (the six-yard box, the centre
  * circle, the penalty arc all used to run straight through bare white text —
- * see the module doc's Figma reference, node 3047:11125). Width is an
- * ESTIMATE (see {@link NAME_CHIP_CHAR_ADVANCE}'s doc for why), not a
- * measurement — this stays a plain, synchronous render with no post-paint
- * measure/resize pass, which matters for the export/capture path
- * (`utils/export.ts`) that rasterises the SVG as-is on first render.
+ * see the module doc's Figma reference, node 3047:11125).
  */
 function NameChip({
   x,
   y,
   label,
   fontSize,
+  fontsReady,
 }: {
   x: number;
   y: number;
   label: string;
   fontSize: number;
+  fontsReady: boolean;
 }) {
-  const width = label.length * fontSize * NAME_CHIP_CHAR_ADVANCE + fontSize * NAME_CHIP_PAD_X * 2;
+  const width = nameChipWidth(label, fontSize, fontsReady);
   const height = fontSize * NAME_CHIP_HEIGHT_RATIO;
   const centerY = y - fontSize * NAME_CHIP_BASELINE_TO_CENTER;
   return (
@@ -485,6 +592,7 @@ export function LineupPitch({
   lineColor,
   className,
   markerSize: markerSizeRaw,
+  nameFontSize: nameFontSizeRaw,
   pitchPadding = 7,
   markerContent = 'number',
   showNames = true,
@@ -553,9 +661,21 @@ export function LineupPitch({
   // so a fullscreen or custom marker size scales the whole marker+label unit
   // together. The chip geometry derives from this too (see the NAME_CHIP_*
   // ratios), so the chip grows with the text and needs no separate change.
-  const nameFontSize = markerSize * 0.718;
+  // An explicit `nameFontSize` always wins (the social card pins the Figma's
+  // own 22px); otherwise it stays PROPORTIONAL to `markerSize` so a
+  // fullscreen or custom marker size scales the whole marker+label unit
+  // together instead of the label lagging behind at a fixed size.
+  const nameFontSize = finitePositive(nameFontSizeRaw ?? markerSize * 0.718, markerSize * 0.718);
   const labelBaselineOffset = markerSize * 1.5;
   const roleFontSize = markerSize * 0.6;
+  // The one captain to draw an armband on, or -1 for none. Resolved once here
+  // rather than per-slot so "first flagged wins" is a single, obvious rule
+  // (see `LineupSlotPlayer.isCaptain`) instead of a condition repeated inside
+  // the render loop.
+  const captainIndex = slots.findIndex((slot) => slot.player?.isCaptain === true);
+  // Name chips size themselves to the REAL measured glyph run, which is only
+  // trustworthy once the webfont has arrived — see `text-width.ts`.
+  const fontsReady = useFontsReady();
 
   // Drag-to-swap is opt-in and purely additive: without `onSlotsSwap`, filled
   // markers behave exactly as they did before this feature existed (a plain
@@ -899,6 +1019,7 @@ export function LineupPitch({
                   y={position.y + labelBaselineOffset}
                   label={label}
                   fontSize={nameFontSize}
+                  fontsReady={fontsReady}
                 />
                 <text
                   x={position.x}
@@ -919,6 +1040,22 @@ export function LineupPitch({
               </g>
             );
           })}
+
+        {/* Captain armband — a THIRD pass, after the chips.
+            Same paint-order reasoning as the chips above (SVG has no z-index),
+            taken one step further: the badge is the one mark on the board that
+            identifies a player rather than merely naming them, so nothing —
+            not a neighbouring marker, not another player's name chip — is
+            allowed to paint over it. Deliberately NOT gated on `showNames`:
+            the armband is player identity, not a label, and a board with names
+            turned off still has a captain.
+            Only the FIRST flagged player is drawn; see `isCaptain`'s doc. */}
+        {captainIndex !== -1 &&
+          (() => {
+            const slot = slots[captainIndex]!;
+            const position = toScreen(finite(slot.x), finite(slot.y), orientation, true);
+            return <CaptainArmband x={position.x} y={position.y} markerSize={markerSize} />;
+          })()}
 
         {/* Drag ghost: the dragged player's marker, floating at the live pointer
             position — rendered LAST so it paints on top of every slot (SVG has
