@@ -1,6 +1,7 @@
-import { type ReactNode, useId, useRef } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { cn } from '#/lib/utils';
 import { useImageSave } from '#/components/use-image-save';
+import { BtlMark } from './btl-logo';
 import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 
 /**
@@ -10,58 +11,13 @@ import { HUDL_STATSBOMB_LOGO } from './provider-marks';
  *
  * viz is a standalone AGPL package with NO design-system dependency, so the BTL
  * wordmark is inlined here (the design-system `BtlWordmark` SVG geometry is
- * replicated verbatim, white text). Keep this in sync with
- * `design-system/src/components/ui/btl-logo.tsx`.
+ * replicated verbatim, white text) — the mark itself now lives in
+ * `./btl-logo` so the lineup social card can draw the same one at its own
+ * scale. Keep this in sync with `design-system/src/components/ui/btl-logo.tsx`.
  */
 
 /** Data source behind a block — drives the provider mark. */
 export type DataProvider = 'statsbomb' | 'opta' | 'none';
-
-/**
- * The BTL bracket mark — two red-gradient brackets. Replicated from the
- * design-system `BtlLogo` (viewBox 0 0 29.09 28.02) so viz needs no ds import.
- */
-function BtlMark({ className }: { className?: string }) {
-  const uid = useId();
-  const gl = `${uid}-l`;
-  const gr = `${uid}-r`;
-  return (
-    <svg
-      viewBox="0 0 29.09 28.02"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden
-    >
-      <defs>
-        <linearGradient
-          id={gl}
-          x1="0"
-          y1="14.01"
-          x2="12.467"
-          y2="14.01"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#E20613" />
-          <stop offset="1" stopColor="#E5332A" />
-        </linearGradient>
-        <linearGradient
-          id={gr}
-          x1="16.628"
-          y1="14.01"
-          x2="29.091"
-          y2="14.01"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#E20613" />
-          <stop offset="1" stopColor="#E5332A" />
-        </linearGradient>
-      </defs>
-      <path d="M12.467 0V8.516H9.049V19.513H12.467V28.022H0V0H12.467Z" fill={`url(#${gl})`} />
-      <path d="M29.091 0V28.022H16.628V19.513H20.046V8.516H16.628V0H29.091Z" fill={`url(#${gr})`} />
-    </svg>
-  );
-}
 
 /** The BTL wordmark: bracket mark + "breaking / the lines", sized for a colophon. */
 function BtlWordmark() {
