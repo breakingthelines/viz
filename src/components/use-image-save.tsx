@@ -8,8 +8,10 @@ import {
 } from '#/utils/export';
 
 /** Options accepted by `save()`, layered over the plain capture options. */
-export interface ImageSaveOptions
-  extends Pick<ExportOptions, 'backgroundColor' | 'scale' | 'width' | 'height' | 'fitToContent'> {
+export interface ImageSaveOptions extends Pick<
+  ExportOptions,
+  'backgroundColor' | 'scale' | 'width' | 'height' | 'fitToContent'
+> {
   /** File name WITHOUT extension; `.png` is appended. */
   fileName: string;
   /**
@@ -111,8 +113,16 @@ export function useImageSave(): UseImageSaveResult {
   const save = useCallback(
     async (element: HTMLElement | null, options: ImageSaveOptions): Promise<void> => {
       if (!element) return;
-      const { fileName, backgroundColor, scale, width, height, fitToContent, forcePreview, extraControls } =
-        options;
+      const {
+        fileName,
+        backgroundColor,
+        scale,
+        width,
+        height,
+        fitToContent,
+        forcePreview,
+        extraControls,
+      } = options;
 
       setSaving(true);
       try {
