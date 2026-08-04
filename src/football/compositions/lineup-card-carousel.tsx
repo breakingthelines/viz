@@ -397,10 +397,16 @@ export function LineupCardCarousel({
   }, []);
 
   return (
+    // NOTE the scale is deliberately NOT set as an inline custom property on
+    // this root. Each view reads `var(--btl-lineup-view-k, <viewScale>)`, so
+    // the prop is the FALLBACK — which is what lets a host override it from
+    // its own stylesheet at any breakpoint. Defining the variable here would
+    // put it on an ancestor of every view and beat the host's rule outright,
+    // silently pinning the gallery to one size. (It did, until this comment
+    // existed.)
     <div
       data-slot="lineup-card-carousel"
       className={cn('flex w-full flex-col items-center gap-4', className)}
-      style={{ [LINEUP_CARD_VIEW_SCALE_VAR]: String(viewScale) } as React.CSSProperties}
     >
       {/*
         A plain scroll container, tabbable so a keyboard can pan it and so the

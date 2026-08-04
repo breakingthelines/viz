@@ -262,10 +262,22 @@ export const VerifyGalleryViewsAreNotCaptureTargets: Story = {
     // box and the layout box disagree.
     await expect(Math.round(card.getBoundingClientRect().width)).not.toBe(card.offsetWidth);
 
-    // The scale is the documented custom property, so a host can drive it
-    // responsively from its own stylesheet with no resize listener.
+    // The `viewScale` prop landed: 1200 * 0.3 = 360.
+    await expect(Math.round(view.getBoundingClientRect().height)).toBe(360);
+
+    // And it is only a FALLBACK, so a host can override it responsively from
+    // its own stylesheet with no resize listener. This is the regression guard
+    // for a real bug: the root used to carry the custom property as an inline
+    // style, which put it on an ancestor of every view and beat any host rule
+    // outright — the prop worked, the documented override silently did not.
     const root = canvasElement.querySelector<HTMLElement>('[data-slot="lineup-card-carousel"]')!;
-    await expect(root.style.getPropertyValue(LINEUP_CARD_VIEW_SCALE_VAR)).toBe('0.3');
+    await expect(
+      root.style.getPropertyValue(LINEUP_CARD_VIEW_SCALE_VAR),
+      'the scale must not be pinned on the root, or a host can never override it'
+    ).toBe('');
+
+    root.style.setProperty(LINEUP_CARD_VIEW_SCALE_VAR, '0.5');
+    await expect(Math.round(view.getBoundingClientRect().height)).toBe(600);
   },
 };
 
