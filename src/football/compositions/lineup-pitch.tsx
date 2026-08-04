@@ -18,6 +18,18 @@ export interface LineupSlotPlayer {
   shirtNumber?: number;
   /** Headshot URL, shown inside the marker in `headshot` mode (monogram fallback). */
   imageUrl?: string;
+  /**
+   * Marks this player as the team captain.
+   *
+   * Consumed today by `LineupList`, which prints a "C" badge after the name
+   * on the social card's team sheet. `LineupPitch` itself does NOT render it
+   * — a formation board's markers are already dense with a headshot, a name
+   * chip and (in `number` mode) a shirt number, and the Figma pitch frame
+   * (3048:11311) shows no armband — so setting it is inert here. It lives on
+   * the shared player shape rather than a list-only one so a single lineup's
+   * data can drive either body without being reshaped in between.
+   */
+  isCaptain?: boolean;
 }
 
 /** A single position on the lineup board — filled or empty. */
@@ -80,6 +92,28 @@ export interface LineupPitchProps {
   className?: string;
   /** Marker radius in viewBox units. */
   markerSize?: number;
+  /**
+   * Gutter around the pitch markings, in pitch units, forwarded to `Pitch`'s
+   * own `padding`. Defaults to `7` — the value this component has always
+   * hardcoded, so every existing caller renders identically.
+   *
+   * The gutter is what stops a marker sitting ON the touchline (or its name
+   * chip hanging below the goal line) from being clipped by the SVG edge, so
+   * it should only be reduced when the formation in play keeps its markers
+   * clear of the boundary. It is exposed because the padded viewBox costs
+   * real width: at `7`, the pitch DRAWING is only ~83% of the box it is
+   * given, which is invisible on a block sitting in an article column but
+   * very visible on the lineup social card, where the pitch is supposed to
+   * run the full width of a fixed 515px panel (Figma 3048:11311 draws it
+   * edge-to-edge at 515x734). Lowering it there recovers that width without
+   * distorting the pitch's real ~2:3 proportions, which stretching the SVG
+   * to the panel would.
+   *
+   * `0` is valid and means flush, no gutter — which is why it is guarded with
+   * `finite` rather than `finitePositive`, the latter treating `0` as garbage
+   * and silently restoring the default.
+   */
+  pitchPadding?: number;
   /** What a filled marker shows. Defaults to `number`. */
   markerContent?: LineupMarkerContent;
   /** Show the surname under each filled marker. */
@@ -451,6 +485,7 @@ export function LineupPitch({
   lineColor,
   className,
   markerSize: markerSizeRaw,
+  pitchPadding = 7,
   markerContent = 'number',
   showNames = true,
   editable = false,
@@ -623,7 +658,7 @@ export function LineupPitch({
         fit={fit}
         orientation={orientation}
         fillEdgeToEdge
-        padding={7}
+        padding={finite(pitchPadding, 7)}
       >
         {slots.map((slot, index) => {
           // `position` is SCREEN space (post-`toScreen`) — every render usage
