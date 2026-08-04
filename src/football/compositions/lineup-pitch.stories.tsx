@@ -745,3 +745,110 @@ export const FigmaMarkingGeometry: Story = {
     expect(formationSpan.className).toContain('text-white/80');
   },
 };
+
+/** A filled 4-3-3, optionally flagging captains by slot index. */
+function captainSlots(...captainIndexes: number[]): LineupSlot[] {
+  return getFormationTemplate('4-3-3').map((t, i) => ({
+    x: t.x,
+    y: t.y,
+    role: t.role,
+    player: {
+      id: `p${i}`,
+      name: SAMPLE_NAMES[i] ?? `Player ${i}`,
+      shirtNumber: i + 1,
+      ...(captainIndexes.includes(i) ? { isCaptain: true as const } : {}),
+    },
+  }));
+}
+
+/**
+ * The captain's armband on a formation board.
+ *
+ * `isCaptain` is shared with `LineupList` (one field, one meaning — see its
+ * doc on `LineupSlotPlayer`), and this is the pitch's half of it. The story
+ * asserts the three things that make the flag safe to add to a shape every
+ * existing consumer already passes:
+ *
+ *  1. Set → exactly one armband, on the right marker.
+ *  2. Unset → no armband anywhere, so every caller that never heard of the
+ *     field renders as it always did.
+ *  3. Set MORE THAN ONCE → still exactly one, on the FIRST flagged slot. A
+ *     team has one captain; drawing several would render invalid data as
+ *     though it were valid.
+ */
+export const CaptainArmband: Story = {
+  args: {
+    slots: captainSlots(2),
+    teamName: 'Arsenal',
+    markerContent: 'headshot',
+    editable: false,
+    theme: 'dark',
+  },
+  play: async ({ canvasElement }) => {
+    const badges = canvasElement.querySelectorAll('[data-slot="lineup-captain-badge"]');
+    expect(badges, 'one flagged player draws one armband').toHaveLength(1);
+
+    // On the flagged marker: up-and-right of Saliba's own name chip, the
+    // quadrant the badge is documented to occupy.
+    const badge = badges[0]!.getBoundingClientRect();
+    const saliba = Array.from(canvasElement.querySelectorAll('text')).find(
+      (text) => text.textContent === 'Saliba' && text.parentElement?.querySelector('rect') != null
+    )!;
+    const chip = saliba.parentElement!.querySelector('rect')!.getBoundingClientRect();
+    expect(badge.left + badge.width / 2).toBeGreaterThan(chip.left + chip.width / 2);
+    expect(badge.bottom, 'armband clears the name chip below the marker').toBeLessThan(chip.top);
+  },
+};
+
+/** No captain flagged — the shape every pre-0.11.0 caller passes. */
+export const NoCaptain: Story = {
+  args: {
+    slots: captainSlots(),
+    teamName: 'Arsenal',
+    markerContent: 'headshot',
+    editable: false,
+    theme: 'dark',
+  },
+  play: async ({ canvasElement }) => {
+    expect(
+      canvasElement.querySelectorAll('[data-slot="lineup-captain-badge"]'),
+      'no flag, no armband — existing callers are untouched'
+    ).toHaveLength(0);
+  },
+};
+
+/**
+ * Two captains — caller error. Renders the FIRST and ignores the rest, rather
+ * than drawing two armbands or throwing. See `LineupSlotPlayer.isCaptain`.
+ */
+export const MultipleCaptainsRenderOnlyTheFirst: Story = {
+  args: {
+    slots: captainSlots(2, 7),
+    teamName: 'Arsenal',
+    markerContent: 'headshot',
+    editable: false,
+    theme: 'dark',
+  },
+  play: async ({ canvasElement }) => {
+    const badges = canvasElement.querySelectorAll('[data-slot="lineup-captain-badge"]');
+    expect(badges, 'two flags still draw exactly one armband').toHaveLength(1);
+
+    // The FIRST flagged slot (index 2, Saliba) — not the later one.
+    const badge = badges[0]!.getBoundingClientRect();
+    const chipFor = (name: string) =>
+      Array.from(canvasElement.querySelectorAll('text'))
+        .find(
+          (text) => text.textContent === name && text.parentElement?.querySelector('rect') != null
+        )!
+        .parentElement!.querySelector('rect')!
+        .getBoundingClientRect();
+
+    const first = chipFor('Saliba');
+    const later = chipFor('Merino');
+    const badgeX = badge.left + badge.width / 2;
+    expect(
+      Math.abs(badgeX - (first.left + first.width / 2)),
+      'the armband belongs to the first flagged player'
+    ).toBeLessThan(Math.abs(badgeX - (later.left + later.width / 2)));
+  },
+};

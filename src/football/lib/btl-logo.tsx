@@ -1,6 +1,20 @@
 import { useId, type CSSProperties } from 'react';
 
 /**
+ * The BTL brand red — the base stop of the bracket mark's gradient, and the
+ * package's single source for "BTL red".
+ *
+ * Exported rather than left inline because a second surface now needs the same
+ * red away from the logo (`LineupPitch`'s captain badge), and a hand-copied hex
+ * is exactly the kind of thing that drifts from the mark it is supposed to
+ * match. Keep in sync with the design-system brand token.
+ */
+export const BTL_RED = '#E20613';
+
+/** The lighter stop the bracket gradient runs out to. */
+const BTL_RED_LIGHT = '#E5332A';
+
+/**
  * The BTL bracket mark — two red-gradient brackets, viewBox `0 0 29.09 28.02`.
  *
  * viz is a standalone AGPL package with NO design-system dependency, so the
@@ -42,8 +56,8 @@ export function BtlMark({ className, style }: { className?: string; style?: CSSP
           y2="14.01"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#E20613" />
-          <stop offset="1" stopColor="#E5332A" />
+          <stop stopColor={BTL_RED} />
+          <stop offset="1" stopColor={BTL_RED_LIGHT} />
         </linearGradient>
         <linearGradient
           id={gr}
@@ -53,8 +67,8 @@ export function BtlMark({ className, style }: { className?: string; style?: CSSP
           y2="14.01"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#E20613" />
-          <stop offset="1" stopColor="#E5332A" />
+          <stop stopColor={BTL_RED} />
+          <stop offset="1" stopColor={BTL_RED_LIGHT} />
         </linearGradient>
       </defs>
       <path d="M12.467 0V8.516H9.049V19.513H12.467V28.022H0V0H12.467Z" fill={`url(#${gl})`} />
