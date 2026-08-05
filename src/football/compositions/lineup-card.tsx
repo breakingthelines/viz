@@ -528,19 +528,27 @@ export function LineupCard({
                 {eyebrow}
               </div>
             )}
-            <div
-              className="w-full"
-              style={{
-                fontSize: 80,
-                fontWeight: SEMIBOLD,
-                color: 'white',
-                letterSpacing: CARD_TRACKING,
-                wordBreak: 'break-word',
-                ...capTrim(),
-              }}
-            >
-              {title}
-            </div>
+            {/* Conditional exactly as `eyebrow` above is. An unconditional
+                title collapses to zero height when absent, but the header's
+                `gap: 32` still applies between it and the eyebrow — leaving
+                32px of dead air under the kicker on every untitled card.
+                Editor 0.60.0 dropped the "Starting XI" default outright, so
+                untitled is now an ordinary state rather than a rarity. */}
+            {title && (
+              <div
+                className="w-full"
+                style={{
+                  fontSize: 80,
+                  fontWeight: SEMIBOLD,
+                  color: 'white',
+                  letterSpacing: CARD_TRACKING,
+                  wordBreak: 'break-word',
+                  ...capTrim(),
+                }}
+              >
+                {title}
+              </div>
+            )}
           </div>
 
           <div className="flex min-h-0 w-full flex-1 flex-col" style={{ gap: FOOTER_GAP[frame] }}>
