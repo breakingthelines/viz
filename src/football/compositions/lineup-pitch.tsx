@@ -257,11 +257,25 @@ export interface LineupPitchProps {
    * the same {@link toScreen} remap so markings and markers always agree on
    * where the pitch is. Marker CONTENT — the number/monogram, the name
    * label, the headshot, the empty-slot "+" — is never rotated, only its
-   * anchor point moves, so it stays upright and legible in both
-   * orientations. Drag-to-swap (`onSlotsSwap`) also works unchanged in
+   * anchor point moves, so it stays upright and legible in every
+   * orientation. Drag-to-swap (`onSlotsSwap`) also works unchanged in
    * portrait: the pointer-to-pitch-space conversion accounts for
    * orientation via {@link fromScreen} before any hit-testing happens, so
    * the gesture math itself never needs to know which orientation is active.
+   *
+   * `portrait-down` is the same box turned 180 degrees — own goal at the TOP,
+   * attacking DOWN the screen, and the team's own left touchline on the
+   * VIEWER'S RIGHT, because you are looking back up the pitch from the far
+   * end. It is the lineup social card's viewpoint.
+   *
+   * Pass it rather than pre-reversing `slots`. A caller that flips only the
+   * depth axis to get the keeper to the top produces a MIRROR — left and right
+   * swap, and the whole XI renders back to front — which is the defect
+   * `portrait-down` was added to fix; see {@link toScreen}. Slots stay in
+   * ordinary lineup coordinates in every orientation, so one lineup's data can
+   * be handed to the reader plate and to a card without being reshaped in
+   * between, and `nameChipBudgets`, the drag hit-test and the drag ghost all
+   * keep agreeing with the markings for free.
    */
   orientation?: PitchOrientation;
 }
@@ -747,7 +761,9 @@ function NameChip({
  *
  * Renders `landscape` (goal-to-goal left → right) by default; pass
  * `orientation="portrait"` for a vertical pitch (own goal at the bottom,
- * attacking up the screen) that fills a phone-shaped viewport — see
+ * attacking up the screen) that fills a phone-shaped viewport, or
+ * `orientation="portrait-down"` for the same pitch seen from the far end (own
+ * goal at the top, attacking down, left/right reversed with it) — see
  * {@link LineupPitchProps.orientation}.
  *
  * Always renders its underlying `Pitch` with `fillEdgeToEdge` — a real pitch

@@ -16,7 +16,10 @@ const meta = {
     markerContent: { control: 'select', options: ['number', 'headshot'] },
     showNames: { control: 'boolean' },
     editable: { control: 'boolean' },
-    orientation: { control: 'select', options: ['landscape', 'portrait'] },
+    orientation: {
+      control: 'select',
+      options: ['landscape', 'portrait', 'portrait-down'],
+    },
   },
   decorators: [
     (Story) => (
@@ -493,6 +496,127 @@ export const PortraitReader: Story = {
     const gkNumber = gk!.querySelector('text');
     expect(gkNumber, 'GK number glyph present').not.toBeNull();
     expect(gkNumber!.getAttribute('transform'), 'number glyph unrotated').toBeNull();
+  },
+};
+
+/**
+ * `portrait-down` is `portrait` TURNED AROUND, not mirrored — the guard on the
+ * distinction that broke the lineup social card.
+ *
+ * The card composes its XI keeper-first under the headline, so it needs the
+ * own goal at the TOP. Two callers reached that by handing `portrait` a set of
+ * slots with the depth axis pre-reversed (`x → 100 - x`). That does put the
+ * keeper at the top, and it is a MIRROR: reversing one axis has a negative
+ * determinant, so left and right swap with it and the whole XI renders back to
+ * front. Cards published from it had the left winger on the right of the
+ * picture and the left back on the right of the defence.
+ *
+ * Turning a pitch around reverses BOTH axes. This story states that as the
+ * only thing it can be checked as — a measurement of two renders of the SAME
+ * XI, one in each portrait orientation, taken in real screen pixels:
+ *
+ *  - every marker sits at the exact POINT REFLECTION of its counterpart about
+ *    the pitch's own centre, which is what "180 degrees" means and what no
+ *    mirror of either single axis can satisfy;
+ *  - and, stated separately because it is the half a reader notices, the
+ *    keeper moves from the bottom to the top while the team's left touchline
+ *    moves from the viewer's left to the viewer's right.
+ *
+ * The pitch MARKINGS are identical between the two, and deliberately so: a
+ * full pitch is symmetric under a 180-degree turn. That symmetry is exactly
+ * why the mirror went unnoticed for two releases — nothing in the drawing
+ * gives it away, only the players do.
+ */
+export const PortraitDownIsARotationNotAMirror: Story = {
+  args: {
+    slots: templateSlots('4-3-3'),
+    editable: false,
+    showNames: true,
+    orientation: 'portrait-down',
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '760px', padding: '24px', background: '#121212', borderRadius: 12 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: function PortraitDownStory() {
+    // Deliberately ASYMMETRIC: a left back and a right back who are different
+    // people. A symmetric XI renders identically under a rotation and under a
+    // mirror, which is why no fixture in this file caught the defect.
+    const slots = templateSlots('4-3-3').map((slot, i) => ({
+      ...slot,
+      player: { id: `p${i}`, name: SAMPLE_NAMES[i], shirtNumber: i + 1 },
+    }));
+    return (
+      <div style={{ display: 'flex', gap: 16 }}>
+        <div data-host="portrait" style={{ width: 340 }}>
+          <LineupPitch slots={slots} orientation="portrait" teamColor="#eb0000" />
+        </div>
+        <div data-host="portrait-down" style={{ width: 340 }}>
+          <LineupPitch slots={slots} orientation="portrait-down" teamColor="#eb0000" />
+        </div>
+      </div>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    /** A marker's centre, in px measured from the DRAWN pitch's own centre. */
+    const centres = (host: string) => {
+      const root = canvasElement.querySelector<HTMLElement>(`[data-host="${host}"]`)!;
+      const svg = root.querySelector('svg')!;
+      const grass = svg.querySelector('rect')!.getBoundingClientRect();
+      const originX = grass.left + grass.width / 2;
+      const originY = grass.top + grass.height / 2;
+      return new Map(
+        SAMPLE_NAMES.slice(0, 11).map((name) => {
+          const marker = root.querySelector(`[aria-label="${name}"]`);
+          expect(marker, `${host}: ${name}'s marker must be on the pitch`).not.toBeNull();
+          const box = marker!.getBoundingClientRect();
+          return [
+            name,
+            { x: box.left + box.width / 2 - originX, y: box.top + box.height / 2 - originY },
+          ] as const;
+        })
+      );
+    };
+
+    const up = centres('portrait');
+    const down = centres('portrait-down');
+
+    // (1) A POINT REFLECTION about the pitch centre — both axes negated, for
+    // every one of the eleven. A mirror in either single axis leaves one
+    // coordinate unchanged and fails here immediately.
+    //
+    // 0.5px for anti-aliasing on the measured boxes; the failure this guards
+    // against is a whole flank's width.
+    for (const name of up.keys()) {
+      const a = up.get(name)!;
+      const b = down.get(name)!;
+      expect(
+        b.x,
+        `${name}: portrait-down must be the 180-degree turn of portrait — screen x should be negated about the pitch centre, got ${b.x.toFixed(1)} against ${a.x.toFixed(1)}`
+      ).toBeCloseTo(-a.x, 0);
+      expect(
+        b.y,
+        `${name}: portrait-down must be the 180-degree turn of portrait — screen y should be negated about the pitch centre, got ${b.y.toFixed(1)} against ${a.y.toFixed(1)}`
+      ).toBeCloseTo(-a.y, 0);
+    }
+
+    // (2) The same claim as a reader would put it, so a failure is legible
+    // without reading the algebra above. `SAMPLE_NAMES` follows the 4-3-3
+    // template: [0] is the keeper, [1] the left back, [4] the right back.
+    const [keeper, leftBack, , , rightBack] = SAMPLE_NAMES;
+    expect(up.get(keeper!)!.y, 'portrait draws the keeper at the BOTTOM').toBeGreaterThan(0);
+    expect(down.get(keeper!)!.y, 'portrait-down draws the keeper at the TOP').toBeLessThan(0);
+    expect(
+      up.get(leftBack!)!.x,
+      'portrait puts the team’s LEFT back on the viewer’s left'
+    ).toBeLessThan(up.get(rightBack!)!.x);
+    expect(
+      down.get(leftBack!)!.x,
+      'portrait-down looks back up the pitch, so the team’s LEFT back is on the viewer’s RIGHT'
+    ).toBeGreaterThan(down.get(rightBack!)!.x);
   },
 };
 

@@ -2,11 +2,27 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 
 import { LineupCard, LINEUP_CARD_FRAME_SIZE } from './lineup-card';
+import { LineupCardPitch } from './lineup-card-pitch';
 import { LineupList } from './lineup-list';
 import { LineupPitch } from './lineup-pitch';
 import type { LineupSlot, LineupSlotPlayer } from './lineup-pitch';
 import { getFormationTemplate } from '#/football/data/formations';
 import { captureElementToPng } from '#/utils/export';
+import {
+  assertChipGeometry,
+  chipTexts,
+  expectNoTruncation,
+  intersection,
+  nameChips,
+  pitchSvg,
+  settled,
+} from '#/test/chip-geometry';
+import {
+  LIVERPOOL_CHIP_LABELS,
+  LIVERPOOL_REPORTED_TRUNCATIONS,
+  LIVERPOOL_XI,
+  liverpoolSlots,
+} from '#/test/fixtures/lineup-xi';
 
 /**
  * The BTL lineup social export card, at all four of its authored frames.
@@ -98,25 +114,21 @@ const ENGLAND_XI: LineupSlotPlayer[] = [
 ];
 
 /**
- * Lay an XI onto the `4-3-3` the card's pitch frame draws.
+ * Lay an XI onto the `4-3-3` the card's pitch frame draws, in ORDINARY lineup
+ * coordinates — keeper at low `x`, `y=0` at the team's own left touchline.
  *
- * `x` is MIRRORED (`100 - x`) so the keeper sits at the TOP of the pitch and
- * the front three at the bottom, which is how the Figma pitch frame draws it.
- * viz's `portrait` orientation is defined the other way up — own goal at the
- * bottom, attacking UP the screen — because that is the convention the
- * editor's Lineup block and the Match Centre already ship.
- *
- * This needs no new prop and is not a hack: `variant="full"` draws a complete
- * pitch, which is symmetric under a 180-degree rotation (penalty area, goal
- * area, penalty spot and arc at BOTH ends, plus a centred halfway line, circle
- * and spot). So mirroring where the players sit is exactly equivalent to
- * turning the pitch around, and nothing about the markings gives it away.
- * Only the XI's own coordinates change — the formation template itself is
- * untouched, and `LineupPitch` is unmodified.
+ * Nothing is reshaped for the card's keeper-at-the-top viewpoint. Until 0.14.0
+ * this function reversed `x` here (`100 - x`) and this file's own comment
+ * argued it was "exactly equivalent to turning the pitch around". It is not:
+ * reversing one axis is a MIRROR, and it published every card with its left
+ * and right flanks swapped. Turning a pitch around reverses BOTH axes, and
+ * that is now `LineupPitch`'s `orientation="portrait-down"` — one rotation, in
+ * the one place orientation math lives, instead of a reshape each caller has
+ * to reinvent. (Two of them did, and both got it wrong the same way.)
  */
 function slotsFor(xi: LineupSlotPlayer[]): LineupSlot[] {
   return getFormationTemplate('4-3-3').map((slot, i) => ({
-    x: 100 - slot.x,
+    x: slot.x,
     y: slot.y,
     role: slot.role,
     player: xi[i],
@@ -248,90 +260,21 @@ function overlongSlots(): LineupSlot[] {
 }
 
 /**
- * The pitch body, restyled for the card.
+ * The pitch body — the SHIPPED one.
  *
- * Everything the Figma pitch frame asks for comes out of `LineupPitch`'s
- * EXISTING props — `orientation`, `markerContent`, `showNames`, `lineColor`,
- * plus the dark theme's own `#1f1f1f` grass default, which already matches
- * the file. No new props were needed.
+ * This was a story-local copy of `LineupCardPitch` until 0.14.0, written from
+ * the same Figma frame as the component `LineupCardView` renders and then
+ * drifted from it. Every geometry story below measured this copy, so 0.12.0's
+ * slot fit and 0.13.0's 16px type were asserted here and never reached a
+ * reader; the card that shipped rendered its labels at 25px and clipped three
+ * ordinary surnames while the whole suite stayed green.
  *
- * `orientation` is passed explicitly rather than left to the default: the
- * card must keep drawing a portrait pitch regardless of what that default
- * happens to be.
- *
- * `teamName`/`formation` are deliberately NOT passed. `LineupPitch` prints
- * its own team + formation chip above the pitch in read-only mode, and the
- * card already carries both in its own headline and footer — omitting them is
- * what suppresses the duplicate, with no new prop required.
- *
- * `fit` and `pitchPadding` are NOT passed, and that is the point: inside a
- * `LineupCard` they resolve to `height` / `0` on their own, so a host
- * composing this card gets the slot fit without having to know the numbers.
- * 0.11.0 passed `pitchPadding={1.7}` here to fake it — that sized the drawing
- * to the slot's 734px height but left the pitch's BOX at 515x772.5, hanging
- * 19px past the slot top and bottom. `PitchFitsCardBodySlot` measures the
- * repair.
- *
- * `shrink-0` stops the flex slot from squeezing the pitch: without it the
- * pitch collapses to ~420px wide and floats in the middle of the slot.
+ * There is one component now, and this is a thin alias so the stories keep
+ * reading the way they did. See `lineup-card-pitch.tsx` for the numbers and
+ * why each is what it is.
  */
 function CardPitch({ slots = englandSlots() }: { slots?: LineupSlot[] } = {}) {
-  return (
-    <LineupPitch
-      slots={slots}
-      orientation="portrait"
-      markerContent="headshot"
-      showNames
-      editable={false}
-      theme="dark"
-      // The Figma pitch is a hairline drawing on the card's own dark ground,
-      // far lighter than `Pitch`'s `#2b2b2b` dark-theme default. Grass is left
-      // unset — `LineupPitch`'s dark default is already the file's `#1f1f1f`.
-      lineColor="rgba(255,255,255,0.5)"
-      // 4.354 viewBox units of RADIUS — the Figma's 64px headshot, derived
-      // rather than eyeballed. The card's pitch declares a 66.667-unit-wide
-      // viewBox across a 489.6px box, i.e. 7.344 px per unit, so the file's
-      // 64px disc is a 32px radius is 4.354 units. (Unchanged by the 0.12.0
-      // slot fit: that moved the px-per-unit scale by 0.08%, from 7.3502 to
-      // 7.3444, because it shrank the pitch's empty BOX and left the drawing
-      // where it was.)
-      //
-      // Was 5.0, whose comment claimed the same 64px but measured 73.5px — 15%
-      // over. That mattered for more than the discs: `nameFontSize` is derived
-      // from `markerSize`, so the oversized marker also set the name chips at
-      // 26.4px against the file's 22px, and the two errors together were what
-      // collided the back four's chips. At 4.354 the labels land at 22.98px.
-      //
-      markerSize={4.354}
-      // 2.177 units = 16px at the same 7.344 px/unit — HALF the marker radius,
-      // so the name is set at a quarter of the 64px headshot's diameter.
-      //
-      // A deliberate departure from the Figma, which sets 22px (2.993 units).
-      // It is recorded here rather than buried: the file's own value is 27%
-      // larger, and 0.11.0 matched it on purpose. What the file could not show
-      // is a real team sheet — its sample XI is James, Stones, Rice, Kane,
-      // Saka, and at that length 22px looks correct. Against the names cards
-      // are actually published with, the same 22px reads as heavy chips
-      // crowding the photographs they are supposed to caption (the owner's
-      // report on a published card), and it is the size at which the back
-      // four's chips start competing for room at all — see
-      // `nameChipBudgets`. At 16px the whole of `LONG_NAME_XI` renders in
-      // full, including "Alexander-Arnold", with nothing truncated and
-      // nothing clamped; `SquarePitchLongNamesGeometry` is what holds that.
-      //
-      // The MARKER is untouched at the file's 64px. This is a change to the
-      // type only, which is what `nameFontSize` was added for in 0.11.0 —
-      // sizing the label independently of the disc, instead of shrinking the
-      // photographs to control the text hanging under them.
-      nameFontSize={2.177}
-      // Neutral `#2b2b2b` (the file's own chip grey) rather than the default
-      // team blue, which would be the only saturated colour on an otherwise
-      // monochrome card. It backs each headshot and shows through a
-      // transparent one.
-      teamColor="#2b2b2b"
-      className="w-full shrink-0"
-    />
-  );
+  return <LineupCardPitch slots={slots} />;
 }
 
 /** Figma 3048:11243 — square, split panel, text team sheet on the right. */
@@ -703,137 +646,6 @@ export const MatchesFigmaBodySlot: Story = {
 };
 
 /**
- * Wait for the state a captured card is actually rasterised in: webfonts
- * resolved, and React's font-swap re-render flushed to the DOM.
- *
- * Name chips size themselves to the REAL measured width of their label
- * (`lib/text-width.ts`), so before Inter arrives they legitimately describe
- * the fallback face the SVG is drawing at that moment, and re-measure when the
- * face swaps. Measuring the card mid-swap would assert against a transient
- * neither the viewer nor the exporter ever sees.
- */
-async function settled() {
-  await document.fonts.ready;
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-}
-
-/** The card's pitch SVG — the widest one, so the BTL lockup's mark can't win. */
-function pitchSvg(root: HTMLElement): SVGSVGElement {
-  return Array.from(root.querySelectorAll('svg')).reduce((a, b) =>
-    a.getBoundingClientRect().width >= b.getBoundingClientRect().width ? a : b
-  );
-}
-
-/**
- * The pitch's name-chip `<text>` nodes — the ones backed by a chip `<rect>`,
- * which is what separates them from shirt numbers and empty-slot role labels.
- */
-function chipTexts(svg: SVGSVGElement): SVGTextElement[] {
-  return Array.from(svg.querySelectorAll('text')).filter(
-    (text) => text.parentElement?.querySelector('rect') != null
-  );
-}
-
-/** Every name chip's backing rect, paired with the label it has to contain. */
-function nameChips(svg: SVGSVGElement): { label: string; rect: DOMRect; text: DOMRect }[] {
-  return chipTexts(svg).map((text) => ({
-    label: text.textContent ?? '',
-    rect: text.parentElement!.querySelector('rect')!.getBoundingClientRect(),
-    text: text.getBoundingClientRect(),
-  }));
-}
-
-/** Overlap of two rects, in px per axis. Both positive means they intersect. */
-function intersection(a: DOMRect, b: DOMRect) {
-  return {
-    x: Math.min(a.right, b.right) - Math.max(a.left, b.left),
-    y: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top),
-  };
-}
-
-/**
- * The DRAWN pitch — the grass rect, whose edges ARE the touchlines and goal
- * lines. Deliberately not the SVG's own box: inside the card those happen to
- * coincide (`pitchPadding` is 0), but on every other surface the SVG carries a
- * gutter around the drawing, and "inside the pitch" has to mean inside the
- * thing a reader can see, on all of them.
- */
-function pitchBounds(svg: SVGSVGElement): DOMRect {
-  return svg.querySelector('rect')!.getBoundingClientRect();
-}
-
-/**
- * The geometry contract the card's pitch body owes EVERY XI, asserted against
- * whichever one the calling story renders.
- *
- * Extracted so the realistic fixture and the Figma's own sample are held to
- * one identical standard. 0.11.0's assertions lived inline in a single story
- * bound to a single sample XI, which is precisely how a guard ends up
- * measuring only the case that cannot fail — see `LONG_NAME_XI`'s doc.
- *
- * The three clauses are not independent, and none of them can be dropped:
- *
- *  - **(1) No two chips intersect** is the reported defect stated directly.
- *    Alone, it is satisfiable by shrinking chips until their text spills out.
- *  - **(2) Every chip contains its own text** closes that, pinning the chip to
- *    its label from the other side.
- *  - **(3) No chip leaves the drawn pitch.** Alone, (1) and (2) are both
- *    satisfied by a chip hanging off the touchline into the card's margin —
- *    which is exactly what "Alexander-Arnold" did on the reported card, and
- *    what nothing in 0.11.0 looked at.
- */
-function assertChipGeometry(svg: SVGSVGElement, chips: ReturnType<typeof nameChips>) {
-  // (1) NO TWO NAME CHIPS INTERSECT. The defect, as a measurement.
-  for (let i = 0; i < chips.length; i++) {
-    for (let j = i + 1; j < chips.length; j++) {
-      const a = chips[i]!;
-      const b = chips[j]!;
-      const { x, y } = intersection(a.rect, b.rect);
-      expect(
-        x > 0 && y > 0,
-        `name chips "${a.label}" and "${b.label}" must not overlap — they intersect by ${x.toFixed(1)}x${y.toFixed(1)}px`
-      ).toBe(false);
-    }
-  }
-
-  // (2) Every chip still CONTAINS its own label. Without this, (1) could be
-  // passed by shrinking chips until the text spills out of them.
-  for (const { label, rect, text } of chips) {
-    expect(
-      text.left >= rect.left && text.right <= rect.right,
-      `name chip for "${label}" must contain its text — chip [${rect.left.toFixed(1)}, ${rect.right.toFixed(1)}], text [${text.left.toFixed(1)}, ${text.right.toFixed(1)}]`
-    ).toBe(true);
-  }
-
-  // (3) NOTHING LEAVES THE PITCH. Stated on all four edges rather than just
-  // the two the reported card happened to break, so a formation that pushes a
-  // chip off the goal line is caught by the same assertion.
-  //
-  // The 0.5px tolerance is anti-aliasing on the grass rect's own edge, not
-  // slack in the claim — the failure this guards against was 30px+.
-  const pitch = pitchBounds(svg);
-  const EDGE_TOLERANCE = 0.5;
-  for (const { label, rect } of chips) {
-    expect(
-      rect.left,
-      `name chip for "${label}" must not run off the LEFT touchline — chip left ${rect.left.toFixed(1)}, pitch left ${pitch.left.toFixed(1)}`
-    ).toBeGreaterThanOrEqual(pitch.left - EDGE_TOLERANCE);
-    expect(
-      rect.right,
-      `name chip for "${label}" must not run off the RIGHT touchline — chip right ${rect.right.toFixed(1)}, pitch right ${pitch.right.toFixed(1)}`
-    ).toBeLessThanOrEqual(pitch.right + EDGE_TOLERANCE);
-    expect(
-      rect.top,
-      `name chip for "${label}" must not run off the TOP goal line — chip top ${rect.top.toFixed(1)}, pitch top ${pitch.top.toFixed(1)}`
-    ).toBeGreaterThanOrEqual(pitch.top - EDGE_TOLERANCE);
-    expect(
-      rect.bottom,
-      `name chip for "${label}" must not run off the BOTTOM goal line — chip bottom ${rect.bottom.toFixed(1)}, pitch bottom ${pitch.bottom.toFixed(1)}`
-    ).toBeLessThanOrEqual(pitch.bottom + EDGE_TOLERANCE);
-  }
-}
-
-/**
  * Verification story (not a product story): the pitch frame's marker and label
  * geometry, measured against the Figma file's own numbers.
  *
@@ -1003,6 +815,106 @@ export const SquarePitchLongNamesGeometry: Story = {
     const labels = chips.map((chip) => chip.label);
     for (const required of ['Alexander-Arnold', 'Tchouaméni', 'Mastantuono', 'Cucurella']) {
       expect(labels, `the stress fixture must keep carrying "${required}"`).toContain(required);
+    }
+  },
+};
+
+/** The reported Liverpool XI, with the placeholder headshots attached. */
+function reportedSlots(): LineupSlot[] {
+  const photos = Object.values(HEADSHOT);
+  return liverpoolSlots((player) => ({
+    ...player,
+    imageUrl: photos[LIVERPOOL_XI.findIndex((entry) => entry.id === player.id) % photos.length],
+  }));
+}
+
+/**
+ * Verification story (not a product story): ORDINARY surnames are printed in
+ * full.
+ *
+ * `SquarePitchLongNamesGeometry` above stresses the extreme —
+ * "Alexander-Arnold", "Papastathopoulos" — and it is a good test of whether
+ * the fit mechanism ENGAGES. It says nothing about whether it engages when it
+ * must not, and that is the failure the owner reported: a published card with
+ * "van D…", "Jacq…" and "Frim…" across its back four. Not one of those names
+ * is hard. They are six-to-eight-character top-flight surnames, and they
+ * clipped.
+ *
+ * So this is the other end of the same contract, and the two are deliberately
+ * separate stories rather than one: a guard that only ever asks "did the clamp
+ * fire?" is satisfied by a board of ellipses, and a guard that only ever asks
+ * "is anything clipped?" cannot be run on a lineup that legitimately has to be.
+ *
+ * The names are asserted individually, by surname, rather than counted — a
+ * later edit that shortened the fixture until nothing clipped would otherwise
+ * leave this passing while measuring nothing, which is exactly how the
+ * original defect survived two releases of green suite.
+ */
+export const SquarePitchOrdinaryNamesGeometry: Story = {
+  args: {
+    frame: 'square',
+    title: 'Liverpool XI',
+    eyebrow: 'Lineup',
+    heroImageUrl: HERO_WARM,
+    children: null,
+  },
+  render: (args) => (
+    <LineupCard {...args}>
+      <CardPitch slots={reportedSlots()} />
+    </LineupCard>
+  ),
+  play: async ({ canvasElement }) => {
+    await settled();
+    const card = canvasElement.querySelector<HTMLElement>('[data-slot="lineup-card"]')!;
+    const svg = pitchSvg(card);
+
+    const chips = nameChips(svg);
+    expect(chips, 'one name chip per player').toHaveLength(11);
+
+    // Every surname in full — including the three the published card cut.
+    expectNoTruncation(chips, LIVERPOOL_CHIP_LABELS);
+
+    // And the fit contract still holds, so "stopped truncating" cannot have
+    // been bought by letting the chips collide or leave the pitch.
+    assertChipGeometry(svg, chips);
+
+    // The three that actually broke, named again on their own so a failure
+    // reads as the owner's report rather than as a list of eleven labels.
+    const labels = chips.map((chip) => chip.label);
+    for (const surname of LIVERPOOL_REPORTED_TRUNCATIONS) {
+      expect(
+        labels,
+        `"${surname}" is one of the three surnames the published card clipped, and must be printed whole`
+      ).toContain(surname);
+    }
+
+    // CLEARANCE, not merely absence of collision.
+    //
+    // `assertChipGeometry` only asks that chips do not intersect, which a board
+    // fitted right up against its own budget satisfies by a hair — and a board
+    // one letter away from clipping again. On an ordinary XI the chips should
+    // be visibly separate, so the floor is stated as a real distance: 20px,
+    // about two thirds of a chip's own 28px height.
+    //
+    // It is a floor with room under it rather than a number tuned to pass. The
+    // tightest pair here is the centre backs, who share a row and share the
+    // least space of anyone on the board; measured, they clear each other by
+    // ~62px. The card that shipped left the same pair 19px apart, and only
+    // because both their names had already been cut.
+    const MIN_CLEARANCE_PX = 20;
+    for (let i = 0; i < chips.length; i++) {
+      for (let j = i + 1; j < chips.length; j++) {
+        const a = chips[i]!;
+        const b = chips[j]!;
+        // Same row only: chips on different rows are separated vertically and
+        // owe each other nothing horizontally.
+        if (intersection(a.rect, b.rect).y <= 0) continue;
+        const gap = Math.max(a.rect.left, b.rect.left) - Math.min(a.rect.right, b.rect.right);
+        expect(
+          gap,
+          `"${a.label}" and "${b.label}" share a row and must clear each other by at least ${MIN_CLEARANCE_PX}px — got ${gap.toFixed(1)}px`
+        ).toBeGreaterThanOrEqual(MIN_CLEARANCE_PX);
+      }
     }
   },
 };

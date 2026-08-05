@@ -6,13 +6,21 @@ import {
   LineupCardView,
   LINEUP_CARD_VARIANTS,
   LINEUP_CARD_VIEW_SCALE_VAR,
-  cardPitchSlots,
+  type LineupCardVariant,
   type LineupCardViewData,
 } from './lineup-card-carousel';
 import { LINEUP_CARD_FRAME_SIZE } from './lineup-card';
 import type { LineupSlot, LineupSlotPlayer } from './lineup-pitch';
 import { getFormationTemplate } from '#/football/data/formations';
 import { captureElementToPng } from '#/utils/export';
+import {
+  assertChipGeometry,
+  expectNoTruncation,
+  nameChips,
+  pitchSvg,
+  settled,
+} from '#/test/chip-geometry';
+import { LIVERPOOL_CHIP_LABELS, LIVERPOOL_XI, liverpoolSlots } from '#/test/fixtures/lineup-xi';
 
 /**
  * Every view of one lineup card, swipeable, with pills.
@@ -52,8 +60,10 @@ const XI: LineupSlotPlayer[] = [
 ];
 
 /**
- * The XI on a 4-3-3, in ORDINARY lineup coordinates — keeper at low `x`.
- * The carousel mirrors them itself; nothing here pre-mirrors.
+ * The XI on a 4-3-3, in ORDINARY lineup coordinates — keeper at low `x`, `y=0`
+ * at the team's own left touchline. Nothing here is reshaped for the card's
+ * keeper-at-the-top viewpoint; that is `LineupCardPitch`'s `portrait-down`
+ * orientation, and a caller doing it by hand is the defect 0.14.0 fixed.
  */
 function slots(): LineupSlot[] {
   return getFormationTemplate('4-3-3').map((t, i) => ({
@@ -331,24 +341,189 @@ export const VerifyStandaloneViewCapturesAtFrameSize: Story = {
   },
 };
 
+// ── The shipped card, measured ───────────────────────────────────────────────
+//
+// Everything below renders `LineupCardView` — the transform-free component a
+// host actually captures — rather than a story-local composition of the same
+// parts. That distinction is the reason these stories exist: until 0.14.0 the
+// card's pitch was configured in TWO places, and every geometry guard in the
+// suite measured the other one. The name type was retuned to 16px in 0.13.0
+// on a pitch no reader has ever seen, while the shipped view kept rendering
+// it at 25px and clipping surnames.
+
+/** The Liverpool XI the owner reported, on the card's own pitch body. */
+const REPORTED_DATA: LineupCardViewData = {
+  title: 'Liverpool XI',
+  formation: '4-3-3',
+  players: [...LIVERPOOL_XI],
+  slots: liverpoolSlots(),
+  markerContent: 'number',
+};
+
+const PITCH_VARIANT: LineupCardVariant = LINEUP_CARD_VARIANTS.find(
+  (variant) => variant.id === 'square-pitch'
+)!;
+
 /**
- * The pitch body is mirrored for the card, and the caller does not do it.
- *
- * The card draws its pitch keeper-at-the-TOP; `LineupPitch`'s `portrait`
- * orientation is defined the other way up. Owning the mirror here is what
- * stops every caller having to know that — and stops two callers disagreeing.
+ * One `LineupCardView` at its TRUE size, parked offscreen — the capture
+ * target, with no transform anywhere above it, so every px this story reads
+ * is a px a reader gets.
  */
-export const VerifyPitchIsMirroredForTheCard: Story = {
-  args: { data: DATA },
-  play: async () => {
-    const mirrored = cardPitchSlots([
-      { x: 6, y: 50, player: { id: 'a', name: 'Keeper' } },
-      { x: 80, y: 50, player: { id: 'c', name: 'Striker' } },
-    ]);
-    await expect(mirrored[0]!.x).toBe(94);
-    await expect(mirrored[1]!.x).toBe(20);
-    // `y` and the player ride through untouched.
-    await expect(mirrored[0]!.y).toBe(50);
-    await expect(mirrored[1]!.player?.name).toBe('Striker');
+function renderCaptureTarget(data: LineupCardViewData) {
+  return (
+    <div style={{ position: 'fixed', top: 0, left: -20000, width: 'max-content' }}>
+      <div data-testid="capture-target" style={{ width: 'max-content' }}>
+        <LineupCardView variant={PITCH_VARIANT} data={data} />
+      </div>
+    </div>
+  );
+}
+
+/** The pitch inside the offscreen capture target. */
+function capturedPitch(canvasElement: HTMLElement): SVGSVGElement {
+  return pitchSvg(canvasElement.querySelector<HTMLElement>('[data-testid="capture-target"]')!);
+}
+
+/** A marker's centre in real screen px, found by the player it carries. */
+function markerCentre(svg: SVGSVGElement, name: string): { x: number; y: number } {
+  const marker = svg.querySelector<SVGGElement>(`[aria-label="${name}"]`);
+  expect(marker, `${name}'s marker must be on the pitch`).not.toBeNull();
+  const box = marker!.getBoundingClientRect();
+  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+}
+
+/**
+ * The card's pitch is the view from BEHIND THE GOAL THE TEAM IS ATTACKING —
+ * a 180-degree rotation of the reader's portrait pitch, not a mirror of it.
+ *
+ * This is the defect the owner reported: "LB/LW and RB/RW are getting
+ * switched wrongly, Barcola should be on the right (it's from the
+ * goalkeeper's perspective)".
+ *
+ * ## Why one clause is not enough
+ *
+ * The card wants the keeper at the TOP; `LineupPitch`'s `portrait` puts him
+ * at the bottom. Turning a pitch around to look at it from the other end is a
+ * ROTATION, which reverses BOTH axes. Reversing only the depth axis is a
+ * MIRROR, and a mirror puts the keeper at the top too — so a test that only
+ * checked the keeper's position passes on the broken render, which is exactly
+ * what shipped.
+ *
+ * There are four ways to lay a portrait pitch out, and each is pinned by a
+ * different pair of answers:
+ *
+ * | render                    | keeper | team's left |
+ * | ------------------------- | ------ | ----------- |
+ * | `portrait` (reader)       | bottom | viewer left |
+ * | `portrait`, y reversed    | bottom | viewer right|
+ * | `portrait`, x reversed    | top    | viewer left | ← what shipped
+ * | 180-degree rotation       | top    | viewer right| ← the card
+ *
+ * Both clauses below are therefore load-bearing, and together they identify
+ * the card's viewpoint uniquely.
+ *
+ * ## Measured, not derived
+ *
+ * Every assertion reads `getBoundingClientRect()` off the rendered markers.
+ * Nothing here inspects a coordinate transform, so a future change that keeps
+ * the transform and breaks the render — or replaces the transform entirely,
+ * as 0.14.0 does — is judged on what a reader sees.
+ */
+export const VerifyPitchIsTheKeepersViewpoint: Story = {
+  args: { data: REPORTED_DATA },
+  render: () => renderCaptureTarget(REPORTED_DATA),
+  play: async ({ canvasElement }) => {
+    await settled();
+    const svg = capturedPitch(canvasElement);
+
+    // (1) THE KEEPER IS AT THE TOP, and the front three at the bottom — the
+    // half of the contract the previous build did satisfy.
+    const keeper = markerCentre(svg, 'Alisson Becker');
+    for (const forward of ['Barcola', 'Isak', 'Mbaye']) {
+      expect(
+        keeper.y,
+        `the card draws the keeper at the TOP — Alisson must sit above ${forward}`
+      ).toBeLessThan(markerCentre(svg, forward).y);
+    }
+
+    // (2) THE TEAM'S LEFT IS THE VIEWER'S RIGHT — the half it did not.
+    //
+    // Stated first as the owner stated it, so a failure reads like the report.
+    expect(
+      markerCentre(svg, 'Barcola').x,
+      'Barcola plays on the LEFT wing, and the card looks up the pitch from behind the goal, so he must render to the viewer’s RIGHT of the right winger'
+    ).toBeGreaterThan(markerCentre(svg, 'Mbaye').x);
+    expect(
+      markerCentre(svg, 'Kerkez').x,
+      'Kerkez is the LEFT back and must render to the viewer’s RIGHT of Frimpong, the right back'
+    ).toBeGreaterThan(markerCentre(svg, 'Frimpong').x);
+
+    // (3) And it holds for the WHOLE XI, not the two pairs named above — a
+    // partial fix that reversed the wingers and left the back four alone
+    // would satisfy (2) on its own.
+    //
+    // `y` in lineup coordinates runs 0 (the team's own left touchline) to 100
+    // (its right). Under a 180-degree rotation that ordering reverses on
+    // screen exactly, so for every pair of players the one with the SMALLER
+    // `y` must render at the LARGER screen x.
+    const placed = liverpoolSlots()
+      .filter((slot) => slot.player)
+      .map((slot) => ({
+        name: slot.player!.name,
+        y: slot.y,
+        x: markerCentre(svg, slot.player!.name).x,
+      }));
+    expect(placed, 'the whole XI is on the pitch').toHaveLength(11);
+
+    for (const a of placed) {
+      for (const b of placed) {
+        if (a.y >= b.y) continue;
+        expect(
+          a.x,
+          `${a.name} (y ${a.y}, further LEFT than ${b.name} at y ${b.y}) must render further RIGHT on screen — got ${a.x.toFixed(1)}px against ${b.x.toFixed(1)}px`
+        ).toBeGreaterThan(b.x);
+      }
+    }
+  },
+};
+
+/**
+ * Ordinary top-flight surnames are printed in full on the shipped card.
+ *
+ * The second half of the owner's report: "van D…", "Jacq…", "Frim…" — van
+ * Dijk, a second centre back and Frimpong, all clipped across the back four,
+ * where markers sit closest together and a chip's share of its row is
+ * smallest.
+ *
+ * `LONG_NAME_XI` was added in 0.13.0 to stop exactly this and did not, for two
+ * reasons that this story fixes separately:
+ *
+ *  - it stressed the EXTREME ("Alexander-Arnold", "Papastathopoulos") when the
+ *    names that broke were unremarkable six-to-eight-character surnames, and
+ *  - it was only ever rendered through the card stories' own pitch, not
+ *    through `LineupCardView`, which is what a reader is handed.
+ *
+ * So this measures the shipped component against the lineup that broke. The
+ * geometry contract is asserted too, not just the absence of ellipses — a
+ * layout that stopped truncating by letting chips collide would be a
+ * different defect, not a fix.
+ */
+export const VerifyOrdinarySurnamesArePrintedInFull: Story = {
+  args: { data: REPORTED_DATA },
+  render: () => renderCaptureTarget(REPORTED_DATA),
+  play: async ({ canvasElement }) => {
+    await settled();
+    const svg = capturedPitch(canvasElement);
+
+    const chips = nameChips(svg);
+    expect(chips, 'one name chip per player').toHaveLength(11);
+
+    // Nothing clipped — named surname by surname, so a fixture edit that
+    // quietly shortened one fails here rather than silently measuring less.
+    expectNoTruncation(chips, LIVERPOOL_CHIP_LABELS);
+
+    // And the fit contract still holds: no chip overlaps another, every chip
+    // contains its own text, nothing leaves the pitch.
+    assertChipGeometry(svg, chips);
   },
 };

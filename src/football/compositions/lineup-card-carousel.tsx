@@ -62,11 +62,11 @@ import {
   type LineupCardFrame,
 } from '#/football/compositions/lineup-card';
 import { LineupList } from '#/football/compositions/lineup-list';
-import {
-  LineupPitch,
-  type LineupMarkerContent,
-  type LineupSlot,
-  type LineupSlotPlayer,
+import { LineupCardPitch } from '#/football/compositions/lineup-card-pitch';
+import type {
+  LineupMarkerContent,
+  LineupSlot,
+  LineupSlotPlayer,
 } from '#/football/compositions/lineup-pitch';
 
 /** Which body fills the card's slot: the numbered team sheet, or the pitch. */
@@ -162,11 +162,15 @@ export interface LineupCardViewData {
   /** The XI for the team-sheet body, in the order it should be printed. */
   players: LineupSlotPlayer[];
   /**
-   * The XI for the pitch body, in ORDINARY lineup coordinates — the same
-   * ones a `LineupPitch` elsewhere in the product is given, keeper at low
-   * `x`. The card draws its pitch keeper-at-the-TOP, so this component
-   * mirrors `x` itself (see {@link cardPitchSlots}); callers must not
-   * pre-mirror.
+   * The XI for the pitch body, in ORDINARY lineup coordinates — the same ones
+   * a `LineupPitch` elsewhere in the product is given, keeper at low `x` and
+   * `y=0` at the team's own left touchline.
+   *
+   * Callers must not reshape them for the card's keeper-at-the-top viewpoint.
+   * That is carried by `LineupCardPitch`'s `orientation="portrait-down"`,
+   * where it is one provable rotation; until 0.14.0 this component reversed
+   * the depth axis here instead, which is a MIRROR and published every card
+   * with its left and right flanks swapped.
    */
   slots: LineupSlot[];
   heroImageUrl?: string;
@@ -175,26 +179,6 @@ export interface LineupCardViewData {
   numberColor?: string;
   /** What the pitch draws in each marker. Defaults to `'headshot'`. */
   markerContent?: LineupMarkerContent;
-}
-
-/**
- * Turn ordinary lineup slots into the card pitch's own orientation by
- * MIRRORING `x` (`100 - x`).
- *
- * The card draws its pitch keeper-at-the-TOP, attacking DOWN the frame, which
- * is how the Figma pitch frame composes it under the headline. `LineupPitch`'s
- * `portrait` orientation is defined the other way up — own goal at the bottom
- * — because that is the convention the reader pitch and the Match Centre
- * already ship, and changing it would re-orient every published lineup.
- *
- * Mirroring is exactly equivalent to turning the pitch around and needs no new
- * prop: `Pitch`'s full variant is symmetric under a 180-degree rotation
- * (penalty area, goal area, spot and arc at BOTH ends, plus a centred halfway
- * line, circle and spot), so nothing in the markings gives it away. Only the
- * players' coordinates change — the formation template itself is untouched.
- */
-export function cardPitchSlots(slots: LineupSlot[]): LineupSlot[] {
-  return slots.map((slot) => ({ ...slot, x: 100 - slot.x }));
 }
 
 /**
@@ -228,32 +212,15 @@ export function LineupCardView({
       {variant.body === 'list' ? (
         <LineupList players={data.players} />
       ) : (
-        <LineupPitch
-          slots={cardPitchSlots(data.slots)}
-          // Explicit, not left to the prop default: the card must keep
-          // drawing a portrait pitch whatever that default happens to be.
-          orientation="portrait"
-          markerContent={data.markerContent ?? 'headshot'}
-          showNames
-          editable={false}
-          theme="dark"
+        // `LineupCardPitch` owns every number the Figma pitch frame asks for —
+        // the marker size, the name type, the viewpoint. This file used to
+        // carry its own copy of them, drifting from the copy the geometry
+        // stories measured; see that module's header for what that cost.
+        <LineupCardPitch
+          slots={data.slots}
+          markerContent={data.markerContent}
           teamColor={data.teamColor}
           numberColor={data.numberColor}
-          // The card's own hairline drawing, far lighter than the reader
-          // pitch's lines. Grass is left unset so the card-scoped `#1f1f1f`
-          // dark default applies.
-          lineColor="rgba(255,255,255,0.5)"
-          // A 64px headshot on this 515px-wide pitch, which is what the Figma
-          // draws; the component's 3.34 default was tuned for the reader
-          // plate's much wider pitch and reads small here.
-          markerSize={5}
-          // The default gutter of 7 shrinks the drawn pitch to ~425px inside
-          // the card's 515px column — a dead margin the Figma does not have.
-          // 1.7 fills the slot's full height.
-          pitchPadding={1.7}
-          // Without `shrink-0` the flex slot squeezes the pitch to ~420px and
-          // floats it in the middle of the column.
-          className="w-full shrink-0"
         />
       )}
     </LineupCard>
