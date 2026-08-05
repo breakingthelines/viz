@@ -1,15 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { expect, userEvent, waitFor } from 'storybook/test';
 
 import {
   LineupCardCarousel,
   LineupCardView,
+  LEADING_SLIDE_ID,
   LINEUP_CARD_VARIANTS,
   LINEUP_CARD_VIEW_SCALE_VAR,
+  type LineupCardSlide,
   type LineupCardVariant,
   type LineupCardViewData,
 } from './lineup-card-carousel';
 import { LINEUP_CARD_FRAME_SIZE } from './lineup-card';
+import { LineupPitch } from './lineup-pitch';
 import type { LineupSlot, LineupSlotPlayer } from './lineup-pitch';
 import { getFormationTemplate } from '#/football/data/formations';
 import { captureElementToPng } from '#/utils/export';
@@ -239,6 +243,620 @@ export const VerifyPillSelectsItsView: Story = {
     await expect(active).toHaveLength(1);
     await expect((active[0] as HTMLElement).dataset.variant).toBe('square-pitch');
     await expect(pill.getAttribute('aria-current')).toBe('true');
+  },
+};
+
+// ── The track's geometry ─────────────────────────────────────────────────────
+
+/**
+ * Narrower than a single square card view (1212 * 0.35 = 424px), so the
+ * geometry stories below measure a track that genuinely scrolls. Measuring a
+ * track with slack in it would pass on any padding at all.
+ */
+const TRACK_WIDTH = 420;
+
+const trackOf = (canvasElement: HTMLElement) =>
+  canvasElement.querySelector<HTMLElement>('[data-slot="lineup-card-track"]')!;
+
+const viewsOf = (canvasElement: HTMLElement) => [
+  ...canvasElement.querySelectorAll<HTMLElement>('[data-slot="lineup-card-view"]'),
+];
+
+const pillsOf = (canvasElement: HTMLElement) => [
+  ...canvasElement.querySelectorAll<HTMLAnchorElement>('[data-slot="lineup-card-pill"]'),
+];
+
+/**
+ * Nothing before the first slide, nothing after the last.
+ *
+ * The defect this pins: the track used to carry `px-[50%]`, the usual
+ * companion to `snap-center`, which is what lets an end slide reach the MIDDLE
+ * of the viewport. Percentage padding on a scroll container is content — so at
+ * rest the reader was shown half a container of empty band and then the card,
+ * pushed right by an allowance made for a slide in the middle of the track.
+ *
+ * Both ends are asserted, because the obvious wrong fix is to move the
+ * allowance rather than remove it: `pl-0 pr-[50%]` would satisfy a first-slide
+ * check on its own and leave the same band hanging off the other end.
+ */
+async function expectFlushEnds(canvasElement: HTMLElement) {
+  const track = trackOf(canvasElement);
+  const views = viewsOf(canvasElement);
+  const first = views[0]!;
+  const last = views.at(-1)!;
+
+  // The track really does scroll, or none of this measures anything.
+  await expect(
+    track.scrollWidth,
+    'the track must overflow for its end geometry to mean anything'
+  ).toBeGreaterThan(track.clientWidth);
+  await expect(track.scrollLeft, 'the track starts at its own beginning').toBe(0);
+
+  // (1) AT REST, the first slide starts exactly where the container does.
+  await expect(
+    Math.round(first.getBoundingClientRect().left - track.getBoundingClientRect().left),
+    'the first slide must be flush with the container’s left edge'
+  ).toBe(0);
+
+  // (2) AT THE FAR END, the last slide finishes exactly where it does.
+  track.scrollLeft = track.scrollWidth;
+  await waitFor(async () => {
+    await expect(
+      Math.round(last.getBoundingClientRect().right - track.getBoundingClientRect().right),
+      'the last slide must be flush with the container’s right edge'
+    ).toBe(0);
+  });
+  track.scrollLeft = 0;
+
+  // (3) And the CAUSE, not only the symptom: a later hand reaching for
+  // `px-[50%]` again puts the band straight back, and (1) and (2) alone would
+  // not say why they failed.
+  const padded = getComputedStyle(track);
+  await expect(padded.paddingLeft, 'the track pads its own content out of view').toBe('0px');
+  await expect(padded.paddingRight, 'the track pads its own content out of view').toBe('0px');
+}
+
+/**
+ * The ends are flush, the middle still centres.
+ *
+ * The second half matters as much as the first: the fix is not "stop
+ * centring", it is "centre everything the track CAN centre and let the two it
+ * cannot sit against the edges". `snap-start` / `snap-end` on the end slides
+ * say that in CSS; `restingScrollLeft` says the same thing in arithmetic, so
+ * the scroll handler and the stylesheet cannot disagree about where a slide
+ * lives.
+ */
+export const VerifyTrackEndsAreFlush: Story = {
+  args: { data: DATA },
+  render: () => (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel data={DATA} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectFlushEnds(canvasElement);
+
+    const views = viewsOf(canvasElement);
+    const snapOf = (view: HTMLElement) => getComputedStyle(view).scrollSnapAlign;
+    await expect(snapOf(views[0]!), 'the first slide snaps to the start').toContain('start');
+    await expect(snapOf(views.at(-1)!), 'the last slide snaps to the end').toContain('end');
+    for (const middle of views.slice(1, -1)) {
+      await expect(snapOf(middle), 'every slide between them still centres').toContain('center');
+    }
+
+    // Measured, not merely declared: pick a middle slide and it lands in the
+    // middle. This is the "in-between behaviour unchanged" half of the fix.
+    const track = trackOf(canvasElement);
+    const middleIndex = 1;
+    await userEvent.click(pillsOf(canvasElement)[middleIndex]!);
+    await waitFor(async () => {
+      const view = views[middleIndex]!.getBoundingClientRect();
+      const box = track.getBoundingClientRect();
+      await expect(
+        Math.abs(view.left + view.width / 2 - (box.left + box.width / 2)),
+        'a slide the track can centre is still centred'
+      ).toBeLessThan(2);
+    });
+  },
+};
+
+/**
+ * At rest, the gallery reports the slide the reader is actually looking at.
+ *
+ * The companion defect to the band, and the reason the fix is not one line of
+ * CSS. The scroll handler used to pick whichever slide sat nearest the
+ * VIEWPORT'S MIDDLE, which was sound only while `px-[50%]` guaranteed every
+ * slide could reach it. With the padding gone the first slide's own centre is
+ * left of the viewport's middle at scroll offset 0, so on any track wide
+ * enough the SECOND slide measures closer — and the gallery marks a slide
+ * active while the reader is plainly looking at the one before it.
+ *
+ * `restingScrollLeft` clamps each slide's resting place to the scroll range,
+ * which is the same rule the CSS snapping follows, so the two agree at the
+ * ends as well as the middle.
+ */
+export const VerifyRestingAtTheStartSelectsTheFirstSlide: Story = {
+  args: { data: DATA },
+  render: () => (
+    // Deliberately WIDE — wide enough that the second slide is nearer the
+    // viewport's middle than the first is when the track is at 0, which is
+    // exactly the case the old midpoint rule got wrong.
+    <div style={{ width: 900 }}>
+      <LineupCardCarousel data={DATA} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const track = trackOf(canvasElement);
+    const views = viewsOf(canvasElement);
+    const pills = pillsOf(canvasElement);
+
+    // The band, on the width it was reported at. The wider the reader's
+    // column the worse it got: `px-[50%]` with `snap-center` CENTRED the
+    // first slide, so the empty run before it was half the difference between
+    // the column and the card — 275px in this 900px one, against 35px in a
+    // phone-width track. Desktop is where the owner saw it, so desktop is
+    // where it is pinned.
+    await expect(
+      Math.round(views[0]!.getBoundingClientRect().left - track.getBoundingClientRect().left),
+      'the first slide must start at the container’s edge, on a wide column too'
+    ).toBe(0);
+
+    // The premise: at rest, slide two really is nearer the middle of the
+    // viewport than slide one. Without this the story would pass on the old
+    // rule too, and prove nothing.
+    const middle = track.getBoundingClientRect().left + track.clientWidth / 2;
+    const centreOf = (view: HTMLElement) => {
+      const box = view.getBoundingClientRect();
+      return box.left + box.width / 2;
+    };
+    await expect(
+      Math.abs(centreOf(views[1]!) - middle),
+      'this track must be wide enough for the midpoint rule to pick the wrong slide'
+    ).toBeLessThan(Math.abs(centreOf(views[0]!) - middle));
+
+    // Move the track away and let it come back to the very start.
+    //
+    // Driven by SCROLLING it, not by picking an indicator: a pick also arms
+    // the guard that holds a selection while its own scroll is in flight, and
+    // this story is about the swipe half of the control. A bare nudge would
+    // not do either — the track snaps mandatorily, so a few px are simply
+    // undone and the handler is never asked the question.
+    track.scrollLeft = track.scrollWidth;
+    await waitFor(async () => {
+      await expect(views.at(-1)!.dataset.active, 'the track really did travel to the far end').toBe(
+        'true'
+      );
+    });
+
+    track.scrollLeft = 0;
+    await waitFor(
+      async () => {
+        // Back at the start — within a pixel, because mandatory snapping
+        // settles on a sub-pixel boundary and the exact resting offset is not
+        // what this story is about.
+        await expect(track.scrollLeft, 'the track came back to its own start').toBeLessThan(2);
+        await expect(
+          views[0]!.dataset.active,
+          'resting at the start is looking at the first slide'
+        ).toBe('true');
+        await expect(pills[0]!.getAttribute('aria-current')).toBe('true');
+        await expect(views[1]!.dataset.active).toBeUndefined();
+      },
+      { timeout: 3000 }
+    );
+  },
+};
+
+// ── The indicators ───────────────────────────────────────────────────────────
+
+/**
+ * The controls are BARS, and they still have names.
+ *
+ * The owner's note: "we shouldnt actually have the full verbatim labels for
+ * them, just have the typical carousel pills (like we have for hero carousel
+ * on landing)". Four captions — "Team sheet 5:6", "Pitch 5:6", "Team sheet
+ * 1:1", "Pitch 1:1" — is a row of interface explaining a row of pictures, on
+ * a surface a reader came to read an article on.
+ *
+ * The trap in obeying that literally is deleting the accessible names with the
+ * visible ones, which turns a design note into an accessibility regression: a
+ * screen-reader user would be handed four identical unnamed links. So this
+ * asserts BOTH halves, and they pull against each other — nothing visible, and
+ * every view still individually named and addressable.
+ */
+export const VerifyIndicatorsAreBarsThatStillCarryNames: Story = {
+  args: { data: DATA },
+  render: () => (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel data={DATA} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const pills = pillsOf(canvasElement);
+    await expect(pills).toHaveLength(LINEUP_CARD_VARIANTS.length);
+
+    for (const [index, pill] of pills.entries()) {
+      const variant = LINEUP_CARD_VARIANTS[index]!;
+
+      // (1) NOTHING IS PRINTED. Not "no label element" — no text at all,
+      // anywhere inside the control.
+      await expect(pill.textContent?.trim(), `${variant.id} must print nothing`).toBe('');
+
+      // (2) It is a BAR, measured. A chip reading "Team sheet 5:6" is ~90px
+      // wide; the bar is 24. Sizing rather than class names, so a restyle that
+      // keeps the classes and loses the shape still fails.
+      const bar = pill.firstElementChild as HTMLElement;
+      await expect(bar, `${variant.id} must draw a bar`).not.toBeNull();
+      await expect(Math.round(bar.getBoundingClientRect().height)).toBe(4);
+      await expect(Math.round(bar.getBoundingClientRect().width)).toBe(24);
+      // The bar is the mark, the anchor is the TARGET — a 24x4px hit area is
+      // not a pointer target on the phone this is mostly read on.
+      await expect(Math.round(pill.getBoundingClientRect().height)).toBe(24);
+
+      // (3) THE NAME SURVIVED, and it is the spoken one — "Team sheet,
+      // portrait five by six", not "Team sheet 5:6", which reads as nonsense.
+      await expect(
+        pill.getAttribute('aria-label'),
+        `${variant.id} must still be named for a screen reader`
+      ).toBe(variant.spokenLabel ?? variant.label);
+    }
+
+    // (4) And the names are DISTINCT, so the views can actually be told apart
+    // — four controls all called "Lineup card view" would satisfy (3).
+    const names = pills.map((pill) => pill.getAttribute('aria-label'));
+    await expect(new Set(names).size, 'every view needs its own name').toBe(names.length);
+
+    // (5) `aria-current` still tracks the selection, which is now the ONLY
+    // thing that says which view is showing — there is no text left to bold.
+    await expect(pills.filter((pill) => pill.getAttribute('aria-current') === 'true')).toHaveLength(
+      1
+    );
+    await userEvent.click(pills[2]!);
+    await waitFor(async () => {
+      const current = pills.filter((pill) => pill.getAttribute('aria-current') === 'true');
+      await expect(current, 'exactly one view is current').toHaveLength(1);
+      await expect(current[0]).toBe(pills[2]);
+    });
+    await expect(pills[0]!.getAttribute('aria-current')).toBeNull();
+  },
+};
+
+// ── The leading slide ────────────────────────────────────────────────────────
+
+/**
+ * What the editor hands in.
+ *
+ * The real one is the editor's `ReaderPlate` framing a `LineupPitch` — the
+ * plate a reader is shown with the gallery switched off. viz cannot import it
+ * (that dependency runs the wrong way; it is why the carousel takes a node
+ * rather than building one), so this stands in with the two properties the
+ * carousel actually depends on: it is FLUID, sizing itself to the width it is
+ * given rather than to an absolute frame, and it draws its OWN border.
+ */
+function LeadingPlate() {
+  return (
+    <div
+      data-testid="leading-plate"
+      className="rounded-[14px] border border-white/10 bg-white/[0.03] p-3"
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-red-100">Lineup</p>
+      <p className="mb-2 text-[15px] font-semibold text-white">Alternative England XI</p>
+      <LineupPitch slots={slots()} markerContent="number" showNames />
+    </div>
+  );
+}
+
+const LEADING_LABEL = 'The lineup as published';
+
+/**
+ * The gallery with a leading slide, reporting what it selects into the DOM so
+ * a `play` function can read the callback's arguments back.
+ */
+function LeadingSlideHarness() {
+  const [last, setLast] = useState<{ id: string; variant?: LineupCardVariant } | null>(null);
+  return (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel
+        data={DATA}
+        leadingSlide={{ label: LEADING_LABEL, content: <LeadingPlate /> }}
+        onValueChange={(id, variant) => setLast({ id, variant })}
+      />
+      <p
+        data-testid="last-change"
+        data-slide-id={last?.id ?? ''}
+        data-variant-id={last?.variant?.id ?? ''}
+      />
+    </div>
+  );
+}
+
+/**
+ * The lineup as published leads, and is what a reader is looking at first.
+ *
+ * The owner's note: "we should actually have the OG line up as the first
+ * slide". Before this the gallery was the four card views alone, so switching
+ * it on REPLACED the plate — an author who wanted to offer some extra formats
+ * silently took away the one the reader had. Leading with it makes the opt-in
+ * additive, which is the only reading of an opt-in that does not surprise
+ * whoever ticked it.
+ */
+export const VerifyLeadingSlideLeadsAndIsSelected: Story = {
+  args: { data: DATA },
+  render: () => <LeadingSlideHarness />,
+  play: async ({ canvasElement }) => {
+    const views = viewsOf(canvasElement);
+    const pills = pillsOf(canvasElement);
+
+    // (1) It ADDS a slide rather than swapping one out: every card view is
+    // still here, with the plate in front of them.
+    await expect(views).toHaveLength(LINEUP_CARD_VARIANTS.length + 1);
+    await expect(pills).toHaveLength(LINEUP_CARD_VARIANTS.length + 1);
+    await expect(views[0]!.dataset.slide).toBe(LEADING_SLIDE_ID);
+    await expect(views[0]!.querySelector('[data-testid="leading-plate"]')).not.toBeNull();
+    await expect(
+      views.slice(1).map((view) => view.dataset.variant),
+      'the card views follow it, in order, all of them'
+    ).toEqual(LINEUP_CARD_VARIANTS.map((variant) => variant.id));
+
+    // (2) The leading slide is NOT a variant, and does not pretend to be —
+    // a host querying `[data-variant]` is asking for something exportable,
+    // and this has no frame to export at.
+    await expect(views[0]!.dataset.variant).toBeUndefined();
+    await expect(pills[0]!.dataset.variant).toBeUndefined();
+
+    // (3) Every slide is still real markup, including the new one — the
+    // server-rendering guarantee, extended rather than excused.
+    for (const view of views) {
+      const style = getComputedStyle(view);
+      await expect(style.display).not.toBe('none');
+      await expect(style.visibility).not.toBe('hidden');
+      await expect(view.offsetWidth).toBeGreaterThan(0);
+      await expect(view.offsetHeight).toBeGreaterThan(0);
+    }
+    for (const view of views.slice(1)) {
+      await expect(view.textContent).toContain('Pickford');
+      await expect(view.textContent).toContain('Saka');
+    }
+
+    // (4) It is what the reader sees FIRST — selected by default, so turning
+    // the gallery on changes nothing about the view they land on.
+    await expect(views[0]!.dataset.active, 'the plate is the default view').toBe('true');
+    await expect(pills[0]!.getAttribute('aria-current')).toBe('true');
+
+    // (5) Named, like every other control — the plate is a view a screen
+    // reader has to be able to pick out too.
+    await expect(pills[0]!.getAttribute('aria-label')).toBe(LEADING_LABEL);
+    await expect(pills[0]!.textContent?.trim()).toBe('');
+    await expect(pills[0]!.getAttribute('href')).toBe(`#${views[0]!.id}`);
+
+    // (6) And it is flush with the container, which is where a reader's eye
+    // starts.
+    await expectFlushEnds(canvasElement);
+  },
+};
+
+/**
+ * A host is told which slide is showing, and told honestly when it is one it
+ * cannot export.
+ *
+ * `onValueChange`'s second argument is now optional, and this is why: the
+ * leading slide has no `LineupCardVariant` behind it. A host that staged a
+ * capture from a fallback variant here would hand someone a PNG of a card
+ * they were not looking at.
+ */
+export const VerifyLeadingSlideReportsNoVariant: Story = {
+  args: { data: DATA },
+  render: () => <LeadingSlideHarness />,
+  play: async ({ canvasElement }) => {
+    const pills = pillsOf(canvasElement);
+    const reported = () => canvasElement.querySelector<HTMLElement>('[data-testid="last-change"]')!;
+
+    // A card view reports itself AND its variant.
+    await userEvent.click(pills[3]!);
+    await waitFor(async () => {
+      await expect(reported().dataset.slideId).toBe(LINEUP_CARD_VARIANTS[2]!.id);
+      await expect(reported().dataset.variantId).toBe(LINEUP_CARD_VARIANTS[2]!.id);
+    });
+
+    // The leading slide reports itself and NO variant.
+    await userEvent.click(pills[0]!);
+    await waitFor(async () => {
+      await expect(reported().dataset.slideId).toBe(LEADING_SLIDE_ID);
+      await expect(reported().dataset.variantId, 'the leading slide has no variant to export').toBe(
+        ''
+      );
+    });
+  },
+};
+
+/**
+ * A keyboard reaches the leading slide too.
+ *
+ * `VerifyKeyboardReachable` covers the card views; this covers the one that is
+ * NOT in `LINEUP_CARD_VARIANTS`, which is exactly the kind of slide a
+ * list-driven control forgets to wire up.
+ */
+export const VerifyLeadingSlideIsKeyboardReachable: Story = {
+  args: { data: DATA },
+  render: () => <LeadingSlideHarness />,
+  play: async ({ canvasElement }) => {
+    const track = trackOf(canvasElement);
+    const pills = pillsOf(canvasElement);
+
+    track.focus();
+    await expect(document.activeElement).toBe(track);
+    await userEvent.tab();
+    await expect(document.activeElement, 'the plate’s indicator is reached first').toBe(pills[0]);
+
+    // And it can be picked from the keyboard, like every other one. Space,
+    // which a link ignores natively — see `VerifyKeyboardReachable`.
+    await userEvent.click(pills[2]!);
+    await waitFor(async () => {
+      await expect(pills[2]!.getAttribute('aria-current')).toBe('true');
+    });
+    pills[0]!.focus();
+    pills[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    await waitFor(async () => {
+      await expect(pills[0]!.getAttribute('aria-current')).toBe('true');
+      await expect(viewsOf(canvasElement)[0]!.dataset.active).toBe('true');
+    });
+  },
+};
+
+// ── The per-slide action ─────────────────────────────────────────────────────
+
+/**
+ * What a host hands in: the control that takes the card away.
+ *
+ * The real one is the editor's capture-and-download path. The story only needs
+ * a real, focusable button that names the slide it would save, which is what a
+ * host's own control has to be.
+ */
+function SaveAction({ slide }: { slide: LineupCardSlide }) {
+  return (
+    <button
+      type="button"
+      data-testid="save-action"
+      data-for-slide={slide.id}
+      className="h-9 rounded-[8px] bg-red-100 px-4 text-[13px] font-semibold text-white"
+    >
+      Save {slide.label}
+    </button>
+  );
+}
+
+/**
+ * A reader can take the card away.
+ *
+ * The owner's report: "i can't actually save these images when they're in a
+ * slide on desktop... they're meant to be shareable on socials lol". The cards
+ * are DOM, not images, so there is nothing for a long-press or a right-click to
+ * offer — a gallery of shareable cards with no way to take one fails at the
+ * thing it exists for.
+ *
+ * viz still does not own the button. It asks the host for one per slide and
+ * puts it where it cannot end up inside a picture of the card.
+ */
+export const VerifySlideActionIsOfferedAndExcludedFromCaptures: Story = {
+  args: { data: DATA },
+  render: () => (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel data={DATA} slideAction={(slide) => <SaveAction slide={slide} />} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const action = () => canvasElement.querySelector<HTMLElement>('[data-testid="save-action"]')!;
+    await expect(action(), 'the host’s control must be rendered').not.toBeNull();
+
+    // (1) It is FOR the slide showing, and follows the selection. The reader
+    // swipes to a card and the control is offering that card, not the one they
+    // started on.
+    await expect(action().dataset.forSlide).toBe(LINEUP_CARD_VARIANTS[0]!.id);
+    await userEvent.click(pillsOf(canvasElement)[2]!);
+    await waitFor(async () => {
+      await expect(action().dataset.forSlide).toBe(LINEUP_CARD_VARIANTS[2]!.id);
+    });
+
+    // (2) It CANNOT reach a capture of a card. Not filtered out of one —
+    // structurally outside every view, so there is no filter to forget.
+    const slot = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="lineup-card-slide-action"]'
+    )!;
+    await expect(slot).not.toBeNull();
+    await expect(
+      slot.closest('[data-slot="lineup-card-view"]'),
+      'the action must not live inside a view'
+    ).toBeNull();
+    await expect(
+      slot.closest('[data-slot="lineup-card-track"]'),
+      'nor inside the track a host might rasterise whole'
+    ).toBeNull();
+    // And it is marked for the exclusion filter anyway, for a host that
+    // captures a wider root than one card. `captureElementToPng` collapses
+    // every `data-export-ignore="true"` node before it measures.
+    await expect(slot.getAttribute('data-export-ignore')).toBe('true');
+
+    // (3) Reachable without a pointer, like the indicators — this is read on a
+    // phone and on a desktop, and neither one is allowed to be the only way in.
+    const button = action();
+    button.focus();
+    await expect(document.activeElement, 'the action must take focus').toBe(button);
+    // Big enough to hit with a thumb.
+    await expect(Math.round(button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(36);
+  },
+};
+
+/**
+ * A host that offers nothing gets exactly the gallery it had before.
+ *
+ * The whole point of asking the host rather than building a button: viz stays
+ * usable as a read-only gallery. This pins that the extension point costs a
+ * host that ignores it precisely nothing — not an empty wrapper, not a gap
+ * held open, no node at all.
+ */
+export const VerifyNoSlideActionRendersNoChrome: Story = {
+  args: { data: DATA },
+  render: () => (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel data={DATA} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelector('[data-slot="lineup-card-slide-action"]'),
+      'no `slideAction` must mean no node'
+    ).toBeNull();
+    // The gallery itself is untouched by the extension point existing.
+    await expect(viewsOf(canvasElement)).toHaveLength(LINEUP_CARD_VARIANTS.length);
+    await expect(pillsOf(canvasElement)).toHaveLength(LINEUP_CARD_VARIANTS.length);
+  },
+};
+
+/**
+ * A host can decline PER SLIDE, and the leading plate is the case that matters.
+ *
+ * The plate is the editor's own reader block and carries its own save control
+ * already, so a second one under the carousel would be the same offer made
+ * twice. viz does not make that call — it hands the slide over with `variant`
+ * unset and the host returns nothing. This asserts the branch a host needs is
+ * actually there to branch on.
+ */
+export const VerifySlideActionCanBeDeclinedForTheLeadingSlide: Story = {
+  args: { data: DATA },
+  render: () => (
+    <div style={{ width: TRACK_WIDTH }}>
+      <LineupCardCarousel
+        data={DATA}
+        leadingSlide={{ label: LEADING_LABEL, content: <LeadingPlate /> }}
+        // Exactly the line a host writes: the plate has no frame behind it,
+        // so there is nothing to capture and nothing to offer.
+        slideAction={(slide) => (slide.variant ? <SaveAction slide={slide} /> : null)}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    // The plate leads and is selected, so no action is offered at all.
+    await expect(viewsOf(canvasElement)[0]!.dataset.active).toBe('true');
+    await expect(
+      canvasElement.querySelector('[data-slot="lineup-card-slide-action"]'),
+      'the plate carries its own save control; the carousel must not add a second'
+    ).toBeNull();
+
+    // Move to a card and the offer appears, for that card.
+    await userEvent.click(pillsOf(canvasElement)[1]!);
+    await waitFor(async () => {
+      const action = canvasElement.querySelector<HTMLElement>('[data-testid="save-action"]');
+      await expect(action, 'a card view is savable').not.toBeNull();
+      await expect(action!.dataset.forSlide).toBe(LINEUP_CARD_VARIANTS[0]!.id);
+    });
+
+    // And back again — declining is not a one-way door.
+    await userEvent.click(pillsOf(canvasElement)[0]!);
+    await waitFor(async () => {
+      await expect(
+        canvasElement.querySelector('[data-slot="lineup-card-slide-action"]')
+      ).toBeNull();
+    });
   },
 };
 
