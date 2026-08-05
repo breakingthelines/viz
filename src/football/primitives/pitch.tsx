@@ -11,7 +11,7 @@ export type PitchVariant = 'full' | 'half' | 'attacking-third';
 export type PitchTheme = 'grass' | 'dark';
 
 /**
- * Pitch orientation — which screen axis play runs along.
+ * Pitch orientation — which screen axis play runs along, and which way.
  * - `landscape` (default): the normalized coordinate space (see below) is
  *   rendered as-is — own goal on the LEFT, opposition goal on the RIGHT,
  *   attacking left → right. This is the identity mapping, so every existing
@@ -22,8 +22,20 @@ export type PitchTheme = 'grass' | 'dark';
  *   fill a phone-shaped viewport. The underlying 0–100 data space is
  *   unchanged (own goal is still authored at `x=0`); only where that space
  *   lands on screen changes. See {@link toScreen}.
+ * - `portrait-down`: the same portrait box seen from the OTHER END — own goal
+ *   at the TOP, opposition goal at the BOTTOM, attacking DOWN the screen. A
+ *   180-degree turn of `portrait`, and therefore left/right reversed with it:
+ *   the team's own left touchline (`y=0`) renders on the viewer's RIGHT. This
+ *   is the lineup social card's viewpoint, which composes its XI keeper-first
+ *   under the headline. See {@link toScreen} for why the reversal has to be on
+ *   BOTH axes.
  */
-export type PitchOrientation = 'landscape' | 'portrait';
+export type PitchOrientation = 'landscape' | 'portrait' | 'portrait-down';
+
+/** True for the two orientations that render into a ~2:3 (portrait) box. */
+function isPortrait(orientation: PitchOrientation): boolean {
+  return orientation === 'portrait' || orientation === 'portrait-down';
+}
 
 /**
  * The pitch's real length:width ratio, ~3:2 (a full-size pitch is roughly
@@ -50,6 +62,33 @@ const PITCH_WIDTH_RATIO = 2 / 3;
  * needs an arc's `sweepFlag` to invert (see {@link arcPath}). The own goal
  * (`x=0`) lands at the BOTTOM (`screenY=100`); the opposition goal (`x=100`)
  * lands at the TOP (`screenY=0`) — attacking up the screen.
+ *
+ * `portrait-down` is the three-quarter turn, `{ x: 100 - y, y: x }` — the same
+ * portrait box viewed from the opposite end of the ground. The own goal
+ * (`x=0`) lands at the TOP and play runs DOWN the screen.
+ *
+ * ## Turning a pitch around reverses BOTH axes
+ *
+ * This is the whole reason `portrait-down` is a named orientation rather than
+ * something a caller arranges for itself, and it is the defect it was added to
+ * fix. Both compositions that wanted this viewpoint reached it by handing
+ * `portrait` a set of slots with the DEPTH axis pre-reversed (`x → 100 - x`),
+ * which does put the keeper at the top — and is a MIRROR, not a rotation. Its
+ * linear part has a NEGATIVE determinant, so left and right swap: a left back
+ * rendered on the viewer's left when, seen from that end, he belongs on the
+ * right. Cards published from it had the whole XI flipped, wingers included.
+ *
+ * A 180-degree turn reverses depth AND width together, which is what this
+ * does. Its linear part, `(x, y) → (-y, x)`, has determinant `+1` (times the
+ * `fillEdgeToEdge` scale, which is positive and so cannot change the sign) —
+ * orientation-preserving, exactly like `portrait`, so arcs keep their
+ * `sweepFlag` here too and nothing downstream needs a special case.
+ *
+ * Which way round that leaves the XI: the team's own LEFT touchline (`y=0`)
+ * renders on the viewer's RIGHT, because the viewer is now looking back up the
+ * pitch from behind the goal the team attacks. That is the answer the lineup
+ * card wants and the one a reader checks first — the left winger is on the
+ * right of the picture.
  *
  * This is the one place orientation math lives, and deliberately a
  * coordinate remap rather than an SVG `transform`: a wrapping
@@ -87,6 +126,7 @@ export function toScreen(
 ): { x: number; y: number } {
   const s = fillEdgeToEdge ? PITCH_WIDTH_RATIO : 1;
   if (orientation === 'portrait') return { x: y * s, y: 100 - x };
+  if (orientation === 'portrait-down') return { x: (100 - y) * s, y: x };
   return { x, y: y * s };
 }
 
@@ -109,6 +149,7 @@ export function fromScreen(
 ): { x: number; y: number } {
   const s = fillEdgeToEdge ? PITCH_WIDTH_RATIO : 1;
   if (orientation === 'portrait') return { x: 100 - y, y: x / s };
+  if (orientation === 'portrait-down') return { x: y, y: 100 - x / s };
   return { x, y: y / s };
 }
 
@@ -187,7 +228,10 @@ function screenRect(
   orientation: PitchOrientation,
   fillEdgeToEdge = false
 ): { x: number; y: number; width: number; height: number } {
-  if (orientation !== 'portrait' && !fillEdgeToEdge) return { x, y, width, height };
+  // Landscape without `fillEdgeToEdge` is the identity mapping — returned
+  // untransformed so it stays byte-for-byte what it always was. Every other
+  // combination has to go through `toScreen` on both corners.
+  if (orientation === 'landscape' && !fillEdgeToEdge) return { x, y, width, height };
   const a = toScreen(x, y, orientation, fillEdgeToEdge);
   const b = toScreen(x + width, y + height, orientation, fillEdgeToEdge);
   return {
@@ -275,9 +319,18 @@ export interface PitchProps {
    * renders identically to today. `portrait` rotates the pitch a
    * quarter-turn so the own goal sits at the bottom of the box and the
    * opposition goal at the top (attacking UP the screen), for a lineup that
-   * needs to fill a phone-shaped viewport. See {@link PitchOrientation} /
+   * needs to fill a phone-shaped viewport; `portrait-down` is that box turned
+   * 180 degrees — own goal at the TOP, attacking DOWN, and the team's left
+   * touchline on the viewer's right. See {@link PitchOrientation} /
    * {@link toScreen} for the coordinate mapping — the hardcoded
-   * `aspect-[3/2]` also becomes `aspect-[2/3]` in this mode.
+   * `aspect-[3/2]` also becomes `aspect-[2/3]` in both portrait modes.
+   *
+   * The MARKINGS are identical between the two portrait modes: a full pitch is
+   * symmetric under a 180-degree turn (penalty area, goal area, spot and arc
+   * at both ends, plus a centred halfway line, circle and spot). Only where
+   * a caller's children land differs, which is precisely why the distinction
+   * has to be carried here rather than left to each caller to arrange — see
+   * {@link toScreen}.
    */
   orientation?: PitchOrientation;
   /**
@@ -326,7 +379,9 @@ export interface PitchProps {
  *   this is the identity mapping, i.e. today's exact behaviour.
  * - `orientation="portrait"` renders the SAME authored space rotated a
  *   quarter-turn onto the screen (own goal at the bottom, opposition goal at
- *   the top). See {@link toScreen} for the mapping and {@link PitchProps.orientation}.
+ *   the top), and `"portrait-down"` a three-quarter turn (own goal at the top,
+ *   and left/right reversed with it). See {@link toScreen} for the mapping and
+ *   {@link PitchProps.orientation}.
  * - `fillEdgeToEdge` (default `false`) additionally compresses the viewBox's
  *   WIDTH-axis extent so its aspect matches the outer `aspect-[3/2]`/
  *   `aspect-[2/3]` box exactly, eliminating that box's default letterbox
@@ -441,7 +496,7 @@ export function Pitch({
   // slightly inset, opening an even gutter on all sides for edge markers. And
   // `overflow: visible` lets a marker reaching just past the padded box still
   // paint instead of being cut at the frame.
-  const aspectClass = orientation === 'portrait' ? 'aspect-[2/3]' : 'aspect-[3/2]';
+  const aspectClass = isPortrait(orientation) ? 'aspect-[2/3]' : 'aspect-[3/2]';
 
   // Pitch-marking geometry, remapped once for the requested orientation.
   // Every shape below is still authored at its original LANDSCAPE numbers —
