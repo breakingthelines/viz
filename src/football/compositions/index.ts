@@ -36,6 +36,7 @@ export type { LineupCardPitchProps } from './lineup-card-pitch';
 export {
   LineupCardCarousel,
   LineupCardView,
+  LEADING_SLIDE_ID,
   LINEUP_CARD_VARIANTS,
   LINEUP_CARD_VIEW_HEIGHT,
   LINEUP_CARD_VIEW_SCALE_VAR,
@@ -43,6 +44,8 @@ export {
 export type {
   LineupCardBody,
   LineupCardCarouselProps,
+  LineupCardLeadingSlide,
+  LineupCardSlide,
   LineupCardVariant,
   LineupCardViewData,
 } from './lineup-card-carousel';

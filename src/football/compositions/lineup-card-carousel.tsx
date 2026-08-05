@@ -1,6 +1,6 @@
 'use client';
 
-// A swipeable gallery of the lineup card's views, with pills.
+// A swipeable gallery of the lineup card's views.
 //
 // `LineupCard` is one composition at one frame. There are four ways to draw
 // the same XI with it — two frames crossed with two bodies — and until now
@@ -11,13 +11,28 @@
 // ## Why this lives in viz
 //
 // It is presentation, not authoring. The editor's export modal is its first
-// caller, but the same swipe-and-pills gallery is how a published lineup
-// could be shown inside a thought or an article, and a reader surface can
-// only reach it from here. So this component knows nothing about uploading,
-// capturing, downloading, or `LineupConfig`: it takes the same plain data
-// `LineupCard` already takes, renders it every way, and renders whatever
-// controls its host hands it in `children`. With no `children` and no
-// `onValueChange` it is a complete, read-only gallery.
+// caller, but the same swipeable gallery is how a published lineup could be
+// shown inside a thought or an article, and a reader surface can only reach
+// it from here. So this component knows nothing about uploading, capturing,
+// downloading, or `LineupConfig`: it takes the same plain data `LineupCard`
+// already takes, renders it every way, and renders whatever controls its host
+// hands it in `children`. With no `children` and no `onValueChange` it is a
+// complete, read-only gallery.
+//
+// ## The gallery ADDS views, it does not replace one
+//
+// A reader surface reaches this through an author opt-in, and an opt-in that
+// swaps the block out is a different block rather than an extra option: turn
+// it on and the plate the reader has always been shown — the one the author
+// laid out and previewed — disappears behind a gallery of social cards.
+//
+// So the host's own rendering of the lineup leads. It arrives as
+// {@link LineupCardLeadingSlide}, a plain `ReactNode` with an accessible
+// name, and is drawn FIRST and selected by default, with the card views
+// after it. The dependency has to run this way round: the reader plate is the
+// editor's (`ReaderPlate`, framing a `LineupPitch`), and viz cannot import
+// the editor. Pass nothing and the gallery is exactly the four card views it
+// has always been, which is what the export modal wants.
 //
 // ## Server-rendered, and useful before JavaScript arrives
 //
@@ -26,13 +41,13 @@
 // three are load-bearing rather than stylistic:
 //
 //  1. EVERY view is in the DOM, always. Nothing is mounted on demand, so a
-//     crawler and a reader on a slow connection both see all four cards'
+//     crawler and a reader on a slow connection both see every view's
 //     content — the names, the formation, the headline — without waiting for
 //     or running any script.
-//  2. The pills are ANCHORS to the views' own ids. A same-document fragment
-//     link scrolls a scroll container natively, so the gallery is fully
-//     operable with scripting off. JavaScript only upgrades that to a smooth,
-//     history-free scroll and a controlled `value`.
+//  2. The indicators are ANCHORS to the views' own ids. A same-document
+//     fragment link scrolls a scroll container natively, so the gallery is
+//     fully operable with scripting off. JavaScript only upgrades that to a
+//     smooth, history-free scroll and a controlled `value`.
 //  3. The view scale is a CSS `calc()` over a custom property with an inline
 //     fallback, not a measured value. There is no layout read, no
 //     `ResizeObserver` and no effect anywhere in this file, so the server and
@@ -74,17 +89,85 @@ export type LineupCardBody = 'list' | 'pitch';
 
 /** One way of drawing the XI — a frame crossed with a body. */
 export interface LineupCardVariant {
-  /** Stable, URL-safe id. Used for the view's DOM id and its pill's `href`. */
+  /**
+   * Stable, URL-safe id. Used for the view's DOM id and its indicator's
+   * `href`, and it is the value `value` / `onValueChange` speak in.
+   */
   id: string;
   frame: LineupCardFrame;
   body: LineupCardBody;
-  /** The pill's visible text. */
+  /**
+   * A short human-readable name for the view.
+   *
+   * NOT RENDERED. The gallery's indicators are bars, not chips — four
+   * verbatim captions under a card is a row of interface explaining a row of
+   * pictures that already explain themselves, which is a poor trade on a
+   * reader surface. This survives as the fallback accessible name behind
+   * {@link spokenLabel}, and because a host that lists the views in a FORM
+   * (the export modal's own picker) still needs words for them.
+   */
   label: string;
   /**
-   * The pill's accessible name, where "5:6" would be read out as nonsense.
-   * Falls back to {@link label}.
+   * The indicator's accessible name, where "5:6" would be read out as
+   * nonsense. Falls back to {@link label}.
+   *
+   * This is the whole of what a screen reader is given for the view now that
+   * nothing is printed, so it has to identify the view on its own.
    */
   spokenLabel?: string;
+}
+
+/**
+ * A slide the HOST draws, shown before every card view.
+ *
+ * This is how the lineup as authored — the reader's own plate, the pitch they
+ * are shown with the gallery switched off — stays the first thing on screen.
+ * viz takes it as an opaque node rather than building it, because the plate
+ * belongs to the editor and a viz that imported it would invert the
+ * dependency between the two packages.
+ *
+ * It is NOT a {@link LineupCardVariant}: it has no frame, no body, and no
+ * absolute size, so it is not scaled, not framed and never exported. Anything
+ * keyed on {@link LINEUP_CARD_VARIANTS} has to allow for that — most visibly
+ * `onValueChange`, which reports `undefined` for its variant.
+ */
+export interface LineupCardLeadingSlide {
+  /**
+   * Stable, URL-safe id — the selection value, and the fragment its indicator
+   * links to. Defaults to {@link LEADING_SLIDE_ID}. Set it only to avoid a
+   * collision with a custom `variants` list.
+   */
+  id?: string;
+  /**
+   * The slide's accessible name, and its indicator's. Required, because the
+   * indicator prints nothing and this is all a screen reader gets — e.g.
+   * `"The lineup as published"`.
+   */
+  label: string;
+  /** What to draw. Rendered as-is, at whatever size it lays itself out to. */
+  content: ReactNode;
+}
+
+/** The id {@link LineupCardLeadingSlide} takes when it does not name itself. */
+export const LEADING_SLIDE_ID = 'original';
+
+/**
+ * One slide, as a host sees it — what {@link LineupCardCarouselProps.slideAction}
+ * is handed and what {@link LineupCardCarouselProps.onValueChange} reports.
+ */
+export interface LineupCardSlide {
+  /** The slide's id, and its selection value. */
+  id: string;
+  /** The slide's accessible name. */
+  label: string;
+  /**
+   * The card view this slide draws, or `undefined` for the leading slide.
+   *
+   * This is the field a host branches on. A leading slide has no frame and no
+   * absolute size, so there is nothing behind it to capture — see
+   * {@link LineupCardCarouselProps.slideAction}.
+   */
+  variant?: LineupCardVariant;
 }
 
 /**
@@ -230,44 +313,148 @@ export function LineupCardView({
 export interface LineupCardCarouselProps {
   /** The XI, and everything drawn around it. */
   data: LineupCardViewData;
-  /** Which views to offer. Defaults to {@link LINEUP_CARD_VARIANTS}. */
+  /** Which card views to offer. Defaults to {@link LINEUP_CARD_VARIANTS}. */
   variants?: readonly LineupCardVariant[];
-  /** Controlled selection, by variant id. */
-  value?: string;
-  /** Uncontrolled starting selection. Defaults to the first variant. */
-  defaultValue?: string;
-  /** Fires when the author picks a pill or swipes to another view. */
-  onValueChange?: (id: string, variant: LineupCardVariant) => void;
   /**
-   * How far down each view is drawn, as a fraction of its true size.
+   * The host's own rendering of the lineup, drawn FIRST and selected by
+   * default. Omit for a gallery of card views alone.
+   */
+  leadingSlide?: LineupCardLeadingSlide;
+  /** Controlled selection, by slide id. */
+  value?: string;
+  /**
+   * Uncontrolled starting selection. Defaults to the first slide — the
+   * {@link leadingSlide} when there is one, so switching the gallery on
+   * leaves a reader looking at exactly what they were looking at before.
+   */
+  defaultValue?: string;
+  /**
+   * Fires when someone picks an indicator or swipes to another slide.
+   *
+   * `variant` is `undefined` on the {@link leadingSlide}, which is not one of
+   * the card views and has no frame to export at. A host that stages a
+   * capture must treat that as "nothing to stage" rather than falling back to
+   * a card the reader is not looking at.
+   */
+  onValueChange?: (id: string, variant?: LineupCardVariant) => void;
+  /**
+   * How far down each CARD view is drawn, as a fraction of its true size.
    * `0.35` puts a 1200px-tall card at 420px. Overridden at any breakpoint by
-   * setting {@link LINEUP_CARD_VIEW_SCALE_VAR} in the host's own CSS.
+   * setting {@link LINEUP_CARD_VIEW_SCALE_VAR} in the host's own CSS. The
+   * {@link leadingSlide} is not scaled — it is the host's own layout, at its
+   * own size.
    */
   viewScale?: number;
+  /**
+   * A control for the slide currently showing — in practice, "save this one".
+   *
+   * ## Why the carousel does not simply have a save button
+   *
+   * These cards exist to be shared, and a reader on a published thought could
+   * not take one: the views are DOM, not images, so a long-press offers
+   * nothing to save and a right-click offers nothing to copy. Read-only was
+   * the wrong line to draw.
+   *
+   * It is still not a line viz can cross by itself, though. Capturing a card
+   * means rendering an unscaled {@link LineupCardView} offscreen, rasterising
+   * it and handing someone a file — a host's job, and the editor already owns
+   * that path. So viz asks the host for the control and puts it somewhere
+   * sensible. Pass nothing and the gallery renders exactly what it always did,
+   * with no extra node at all.
+   *
+   * ## Where it goes, and what that guarantees
+   *
+   * OUTSIDE the track, under the indicators — not pinned to a card's corner.
+   * Two reasons, and the first is the load-bearing one:
+   *
+   *  1. Nothing here can reach a capture. Not "is filtered out of one" —
+   *     cannot be inside one, since it is not inside any view. The wrapper
+   *     carries `data-export-ignore="true"` as well, so a host that captures a
+   *     WIDER root than a single card still excludes it.
+   *  2. One control in one place, at a comfortable size, reachable by thumb on
+   *     a phone and by pointer on desktop, that does not move as the reader
+   *     swipes and does not cover the artwork it is offering to save.
+   *
+   * ## The leading slide
+   *
+   * Called for it too, with `variant` unset — the decision is the host's, not
+   * viz's. The editor's plate already carries its own save control, so it
+   * should return `null` there rather than offer a second one; that is one
+   * line, and it is a line only the host can write honestly.
+   */
+  slideAction?: (slide: LineupCardSlide) => ReactNode;
   /** Accessible name for the gallery. */
   label?: string;
   /**
-   * The host's own controls, rendered under the pills and OUTSIDE every view
-   * — so nothing here can reach a capture of a card. Omit for a read-only
-   * gallery.
+   * The host's own controls, rendered under the indicators and OUTSIDE every
+   * view — so nothing here can reach a capture of a card. Omit for a
+   * read-only gallery.
    */
   children?: ReactNode;
   className?: string;
 }
 
 /**
- * The gallery: every view of one XI, swipeable, with pills.
+ * One slide of the gallery, whoever drew it.
+ *
+ * The leading slide and the card views differ in almost everything — one is
+ * the host's fluid layout, the others are absolutely-sized cards painted
+ * through a transform — but they are one list to the track, to the scroll
+ * arithmetic and to the indicators, and every one of those wants the same
+ * three things from a slide: what to call it, what to link to it, and whether
+ * it is the one showing. Flattening them here is what stops each of those
+ * three places growing its own "unless it is the first one" clause.
+ */
+interface CarouselSlide extends LineupCardSlide {
+  /** What the leading slide draws. Unset for a card view. */
+  content?: ReactNode;
+}
+
+/**
+ * Where the track rests when `view` is the slide being shown.
+ *
+ * Centring is the resting position for every slide the track can actually
+ * centre. The first and last cannot be — there is no scroll range past either
+ * end — so theirs are the range's own ends, which is what leaves the first
+ * slide flush with the container's leading edge and the last flush with its
+ * trailing one.
+ *
+ * Both halves of the control read this one function: the scroll an indicator
+ * starts, and the scroll handler's answer to "which slide is this?". They
+ * used to disagree — the handler measured against the viewport's MIDDLE,
+ * which no end slide ever reaches — so at rest the gallery could report a
+ * slide the reader was not looking at.
+ */
+function restingScrollLeft(track: HTMLElement, view: HTMLElement): number {
+  // Measured against the TRACK, not `view.offsetLeft`. `offsetLeft` is
+  // relative to the nearest POSITIONED ancestor, which the track is not — so
+  // it silently carries however far the track itself sits from that ancestor,
+  // in a number that is then compared against `scrollLeft`, which is measured
+  // from the track's own edge. The two agree only when the track happens to
+  // start at the ancestor's edge. Rects have one origin and no such condition.
+  const trackBox = track.getBoundingClientRect();
+  const viewBox = view.getBoundingClientRect();
+  const start = viewBox.left - trackBox.left - track.clientLeft + track.scrollLeft;
+  const centred = start - (track.clientWidth - viewBox.width) / 2;
+  const furthest = Math.max(track.scrollWidth - track.clientWidth, 0);
+  return Math.min(Math.max(centred, 0), furthest);
+}
+
+/**
+ * The gallery: the lineup as published, then every card view of it, swipeable.
  *
  * Read-only by default. Pass `children` to hang a host's own controls under
- * the pills, and `onValueChange` to learn which view is showing — neither is
- * required, and neither is baked in.
+ * the indicators, and `onValueChange` to learn which slide is showing —
+ * neither is required, and neither is baked in.
  */
 export function LineupCardCarousel({
   data,
   variants = LINEUP_CARD_VARIANTS,
+  leadingSlide,
   value,
   defaultValue,
   onValueChange,
+  slideAction,
   viewScale = 0.35,
   label = 'Lineup card views',
   children,
@@ -278,23 +465,63 @@ export function LineupCardCarousel({
   /**
    * The view a programmatic scroll is currently travelling towards, or `null`.
    *
-   * Without this the two halves of the control fight each other. Picking a
-   * pill selects a view AND starts a smooth scroll — and a smooth scroll emits
-   * scroll events for the whole of its journey, each one asking
-   * {@link onTrackScroll} "which view is nearest the middle now?". For the
-   * first few frames the honest answer is still the PREVIOUS view, so the
-   * selection is dragged back and the pill visibly flickers before settling.
-   * While a scroll we started is in flight, the explicit pick wins.
+   * Without this the two halves of the control fight each other. Picking an
+   * indicator selects a slide AND starts a smooth scroll — and a smooth scroll
+   * emits scroll events for the whole of its journey, each one asking
+   * {@link onTrackScroll} "which slide is the track resting at now?". For the
+   * first few frames the honest answer is still the PREVIOUS slide, so the
+   * selection is dragged back and the indicator visibly flickers before
+   * settling. While a scroll we started is in flight, the explicit pick wins.
    */
   const travellingTo = useRef<number | null>(null);
-  const [uncontrolled, setUncontrolled] = useState(
-    () => defaultValue ?? variants[0]?.id ?? LINEUP_CARD_VARIANTS[0]!.id
-  );
-  const selected = value ?? uncontrolled;
-  const viewId = (variantId: string) => `${domId}-view-${variantId}`;
 
   /**
-   * Bring a view to the middle of the track.
+   * Every slide, in swipe order: the host's own first, then the card views.
+   *
+   * Deliberately NOT memoised. Nothing in this file is an effect or a
+   * subscription, so the array's identity is never a dependency of anything
+   * that could fire twice — and a `useMemo` keyed on `data`, `variants` and
+   * `leadingSlide` would be recomputed on almost every render anyway, since a
+   * host builds all three inline.
+   */
+  const slides: CarouselSlide[] = [
+    ...(leadingSlide
+      ? [
+          {
+            id: leadingSlide.id ?? LEADING_SLIDE_ID,
+            label: leadingSlide.label,
+            content: leadingSlide.content,
+          },
+        ]
+      : []),
+    ...variants.map((variant) => ({
+      id: variant.id,
+      label: variant.spokenLabel ?? variant.label,
+      variant,
+    })),
+  ];
+
+  const [uncontrolled, setUncontrolled] = useState(
+    () => defaultValue ?? slides[0]?.id ?? LINEUP_CARD_VARIANTS[0]!.id
+  );
+  const selected = value ?? uncontrolled;
+  const viewId = (slideId: string) => `${domId}-view-${slideId}`;
+
+  // The control for the slide showing, if the host offers one for it. Falls
+  // back to the first slide so a `value` naming nothing still has an action
+  // rather than dropping it silently — the same slide the indicators would
+  // then be showing as current.
+  const activeSlide = slides.find((slide) => slide.id === selected) ?? slides[0];
+  const action =
+    activeSlide && slideAction
+      ? // Rebuilt rather than passed straight through, so the host is handed
+        // the published {@link LineupCardSlide} and not this file's private
+        // `content` field along with it.
+        slideAction({ id: activeSlide.id, label: activeSlide.label, variant: activeSlide.variant })
+      : null;
+
+  /**
+   * Bring a slide to its resting place in the track.
    *
    * Written against the track's own `scrollTo` rather than
    * `Element.scrollIntoView`, which would also scroll every ancestor — inside
@@ -309,36 +536,44 @@ export function LineupCardCarousel({
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     travellingTo.current = index;
     track.scrollTo({
-      left: view.offsetLeft - (track.clientWidth - view.offsetWidth) / 2,
+      left: restingScrollLeft(track, view),
       behavior: reduced ? 'auto' : 'smooth',
     });
   }, []);
 
   const select = useCallback(
     (index: number) => {
-      const variant = variants[index];
-      if (!variant) return;
-      if (value === undefined) setUncontrolled(variant.id);
-      onValueChange?.(variant.id, variant);
+      const slide = slides[index];
+      if (!slide) return;
+      if (value === undefined) setUncontrolled(slide.id);
+      // `undefined` on the leading slide, which is the whole point of the
+      // second argument being optional — see `onValueChange`.
+      onValueChange?.(slide.id, slide.variant);
     },
-    [variants, value, onValueChange]
+    [slides, value, onValueChange]
   );
 
   /**
-   * Swiping is the other half of the same control: whichever view ends up
-   * nearest the middle becomes the selection, so the pills follow a drag or a
-   * trackpad flick without anyone touching them.
+   * Swiping is the other half of the same control: whichever slide the track
+   * has come to rest at becomes the selection, so the indicators follow a drag
+   * or a trackpad flick without anyone touching them.
+   *
+   * "Come to rest at" is {@link restingScrollLeft}, not "is nearest the
+   * middle". They agree for every slide the track can centre and disagree at
+   * both ends, where centring is unreachable: with the track at 0 the first
+   * slide's own centre is left of the viewport's middle, so a neighbour can
+   * measure closer to it and be reported as the slide showing — while the
+   * reader is plainly looking at the first one.
    */
   const onTrackScroll = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
-    const middle = track.scrollLeft + track.clientWidth / 2;
     let nearest = 0;
     let shortest = Number.POSITIVE_INFINITY;
     for (let i = 0; i < track.children.length; i++) {
       const view = track.children[i];
       if (!(view instanceof HTMLElement)) continue;
-      const distance = Math.abs(view.offsetLeft + view.offsetWidth / 2 - middle);
+      const distance = Math.abs(restingScrollLeft(track, view) - track.scrollLeft);
       if (distance < shortest) {
         shortest = distance;
         nearest = i;
@@ -391,66 +626,129 @@ export function LineupCardCarousel({
         onPointerDown={releaseTravel}
         onTouchStart={releaseTravel}
         onWheel={releaseTravel}
-        className="flex w-full snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-[50%] py-1 [scrollbar-width:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/30 motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
+        // NO horizontal padding, and that is the whole of the fix for a gap
+        // that used to open before the first slide.
+        //
+        // This carried `px-[50%]`, the usual companion to `snap-center`: half
+        // a container of padding at each end is what lets an END slide reach
+        // the middle of the viewport, since otherwise the scroll range stops
+        // before it gets there. But that padding is CONTENT. At rest the
+        // track shows half a container of nothing and then the first card,
+        // pushed right by an allowance made for a slide in the middle.
+        //
+        // The end slides do not need to reach the middle; they need to reach
+        // the EDGES. `snap-start` on the first and `snap-end` on the last say
+        // exactly that, and are reachable without any padding at all —
+        // scroll offset 0 and the range's far end. Everything between them
+        // still centres. See `restingScrollLeft`, which is the same rule in
+        // arithmetic so the scroll handler agrees with the CSS.
+        className="flex w-full snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain scroll-smooth py-1 [scrollbar-width:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/30 motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
       >
-        {variants.map((variant) => {
-          const { width } = LINEUP_CARD_FRAME_SIZE[variant.frame];
-          const active = variant.id === selected;
+        {slides.map((slide, index) => {
+          const active = slide.id === selected;
+          const snap =
+            index === 0 ? 'snap-start' : index === slides.length - 1 ? 'snap-end' : 'snap-center';
           return (
             <div
-              key={variant.id}
-              id={viewId(variant.id)}
+              key={slide.id}
+              id={viewId(slide.id)}
               role="group"
-              aria-label={variant.spokenLabel ?? variant.label}
+              aria-label={slide.label}
               aria-roledescription="slide"
               data-slot="lineup-card-view"
-              data-variant={variant.id}
+              data-slide={slide.id}
+              // Only a CARD view carries this. The leading slide is the
+              // host's own layout and has no variant to name, and a host
+              // querying `[data-variant]` is asking for something exportable.
+              data-variant={slide.variant?.id}
               data-active={active || undefined}
               className={cn(
-                'relative shrink-0 snap-center overflow-hidden rounded-[10px] border transition-[opacity,border-color] duration-200 motion-reduce:transition-none',
-                active
-                  ? 'border-white/15 opacity-100 shadow-[0_24px_64px_rgba(0,0,0,0.6)]'
-                  : 'border-white/[0.06] opacity-45'
+                'relative shrink-0 transition-opacity duration-200 motion-reduce:transition-none',
+                snap,
+                slide.variant
+                  ? // A card is a picture with a hard edge, so it is framed
+                    // and clipped to it.
+                    cn(
+                      'overflow-hidden rounded-[10px] border transition-[opacity,border-color]',
+                      active
+                        ? 'border-white/15 opacity-100 shadow-[0_24px_64px_rgba(0,0,0,0.6)]'
+                        : 'border-white/[0.06] opacity-45'
+                    )
+                  : // The leading slide is not. It draws its own frame — the
+                    // editor's plate has a border, a radius and a tilt — so a
+                    // second one here would be a box inside a box, and
+                    // `overflow-hidden` would clip the shadow it casts. It
+                    // takes a full turn of the track because it is a fluid
+                    // block, not a card at an absolute size.
+                    cn('w-full', active ? 'opacity-100' : 'opacity-45')
               )}
-              style={{
-                width: `calc(${width}px * var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
-                height: `calc(${LINEUP_CARD_VIEW_HEIGHT}px * var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
-              }}
+              style={
+                slide.variant
+                  ? {
+                      width: `calc(${LINEUP_CARD_FRAME_SIZE[slide.variant.frame].width}px * var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
+                      height: `calc(${LINEUP_CARD_VIEW_HEIGHT}px * var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
+                    }
+                  : undefined
+              }
             >
-              <div
-                style={{
-                  width,
-                  height: LINEUP_CARD_VIEW_HEIGHT,
-                  transformOrigin: 'top left',
-                  transform: `scale(var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
-                }}
-              >
-                <LineupCardView variant={variant} data={data} />
-              </div>
+              {slide.variant ? (
+                <div
+                  style={{
+                    width: LINEUP_CARD_FRAME_SIZE[slide.variant.frame].width,
+                    height: LINEUP_CARD_VIEW_HEIGHT,
+                    transformOrigin: 'top left',
+                    transform: `scale(var(${LINEUP_CARD_VIEW_SCALE_VAR}, ${viewScale}))`,
+                  }}
+                >
+                  <LineupCardView variant={slide.variant} data={data} />
+                </div>
+              ) : (
+                slide.content
+              )}
             </div>
           );
         })}
       </div>
 
       {/*
-        The pills. Anchors rather than buttons so the gallery still works with
-        scripting off: a same-document fragment link scrolls the track
-        natively. With JavaScript the default is prevented — which also keeps
-        a modal from pushing a hash onto the history stack — and replaced by a
-        smooth, centred scroll.
+        The indicators: one bar per slide, the same device platform's arena
+        carousel uses, and nothing written.
+
+        They used to print the views' names — "Team sheet 5:6", "Pitch 5:6",
+        "Team sheet 1:1", "Pitch 1:1" — a full row of captions under a row of
+        pictures, on a surface where the reader came to read an article. The
+        question a carousel control has to answer is "which of these am I
+        looking at", and four bars answer it; the names only ever restated
+        what each card plainly shows.
+
+        WHAT WENT IS THE PRINTING, NOT THE MEANING. Every bar still carries
+        the view's `spokenLabel` as its accessible name, so a screen reader
+        still hears "Team sheet, portrait five by six" and can still tell the
+        views apart — a bar with no name would have made this an accessibility
+        regression dressed as a design one.
+
+        Still ANCHORS rather than buttons, so the gallery works with scripting
+        off: a same-document fragment link scrolls the track natively. With
+        JavaScript the default is prevented — which also keeps a modal from
+        pushing a hash onto the history stack — and replaced by a smooth
+        scroll. `data-slot="lineup-card-pill"` is deliberately unchanged: it
+        is a published DOM contract the editor's own suite asserts against,
+        and renaming it to match the new shape would break a consumer to
+        rename a string.
       */}
       <nav aria-label={label} data-slot="lineup-card-pills">
-        <ul className="flex list-none flex-wrap items-center justify-center gap-1.5 p-0">
-          {variants.map((variant, index) => {
-            const active = variant.id === selected;
+        <ul className="flex list-none items-center justify-center gap-2 p-0">
+          {slides.map((slide, index) => {
+            const active = slide.id === selected;
             return (
-              <li key={variant.id}>
+              <li key={slide.id}>
                 <a
-                  href={`#${viewId(variant.id)}`}
-                  aria-label={variant.spokenLabel ?? variant.label}
+                  href={`#${viewId(slide.id)}`}
+                  aria-label={slide.label}
                   aria-current={active ? 'true' : undefined}
                   data-slot="lineup-card-pill"
-                  data-variant={variant.id}
+                  data-slide={slide.id}
+                  data-variant={slide.variant?.id}
                   onClick={(event) => {
                     event.preventDefault();
                     select(index);
@@ -458,7 +756,7 @@ export function LineupCardCarousel({
                   }}
                   // Enter is the anchor's own native activation and arrives
                   // as a click. Space is not — a link ignores it, and scrolls
-                  // the page instead — but these READ as pill buttons, so a
+                  // the page instead — but these READ as buttons, so a
                   // keyboard user reasonably tries it. Handling it here is
                   // the one behaviour the anchor does not already give us.
                   onKeyDown={(event) => {
@@ -467,21 +765,53 @@ export function LineupCardCarousel({
                     select(index);
                     scrollToIndex(index);
                   }}
+                  // The anchor is the TARGET, 24x24, and the bar inside it is
+                  // the mark. Sizing the anchor to the bar would make the
+                  // whole control a 24x4px strip, which is under any sane
+                  // pointer target on the phone this is mostly read on.
                   className={cn(
-                    'block cursor-pointer rounded-full border px-3 py-1.5 text-[11px] font-semibold no-underline transition-colors motion-reduce:transition-none',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current',
-                    active
-                      ? 'border-red-100 bg-red-100/15 text-white'
-                      : 'border-white/[0.08] bg-white/[0.04] text-white/55 hover:border-white/25 hover:text-white'
+                    'group/indicator flex size-6 cursor-pointer items-center no-underline',
+                    'focus-visible:rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70'
                   )}
                 >
-                  {variant.label}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'h-1 w-full rounded-full transition-colors motion-reduce:transition-none',
+                      active ? 'bg-white' : 'bg-white/30 group-hover/indicator:bg-white/60'
+                    )}
+                  />
                 </a>
               </li>
             );
           })}
         </ul>
       </nav>
+
+      {/*
+        The host's control for the slide showing — "save this card", in the
+        only case there is so far.
+
+        `data-export-ignore="true"` is belt to the braces: this node is not
+        inside any view, so it cannot be in a capture of one, but a host that
+        rasterises a WIDER root would otherwise pick it up. `captureElementToPng`
+        collapses every node carrying it before it measures.
+
+        Rendered only when the host actually returns something, so a gallery
+        with no `slideAction` — and one whose host declines to offer an action
+        for THIS slide, which is what the leading plate should do — emits no
+        node at all rather than an empty box holding space open.
+      */}
+      {action ? (
+        <div
+          data-slot="lineup-card-slide-action"
+          data-slide={activeSlide?.id}
+          data-export-ignore="true"
+          className="flex items-center justify-center"
+        >
+          {action}
+        </div>
+      ) : null}
 
       {children}
     </div>
