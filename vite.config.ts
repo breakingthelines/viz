@@ -21,6 +21,15 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // Pure-logic tests (type guards, coordinate maths). Node, no browser.
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
         extends: true,
         plugins: [
           storybookTest({

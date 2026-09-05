@@ -12,6 +12,7 @@ const meta = {
   title: 'Football/Lib/RevealOnScroll',
   component: RevealOnScroll,
   parameters: { layout: 'fullscreen' },
+  args: { children: null },
 } satisfies Meta<typeof RevealOnScroll>;
 
 export default meta;

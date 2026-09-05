@@ -2,19 +2,19 @@ import { scaleLinear } from 'd3-scale';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
 import type { PitchTheme } from '#/football/primitives/pitch';
-import type { MatchEvent, PitchCoordinates, ShotEventData } from '#/football/types';
+import type { MatchAction, PitchCoordinates, ShotEventData } from '#/football/types';
 import { ShotOutcome, shotOutcomeName, isShot } from '#/football/types';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 
-/** Shot event type - MatchEvent with shot data */
-type ShotMatchEvent = MatchEvent & { eventData: { case: 'shot'; value: ShotEventData } };
+/** A match action already narrowed to a shot. */
+type ShotAction = MatchAction & { actionData: { case: 'shot'; value: ShotEventData } };
 
 export type ShotMapVariant = 'half' | 'full';
 
 export interface ShotMapProps {
   /** Array of shot events to display */
-  shots: MatchEvent[];
+  shots: MatchAction[];
   /**
    * Pitch variant.
    * - `half` (default): a single attacking half — the standalone shot map.
@@ -47,9 +47,9 @@ export interface ShotMapProps {
   /** Away team marker colour. Defaults to the `--color-team-away` token. */
   awayColor?: string;
   /** Custom color function for shots. Overrides team/outcome colouring. */
-  getColor?: (shot: ShotMatchEvent) => string;
+  getColor?: (shot: ShotAction) => string;
   /** Click handler for shots */
-  onShotClick?: (shot: ShotMatchEvent) => void;
+  onShotClick?: (shot: ShotAction) => void;
   /** Selected shot ID */
   selectedShotId?: string;
 }
@@ -100,20 +100,20 @@ export function ShotMap({
   // Team-coloured mode is active only when both ids are supplied.
   const teamColoured = Boolean(homeTeamId && awayTeamId);
 
-  const isAwayShot = (shot: ShotMatchEvent): boolean =>
+  const isAwayShot = (shot: ShotAction): boolean =>
     teamColoured && awayTeamId !== undefined && shot.team?.id === awayTeamId;
 
-  const getMarkerColor = (shot: ShotMatchEvent): string => {
+  const getMarkerColor = (shot: ShotAction): string => {
     if (getColor) return getColor(shot);
     if (teamColoured) return isAwayShot(shot) ? awayColor : homeColor;
-    return defaultOutcomeColors[shot.eventData.value.outcome];
+    return defaultOutcomeColors[shot.actionData.value.outcome];
   };
 
   // In the full-pitch both-teams layout the away side is mirrored so the two
   // teams attack opposite goals (home → right, away → left). Feed coordinates
   // are normalised "attacking right" per the shooting team. Half-pitch mode and
   // outcome mode leave coordinates untouched.
-  const placeShot = (shot: ShotMatchEvent): PitchCoordinates | undefined => {
+  const placeShot = (shot: ShotAction): PitchCoordinates | undefined => {
     if (!shot.location) return undefined;
     if (variant === 'full' && teamColoured && isAwayShot(shot)) {
       return { x: 100 - shot.location.x, y: 100 - shot.location.y };
@@ -127,7 +127,7 @@ export function ShotMap({
     <div className={cn('relative', className)} style={{ fontFamily: BLOCK_FONT_STACK }}>
       <Pitch variant={variant} theme={theme}>
         {shotEvents.map((shot) => {
-          const shotData = shot.eventData.value;
+          const shotData = shot.actionData.value;
           const xg = finite(shotData.xg ?? 0.1, 0.1);
           const size = finitePositive(sizeScale(xg), minSize);
           const isSelected = shot.id === selectedShotId;

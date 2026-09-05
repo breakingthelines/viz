@@ -35,25 +35,28 @@ export {
 } from './football/data/formations';
 export type { FormationSlotTemplate } from './football/data/formations';
 
-// Football - Types (proto)
+// Football - Types
 export type {
-  NormalizedMatchData,
-  DataSource,
-  Team,
-  Player,
-  PitchCoordinates,
-  MatchEvent,
+  // Wire contract (btl.game.v1.types.football)
+  FootballActionPayload,
   ShotEventData,
   PassEventData,
   TackleEventData,
   CarryEventData,
   InterceptionEventData,
+  FreezeFramePlayer,
+  // Display types viz owns
+  MatchAction,
+  PitchCoordinates,
+  Team,
+  Player,
   Formation,
   FormationPosition,
+  DataProvider,
 } from './football/types/index';
 
 export {
-  EventType,
+  FootballActionType,
   ShotOutcome,
   PassHeight,
   PassOutcome,
@@ -66,7 +69,7 @@ export {
 export { isShot, isPass, isTackle, isCarry, isInterception } from './football/types/index';
 
 export {
-  eventTypeName,
+  actionTypeName,
   shotOutcomeName,
   passHeightName,
   passOutcomeName,

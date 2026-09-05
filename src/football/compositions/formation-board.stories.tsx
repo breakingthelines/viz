@@ -12,6 +12,9 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  args: {
+    formation: argentinaFormation,
+  },
   argTypes: {
     theme: {
       control: 'select',
@@ -124,7 +127,7 @@ export const Interactive: Story = {
         {selected && (
           <div className="p-4 bg-gray-800 rounded text-sm">
             <p>
-              <strong>#{selected.player.number}</strong> {selected.player.name}
+              <strong>#{selected.player.shirtNumber}</strong> {selected.player.name}
             </p>
             <p>Position: {selected.role ?? 'N/A'}</p>
           </div>

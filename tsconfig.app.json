@@ -20,7 +20,11 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+    /* Off because the vendored protoc-gen-es output (src/generated) emits
+       `export enum`, which is not erasable. Both bundlers viz uses (esbuild in
+       Vite, swc in bunchee) compile TS enums, so nothing downstream depends on
+       type-stripping-only transpilation. */
+    "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",

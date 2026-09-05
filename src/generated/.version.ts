@@ -1,3 +1,3 @@
 // Auto-synced - DO NOT EDIT MANUALLY
-// Synced on 2026-01-24T01:11:31Z
-export const PROTOS_VERSION = '393042e';
+// Synced on 2026-09-06T00:00:00Z
+export const PROTOS_VERSION = '8e0c6e9';

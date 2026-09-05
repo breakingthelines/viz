@@ -18,18 +18,16 @@
  * Re-introducing an `initial={{ opacity: 0 }}` gate on core content makes the
  * first-frame opacity read ~0 and fails these assertions.
  */
-import type { ReactNode } from 'react';
+import type { Decorator } from '@storybook/react-vite';
 import { MotionConfig } from 'framer-motion';
 import { expect } from 'storybook/test';
 
 /** Story decorator: render with all framer-motion animations disabled. */
-export function withReducedMotion(Story: () => ReactNode): ReactNode {
-  return (
-    <MotionConfig reducedMotion="always">
-      <Story />
-    </MotionConfig>
-  );
-}
+export const withReducedMotion: Decorator = (Story) => (
+  <MotionConfig reducedMotion="always">
+    <Story />
+  </MotionConfig>
+);
 
 /** Wait a single animation frame, then a microtask, so first paint has settled. */
 async function nextFrame(): Promise<void> {

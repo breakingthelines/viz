@@ -10,6 +10,9 @@ const meta = {
   component: LineupPitch,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
+  args: {
+    slots: [],
+  },
   argTypes: {
     theme: { control: 'select', options: ['grass', 'dark'] },
     markerSize: { control: { type: 'range', min: 2, max: 5, step: 0.2 } },
