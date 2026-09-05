@@ -14,28 +14,33 @@ export type { ShotMapProps, FormationBoardProps } from './compositions/index';
 
 // Types
 export type {
-  DataSource,
+  // Wire contract (btl.game.v1.types.football)
+  FootballActionPayload,
+  ShotEventData,
+  PassEventData,
+  TackleEventData,
+  CarryEventData,
+  InterceptionEventData,
+  FreezeFramePlayer,
+  // Display types viz owns
+  MatchAction,
   PitchCoordinates,
   Player,
   Team,
-  MatchInfo,
-  FormationPosition,
   Formation,
-  NormalizedMatchData,
-  ShotOutcome,
-  ShotEvent,
-  PassOutcome,
-  PassEvent,
-  TackleEvent,
-  CarryEvent,
-  InterceptionEvent,
-  MatchEvent,
+  FormationPosition,
+  DataProvider,
 } from './types/index';
 
 export {
-  isShotEvent,
-  isPassEvent,
-  isTackleEvent,
-  isCarryEvent,
-  isInterceptionEvent,
+  FootballActionType,
+  ShotOutcome,
+  PassHeight,
+  PassOutcome,
+  TackleOutcome,
+  DuelType,
+  InterceptionOutcome,
+  BodyPart,
 } from './types/index';
+
+export { isShot, isPass, isTackle, isCarry, isInterception } from './types/index';

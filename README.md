@@ -76,8 +76,8 @@ import { Pitch, PlayerMarker, Arrow } from '@breakingthelines/viz/football/primi
 import { ShotMap, FormationBoard } from '@breakingthelines/viz/football/compositions';
 
 // Types and schemas
-import type { ShotEvent, PitchCoordinates } from '@breakingthelines/viz/football/types';
-import { isShotEvent, isPassEvent } from '@breakingthelines/viz/football/types';
+import type { MatchAction, PitchCoordinates } from '@breakingthelines/viz/football/types';
+import { isShot, isPass } from '@breakingthelines/viz/football/types';
 
 // Utilities
 import { exportAsPng, exportAsSvg } from '@breakingthelines/viz/utils';
@@ -203,58 +203,100 @@ import { DataAttribution } from '@breakingthelines/viz/components';
 
 ## Types
 
-All data types are defined with Zod schemas for runtime validation.
+viz's football types come in two layers.
 
-### Core Types
+The **wire contract** — the action enums and the per-action payload messages — is
+re-exported verbatim from the generated `btl.game.v1.types.football` code, which
+is synced into `src/generated` from the [protos](https://github.com/breakingthelines/protos)
+repo. viz never redeclares it, so a contract change surfaces as a type error
+rather than as drift.
+
+The **display types** are viz's own. The proto action payload identifies actors
+by id (`teamId`, `playerId`) and carries no id or clock, because on the wire
+those are resolved elsewhere. Rendering needs names, kit colours and a stable
+key, so viz declares plain interfaces for them — ordinary objects, built as
+literals, with no protobuf runtime involved.
+
+### Display types
 
 ```typescript
 import type {
-  PitchCoordinates,  // { x: number, y: number }
-  Player,            // { id, name, number?, position? }
-  Team,              // { id, name, shortName?, color? }
-  DataSource,        // 'statsbomb' | 'opta' | 'wyscout' | ...
+  PitchCoordinates, // { x: number; y: number }, normalised 0-100
+  Player,           // { id, name, shirtNumber? }
+  Team,             // { id, name, shortName?, primaryColor?, secondaryColor? }
+  Formation,        // { team, formation, positions }
+  FormationPosition,
+  MatchAction,      // one action, ready to render
+  DataProvider,     // 'statsbomb' | 'opta' | 'wyscout' | ...
 } from '@breakingthelines/viz/football/types';
 ```
 
-### Event Types
+### Wire contract
 
 ```typescript
 import type {
-  ShotEvent,
-  PassEvent,
-  TackleEvent,
-  CarryEvent,
-  InterceptionEvent,
-  MatchEvent,  // Discriminated union of all events
+  FootballActionPayload,
+  ShotEventData,
+  PassEventData,
+  TackleEventData,
+  CarryEventData,
+  InterceptionEventData,
+  FreezeFramePlayer,
 } from '@breakingthelines/viz/football/types';
 
-// Type guards
 import {
-  isShotEvent,
-  isPassEvent,
-  isTackleEvent,
-  isCarryEvent,
-  isInterceptionEvent,
+  FootballActionType,
+  ShotOutcome,
+  PassHeight,
+  PassOutcome,
+  TackleOutcome,
+  DuelType,
+  InterceptionOutcome,
+  BodyPart,
+  // one schema per message, e.g. ShotEventDataSchema, plus `create`
 } from '@breakingthelines/viz/football/types';
-
-// Usage
-const shots = events.filter(isShotEvent);
 ```
 
-### Shot Event Example
+### Type guards
+
+The guards narrow on the proto `actionData` oneof, so they work on a
+`MatchAction` and on a bare `FootballActionPayload` alike.
 
 ```typescript
-const shot: ShotEvent = {
+import { isShot, isPass, isTackle, isCarry, isInterception } from '@breakingthelines/viz/football/types';
+
+const shots = actions.filter(isShot);
+shots[0].actionData.value.xg; // ShotEventData, narrowed
+```
+
+### Building a shot
+
+```typescript
+import {
+  create,
+  BodyPart,
+  FootballActionType,
+  ShotEventDataSchema,
+  ShotOutcome,
+  type MatchAction,
+} from '@breakingthelines/viz/football/types';
+
+const shot: MatchAction = {
   id: 'shot-123',
-  type: 'shot',
+  type: FootballActionType.SHOT,
   timestamp: 23.5,
   location: { x: 88, y: 45 },
-  endLocation: { x: 100, y: 50 },
-  player: { id: 'p-10', name: 'Lionel Messi', number: 10 },
-  team: { id: 't-1', name: 'Argentina', color: '#75AADB' },
-  xg: 0.34,
-  bodyPart: 'left_foot',
-  outcome: 'goal',
+  player: { id: 'p-10', name: 'Lionel Messi', shirtNumber: 10 },
+  team: { id: 't-1', name: 'Argentina', shortName: 'ARG', primaryColor: '#75AADB' },
+  actionData: {
+    case: 'shot',
+    value: create(ShotEventDataSchema, {
+      xg: 0.34,
+      bodyPart: BodyPart.LEFT_FOOT,
+      outcome: ShotOutcome.GOAL,
+      endLocation: { x: 100, y: 50 },
+    }),
+  },
 };
 ```
 

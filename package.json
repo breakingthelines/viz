@@ -1,6 +1,6 @@
 {
   "name": "@breakingthelines/viz",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "React components for football data visualisation",
   "license": "AGPL-3.0",
   "author": "Breaking The Lines",
@@ -73,7 +73,7 @@
   "scripts": {
     "dev": "storybook dev -p 6008",
     "build": "bunchee",
-    "check": "tsc --noEmit",
+    "check": "tsc --build --noEmit",
     "lint": "oxlint",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",

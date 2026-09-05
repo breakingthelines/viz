@@ -8,6 +8,9 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  args: {
+    source: 'statsbomb',
+  },
   argTypes: {
     source: {
       control: 'select',

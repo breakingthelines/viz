@@ -9,6 +9,9 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  args: {
+    position: { x: 70, y: 50 },
+  },
   argTypes: {
     size: {
       control: { type: 'range', min: 1, max: 5, step: 0.5 },

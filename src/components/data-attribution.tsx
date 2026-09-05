@@ -1,9 +1,9 @@
 import { cn } from '#/lib/utils';
-import type { DataSource } from '#/football/types';
+import type { DataProvider } from '#/football/types';
 
 export interface DataAttributionProps {
   /** Data source/provider */
-  source: DataSource;
+  source: DataProvider;
   /** Custom provider name (for 'custom' source) */
   customName?: string;
   /** Additional CSS classes */
@@ -14,7 +14,7 @@ export interface DataAttributionProps {
   variant?: 'badge' | 'inline';
 }
 
-const sourceLabels: Record<DataSource, string> = {
+const sourceLabels: Record<DataProvider, string> = {
   statsbomb: 'StatsBomb',
   opta: 'Opta',
   wyscout: 'Wyscout',

@@ -1,5 +1,11 @@
-import type { MatchEvent, Team, Player, Formation } from '#/football/types';
-import { EventType, ShotOutcome, BodyPart } from '#/football/types';
+import type { MatchAction, Team, Player, Formation } from '#/football/types';
+import {
+  BodyPart,
+  FootballActionType,
+  ShotEventDataSchema,
+  ShotOutcome,
+  create,
+} from '#/football/types';
 import { fromStatsBomb } from '#/utils/coordinates';
 
 /**
@@ -16,7 +22,6 @@ export const argentinaTeam: Team = {
   shortName: 'ARG',
   primaryColor: '#75AADB',
   secondaryColor: '#FFFFFF',
-  meta: {},
 };
 
 export const franceTeam: Team = {
@@ -25,7 +30,6 @@ export const franceTeam: Team = {
   shortName: 'FRA',
   primaryColor: '#002654',
   secondaryColor: '#FFFFFF',
-  meta: {},
 };
 
 // Helper to create a player
@@ -33,10 +37,10 @@ const player = (id: string, name: string, shirtNumber: number): Player => ({
   id,
   name,
   shirtNumber,
-  meta: {},
 });
 
-// Helper to create a shot event
+// Helper to create a shot action. The payload is a real proto message built
+// with `create`, so the fixture breaks loudly if `ShotEventData` changes shape.
 const shotEvent = (
   id: string,
   timestamp: number,
@@ -46,32 +50,24 @@ const shotEvent = (
   outcome: ShotOutcome,
   xg: number,
   bodyPart: BodyPart
-): MatchEvent => {
-  const location = fromStatsBomb(locationRaw.x, locationRaw.y);
-  return {
-    id,
-    type: EventType.SHOT,
-    timestamp,
-    player: p,
-    team,
-    location,
-    meta: {},
-    eventData: {
-      case: 'shot',
-      value: {
-        xg,
-        outcome,
-        bodyPart,
-      },
-    },
-  } as MatchEvent;
-};
+): MatchAction => ({
+  id,
+  type: FootballActionType.SHOT,
+  timestamp,
+  player: p,
+  team,
+  location: fromStatsBomb(locationRaw.x, locationRaw.y),
+  actionData: {
+    case: 'shot',
+    value: create(ShotEventDataSchema, { xg, outcome, bodyPart }),
+  },
+});
 
 /**
  * Argentina shots (simplified from StatsBomb data)
  * Coordinates converted to BTL normalized format (0-100)
  */
-export const argentinaShots: MatchEvent[] = [
+export const argentinaShots: MatchAction[] = [
   shotEvent(
     'shot-1',
     23,
@@ -117,7 +113,7 @@ export const argentinaShots: MatchEvent[] = [
 /**
  * France shots (simplified from StatsBomb data)
  */
-export const franceShots: MatchEvent[] = [
+export const franceShots: MatchAction[] = [
   shotEvent(
     'shot-5',
     80,
@@ -163,7 +159,7 @@ export const franceShots: MatchEvent[] = [
 /**
  * All shots from the match
  */
-export const allShots: MatchEvent[] = [...argentinaShots, ...franceShots].sort(
+export const allShots: MatchAction[] = [...argentinaShots, ...franceShots].sort(
   (a, b) => a.timestamp - b.timestamp
 );
 

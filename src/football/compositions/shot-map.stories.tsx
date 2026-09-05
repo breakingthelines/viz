@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { ShotMap } from './shot-map';
+import { isShot, shotOutcomeName } from '#/football/types';
 
 /** Minimal assert helper so the play test needs no extra test-runtime import
  * (which would otherwise trigger Vite dep re-optimisation mid browser run). */
@@ -22,6 +23,9 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  args: {
+    shots: [],
+  },
   argTypes: {
     variant: {
       control: 'select',
@@ -88,6 +92,8 @@ export const Interactive: Story = {
   render: function InteractiveShotMap() {
     const [selectedId, setSelectedId] = useState<string | undefined>();
     const selectedShot = allShots.find((s) => s.id === selectedId);
+    const selectedShotData =
+      selectedShot && isShot(selectedShot) ? selectedShot.actionData.value : undefined;
 
     return (
       <div className="space-y-4">
@@ -99,10 +105,11 @@ export const Interactive: Story = {
         {selectedShot && (
           <div className="p-4 bg-gray-800 rounded text-sm">
             <p>
-              <strong>{selectedShot.player?.name}</strong> ({selectedShot.team.shortName})
+              <strong>{selectedShot.player?.name}</strong> ({selectedShot.team?.shortName})
             </p>
             <p>
-              Outcome: {selectedShot.outcome} | xG: {selectedShot.xg?.toFixed(2) ?? 'N/A'}
+              Outcome: {selectedShotData ? shotOutcomeName[selectedShotData.outcome] : 'N/A'} | xG:{' '}
+              {selectedShotData?.xg.toFixed(2) ?? 'N/A'}
             </p>
             <p>Minute: {Math.floor(selectedShot.timestamp)}&apos;</p>
           </div>
@@ -115,7 +122,7 @@ export const Interactive: Story = {
 export const CustomColors: Story = {
   args: {
     shots: allShots,
-    getColor: (shot) => (shot.team.id === 'arg' ? '#75AADB' : '#002654'),
+    getColor: (shot) => (shot.team?.id === 'arg' ? '#75AADB' : '#002654'),
   },
 };
 

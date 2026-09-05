@@ -10,6 +10,10 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  args: {
+    from: { x: 55, y: 50 },
+    to: { x: 95, y: 50 },
+  },
   argTypes: {
     strokeWidth: {
       control: { type: 'range', min: 0.1, max: 1, step: 0.1 },
