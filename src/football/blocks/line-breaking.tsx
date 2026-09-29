@@ -2,9 +2,9 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '#/lib/utils';
 import { Pitch } from '#/football/primitives/pitch';
-import { monogram } from '#/football/lib/player-name';
 import { PanelFooter } from '#/football/lib/panel-footer';
 import { Crest } from '#/football/lib/crest';
+import { PasserAvatar } from '#/football/lib/passer-avatar';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { ControlDropdown, DropdownItem } from '#/football/lib/control-dropdown';
@@ -394,44 +394,6 @@ export function LineBreaking({
 
       <PanelFooter provider="statsbomb" wordmark={wordmark} builderControls={builderControls} />
     </div>
-  );
-}
-
-/**
- * Small circular passer headshot for the hover callout. Falls back to the
- * player's monogram when there's no photo — or when the supplied one fails to
- * load (a 404 / dead link) — so a missing image never leaves a blank chip.
- */
-function PasserAvatar({
-  name,
-  imageUrl,
-  color,
-}: {
-  name: string;
-  imageUrl?: string;
-  color: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const showPhoto = typeof imageUrl === 'string' && imageUrl.length > 0 && !failed;
-  return (
-    <span
-      className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
-      style={{ boxShadow: `inset 0 0 0 1px ${color}` }}
-    >
-      {showPhoto ? (
-        <img
-          src={imageUrl}
-          alt=""
-          crossOrigin="anonymous"
-          className="size-full object-cover"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <span className="text-[9px] font-semibold leading-none text-white/70">
-          {monogram(name)}
-        </span>
-      )}
-    </span>
   );
 }
 

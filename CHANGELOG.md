@@ -5,6 +5,37 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1]
+
+### Fixed: crests and Line breaking hover headshots load in any cache order
+
+`Crest` and the Line breaking hover avatar set `crossOrigin="anonymous"`. The
+same CDN URLs are also loaded plainly: by `SvgHeadshot`, the Pass Sonar
+focus-card crest, and hosts' own lineup and match-stats blocks. The CDN sends
+`Access-Control-Allow-Origin` only when a request carries `Origin`, and its
+plain response is cacheable for 4h with no `Vary: Origin`. After a plain load,
+the CORS load was served the cached plain copy and blocked, so the crest or
+headshot never rendered. On origins missing from the CDN's CORS allowlist
+(admin, localhost, Storybook) it failed on every load.
+
+Both are plain `<img>` elements now. Save as image is unaffected:
+`captureElementToPng` never reads pixels from a live element. html-to-image
+fetches every image again with `{ mode: 'cors', cache: 'no-cache' }`, which
+revalidates with the CDN and gets the CORS headers.
+
+No API change.
+
+**Guards.** `src/football/lib/remote-images.test.ts` fails if `Crest` or the
+hover avatar renders `crossorigin` again. `src/utils/crest-capture.stories.tsx`
+reproduces the collision in Chromium against a fixture origin that answers like
+the CDN (`cdnFixture` in `vite.config.ts`, dev server only). It checks that the
+on-screen crest loads after a plain load of the same URL, and that the crest's
+pixels reach the exported PNG.
+
+**Internal.** The hover avatar moved from `line-breaking.tsx` to
+`src/football/lib/passer-avatar.tsx` so the test can render it. It is not
+exported from the package.
+
 ## [0.16.0]
 
 ### Changed (breaking): the football types follow the current proto contract
