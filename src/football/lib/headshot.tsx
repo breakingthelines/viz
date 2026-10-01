@@ -112,11 +112,7 @@ export function SvgHeadshot({
           // this attribute either: `captureElementToPng` (viz `utils/export.ts`)
           // pre-inlines every SVG `<image>` href as a same-origin `data:` URI
           // via its OWN independent CORS-safe fetch before rasterising, so it
-          // never depends on this live element's crossOrigin at all. See
-          // {@link Crest} for the sibling primitive, which still needs
-          // `crossOrigin` (its plain `<img>` export path doesn't get the same
-          // pre-inlining) — do not "fix" that one to match this without
-          // re-verifying its export path first.
+          // never depends on this live element's crossOrigin at all.
           // Missing/404 photo → fall back to the monogram disc below.
           onError={() => setFailed(true)}
           style={style}
