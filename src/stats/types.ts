@@ -42,7 +42,9 @@ export interface StatMetric {
   value: number | null;
   /** Ordinal rank, 0-100, against the resolved comparison group. */
   percentile: number | null;
-  /** The group's median value, already formatted for display (e.g. "1.42"). */
+  /** The comparison group's raw median value (spec §3.1 `group_median`),
+   * not pre-formatted — a caller formats it the same way as `value`
+   * (`formatMetricValue(median, unit)`) when it needs to show it. */
   median: number | null;
   state: MetricState;
   /** The key a hover/select on this metric should focus elsewhere (e.g. on

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { ramp } from '../brand/colour';
 import { formatMetricValue, formatPercentile } from './format';
 import type { StatMetric } from './types';
@@ -9,14 +9,19 @@ import type { StatMetric } from './types';
  * tick and an ordinal (spec §4.2 "Per-90 rows by group", mock
  * `scratchpad/prof/wheel2.py` `per90_table`). `pending`/`locked` rows (an
  * event-only metric with no values yet) render muted and dashed with no
- * number — never "Event data" placeholder copy (spec §4.5's copy rules;
- * the mock's own "Event data" text is the one place this build departs
- * from it).
+ * number, plus the muted "Event data" state label (spec §4.1, verdict P-D5
+ * "Wheel and per-90 rows use the same states with 'Event data'", mock
+ * `per90_table`) — an approved state label, not banned hint copy: without
+ * it a screen reader gets only the metric name and no indication the row
+ * is in a different state from a value row.
  *
- * Hovering (or focusing) a row reports its metric key through `onFocus`, the
+ * Hovering or focusing a row reports its metric key through `onFocus`, the
  * same mechanism a hover on the wheel or {@link ComparisonBars} would use,
  * so all three can highlight the same metric together; `focusKeys` lights
- * this component's own rows up when another block focused them first.
+ * this component's own rows up when another block focused them first. A
+ * row is keyboard-reachable (`tabIndex`, `onFocus`/`onBlur`, `onClick`)
+ * whenever the caller passes `onFocus` — spec §4.3's "tap replaces hover"
+ * depends on a real focus path, not a browser emulating mouse events.
  */
 
 export interface PercentileRowsProps {
@@ -46,11 +51,12 @@ function PendingRow({ metric }: { metric: StatMetric }) {
       }}
     >
       <span style={{ fontSize: 13, color: MUTED }}>{metric.label}</span>
+      <span style={{ fontSize: 12, color: MUTED }}>Event data</span>
       <span
         aria-hidden
         style={{
+          gridColumn: '1 / 3',
           height: 6,
-          width: 56,
           border: '1px dashed rgba(255, 255, 255, 0.3)',
           borderRadius: 3,
         }}
@@ -72,8 +78,13 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
   const focusKey = metric.focusKey ?? metric.key;
   return (
     <li
+      className="btl-pr-row"
+      tabIndex={onFocus ? 0 : undefined}
       onMouseEnter={onFocus ? () => onFocus(focusKey) : undefined}
       onMouseLeave={onFocus ? () => onFocus(null) : undefined}
+      onFocus={onFocus ? () => onFocus(focusKey) : undefined}
+      onBlur={onFocus ? () => onFocus(null) : undefined}
+      onClick={onFocus ? () => onFocus(focusKey) : undefined}
       style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) auto',
@@ -82,7 +93,8 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
         padding: '9px 0',
         borderTop: `1px solid ${LINE}`,
         background: focused ? FOCUS_BG : 'transparent',
-        transition: 'background 150ms',
+        boxShadow: focused ? '-8px 0 0 ' + FOCUS_BG + ', 8px 0 0 ' + FOCUS_BG : 'none',
+        transition: 'background 150ms, box-shadow 150ms',
       }}
     >
       <span style={{ fontSize: 13, color: LIGHT }}>{metric.label}</span>
@@ -102,6 +114,7 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
       >
         <span style={{ height: 4, background: TRACK, borderRadius: 2, position: 'relative' }}>
           <span
+            className="btl-pr-fill"
             style={{
               position: 'absolute',
               top: 0,
@@ -141,9 +154,11 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
 
 export function PercentileRows({ groups, focusKeys, onFocus }: PercentileRowsProps) {
   const focusSet = useMemo(() => new Set(focusKeys ?? []), [focusKeys]);
+  const scopeClass = `btl-pr-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
     <div
+      className={scopeClass}
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
@@ -151,6 +166,17 @@ export function PercentileRows({ groups, focusKeys, onFocus }: PercentileRowsPro
         fontFamily: 'Inter, sans-serif',
       }}
     >
+      <style>{`
+        .${scopeClass} .btl-pr-fill {
+          transition: width 0.35s, background 0.35s;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .${scopeClass} .btl-pr-fill,
+          .${scopeClass} .btl-pr-row {
+            transition: none;
+          }
+        }
+      `}</style>
       {groups.map((group) => (
         <div key={group.name} style={{ minWidth: 0 }}>
           <h3 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 600, color: WHITE }}>

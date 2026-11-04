@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { PercentileRows, type PercentileRowsProps } from './percentile-rows';
 import type { StatMetric } from './types';
 
@@ -88,19 +88,59 @@ export const Default: Story = {
 };
 
 /**
- * A `pending` (event-only) row renders dashed, muted, with no number and no
- * placeholder copy — not even the mock's own "Event data" text (spec §4.5).
+ * A `pending` (event-only) row renders dashed, muted, with no number but
+ * WITH the "Event data" state label (spec §4.1, verdict P-D5, mock
+ * `per90_table`) — a screen reader needs some indication this row is in a
+ * different state from a value row, and "Event data" is the approved
+ * wording for it.
  */
-export const VerifyPendingRowHasNoPlaceholderCopy: Story = {
+export const VerifyPendingRowShowsEventDataLabel: Story = {
   args: { groups: GROUPS },
   play: async ({ canvasElement }) => {
     const npxgRow = [...canvasElement.querySelectorAll('li')].find((li) =>
       li.textContent?.includes('npxG')
     )!;
-    // Exactly the label text, nothing else — no "Event data" or any other caption.
-    await expect(npxgRow.textContent?.trim()).toBe('npxG');
+    await expect(npxgRow.textContent?.trim()).toBe('npxGEvent data');
     const dashedBar = npxgRow.querySelector('span[style*="dashed"]');
     await expect(dashedBar).not.toBeNull();
+  },
+};
+
+/**
+ * A `no-data` row (computed for the competition, absent for this player,
+ * spec §1.5) still renders as a value row — a ramp bar at 0 and an en dash
+ * for both value and percentile, never a zero and never the pending/locked
+ * dashed treatment, which is reserved for event-only metrics.
+ */
+export const VerifyNoDataRowRendersDashesNotZero: Story = {
+  args: {
+    groups: [
+      {
+        name: 'Shooting',
+        metrics: [
+          {
+            key: 'npg',
+            label: 'Non-penalty goals',
+            shortLabel: 'npG',
+            group: 'Shooting',
+            unit: 'per90',
+            value: null,
+            percentile: null,
+            median: null,
+            state: 'no-data',
+          },
+        ],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const row = [...canvasElement.querySelectorAll('li')].find((li) =>
+      li.textContent?.includes('Non-penalty goals')
+    )!;
+    // No "Event data" label — that is reserved for pending/locked rows.
+    await expect(row.textContent).not.toContain('Event data');
+    const dashes = [...row.querySelectorAll('span')].filter((el) => el.textContent === '–');
+    await expect(dashes.length).toBeGreaterThanOrEqual(2);
   },
 };
 
@@ -132,5 +172,38 @@ export const VerifyHoverReportsFocus: Story = {
 
     await userEvent.unhover(row);
     await expect(readout.textContent).toBe('none');
+  },
+};
+
+/** Keyboard users reach the same readout: tabbing a row focuses it and
+ * reports its key, the same as a hover would (spec §4.3 "tap replaces
+ * hover" needs a real focus path, not emulated mouse events). */
+export const VerifyKeyboardFocusReportsFocus: Story = {
+  args: { groups: GROUPS },
+  render: () => {
+    const [focused, setFocused] = useState<string[] | null>(null);
+    return (
+      <div>
+        <p data-testid="focus-readout">{focused?.join(',') ?? 'none'}</p>
+        <PercentileRows
+          groups={GROUPS}
+          focusKeys={focused}
+          onFocus={(key) => setFocused(key ? [key] : null)}
+        />
+      </div>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const row = [...canvasElement.querySelectorAll('li')].find((li) =>
+      li.textContent?.includes('Key passes')
+    )!;
+    await expect(row).toHaveAttribute('tabindex', '0');
+
+    row.focus();
+    const readout = canvasElement.querySelector('[data-testid="focus-readout"]')!;
+    await waitFor(() => expect(readout.textContent).toBe('key'));
+
+    row.blur();
+    await waitFor(() => expect(readout.textContent).toBe('none'));
   },
 };

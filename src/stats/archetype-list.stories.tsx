@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { ArchetypeList, type ArchetypeListItem } from './archetype-list';
 
 const ITEMS: ArchetypeListItem[] = [
@@ -116,16 +116,16 @@ export const VerifyClickSelectsAndDeselects: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const row = [...canvasElement.querySelectorAll('li')].find((li) =>
-      li.textContent?.includes('Final Ball')
+    const button = [...canvasElement.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Final Ball')
     )!;
-    await expect(row).toHaveAttribute('aria-pressed', 'false');
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
 
-    await userEvent.click(row);
-    await expect(row).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(button);
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
 
-    await userEvent.click(row);
-    await expect(row).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(button);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
   },
 };
 
@@ -143,41 +143,113 @@ export const VerifyKeyboardTogglesSelection: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const row = [...canvasElement.querySelectorAll('li')].find((li) =>
-      li.textContent?.includes('Engine')
+    const button = [...canvasElement.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Engine')
     )!;
-    row.focus();
+    button.focus();
     await userEvent.keyboard('{Enter}');
-    await expect(row).toHaveAttribute('aria-pressed', 'true');
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.keyboard(' ');
-    await expect(row).toHaveAttribute('aria-pressed', 'false');
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
   },
 };
 
-/** Hovering a row reports it through `onHover`, and leaving reports `null`. */
+/** Hovering a row reports it through `onHover`, and leaving reports `null`
+ * — wired up only when `onToggle` is also passed, since that is what makes
+ * a row interactive at all (spec §4.2; a row is never hoverable, tabbable
+ * or clickable on its own without a toggle handler). */
 export const VerifyHoverPreviews: Story = {
   args: { items: ITEMS },
   render: () => {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     return (
       <div>
         <p data-testid="hover-readout">{hoveredId ?? 'none'}</p>
-        <ArchetypeList items={ITEMS} onHover={setHoveredId} />
+        <ArchetypeList
+          items={ITEMS}
+          selectedId={selectedId}
+          onHover={setHoveredId}
+          onToggle={(id) => setSelectedId((current) => (current === id ? null : id))}
+        />
       </div>
     );
   },
   play: async ({ canvasElement }) => {
-    const row = [...canvasElement.querySelectorAll('li')].find((li) =>
-      li.textContent?.includes('Ball Runner')
+    const button = [...canvasElement.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Ball Runner')
     )!;
-    await userEvent.hover(row);
+    await userEvent.hover(button);
     await expect(canvasElement.querySelector('[data-testid="hover-readout"]')!.textContent).toBe(
       'ball-runner'
     );
-    await userEvent.unhover(row);
+    await userEvent.unhover(button);
     await expect(canvasElement.querySelector('[data-testid="hover-readout"]')!.textContent).toBe(
       'none'
     );
+  },
+};
+
+/** Event-only rows (pending/locked) are never interactive: no `<button>`,
+ * no `tabindex`, no hover handler — even when `onToggle` is passed (mock's
+ * `role-ev` rows carry neither `tabindex` nor handlers). A value row with
+ * no `onToggle` (e.g. a read-only `compact` placement) is equally inert. */
+export const VerifyEventOnlyAndReadOnlyRowsAreNotInteractive: Story = {
+  args: { items: ITEMS, onToggle: () => {} },
+  play: async ({ canvasElement }) => {
+    // Even with onToggle passed, the event-only "Line Breaker" row is still
+    // not a button and carries no tabindex.
+    const lineBreakerRow = [...canvasElement.querySelectorAll('li')].find((li) =>
+      li.textContent?.includes('Line Breaker')
+    )!;
+    await expect(lineBreakerRow.querySelector('button')).toBeNull();
+    await expect(lineBreakerRow).not.toHaveAttribute('tabindex');
+  },
+};
+
+/** Without `onToggle` at all (a read-only placement such as the Overview
+ * compact card), no row — not even a value row — renders a `<button>`. */
+export const VerifyReadOnlyWithoutOnToggleHasNoButtons: Story = {
+  args: { items: ITEMS, compact: true },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelectorAll('button')).toHaveLength(0);
+  },
+};
+
+/** Keyboard focus reaches the row (mock `.role:hover,.role:focus-visible`
+ * paint the same background this scoped stylesheet declares — the pseudo-
+ * classes themselves aren't exercisable through synthetic pointer/focus
+ * events in a real browser, so this checks what a play test safely can:
+ * the rule is present in the component's own stylesheet, and the row is
+ * keyboard-reachable). A pinned (selected) row carries the mock's 8px
+ * box-shadow extension, driven by the plain `[aria-pressed="true"]`
+ * attribute selector rather than a pseudo-class, so it is directly
+ * testable. */
+export const VerifyFocusVisibleAndPinnedStyling: Story = {
+  args: { items: ITEMS },
+  render: () => {
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    return (
+      <ArchetypeList
+        items={ITEMS}
+        selectedId={selectedId}
+        onToggle={(id) => setSelectedId((current) => (current === id ? null : id))}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const buttons = [...canvasElement.querySelectorAll('button')];
+    const firstButton = buttons[0]!;
+
+    await userEvent.tab();
+    await expect(document.activeElement).toBe(firstButton);
+
+    const styleText = canvasElement.querySelector('style')?.textContent ?? '';
+    await expect(styleText).toContain(':hover');
+    await expect(styleText).toContain(':focus-visible');
+
+    await userEvent.click(firstButton);
+    await waitFor(() => expect(getComputedStyle(firstButton).boxShadow).toContain('8px'));
   },
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { SimilarList, type SimilarListItem } from './similar-list';
 
 const QUICK_PICKS: SimilarListItem[] = [
@@ -128,5 +128,55 @@ export const VerifyListModeLinksEntities: Story = {
         '/competition/premier-league',
       ])
     );
+  },
+};
+
+/** Keyboard focus reaches a quick-pick button, and a pressed row carries
+ * the mock's 8px box-shadow extension (`.simbtn:focus-visible`,
+ * `.simbtn[aria-pressed="true"]`) — the pressed state via the plain
+ * `[aria-pressed="true"]` attribute selector, directly testable, while the
+ * hover/focus-visible pseudo-classes themselves aren't exercisable through
+ * synthetic events in a real browser, so this checks that the rule is
+ * present in the component's own stylesheet instead. */
+export const VerifyFocusVisibleAndPressedStyling: Story = {
+  args: { items: QUICK_PICKS },
+  render: () => {
+    const [comparingId, setComparingId] = useState<string | null>(null);
+    const items = QUICK_PICKS.map((item) => ({ ...item, pressed: item.id === comparingId }));
+    return (
+      <SimilarList
+        items={items}
+        onSelect={(id) => setComparingId((current) => (current === id ? null : id))}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const button = [...canvasElement.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Paixão')
+    )!;
+
+    // Paixão is the second quick pick.
+    await userEvent.tab();
+    await userEvent.tab();
+    await expect(document.activeElement).toBe(button);
+
+    const styleText = canvasElement.querySelector('style')?.textContent ?? '';
+    await expect(styleText).toContain(':hover');
+    await expect(styleText).toContain(':focus-visible');
+
+    await userEvent.click(button);
+    await waitFor(() => expect(getComputedStyle(button).boxShadow).toContain('8px'));
+  },
+};
+
+/** Entity links use the mock's muted underline (`.ent`), not the browser's
+ * default full-opacity one, and switch to `currentColor` on focus. */
+export const VerifyEntityLinkUnderlineStyle: Story = {
+  args: { items: SIMILAR_PLAYERS },
+  play: async ({ canvasElement }) => {
+    const link = canvasElement.querySelector('a[href="/team/fulham"]') as HTMLElement;
+    const style = getComputedStyle(link);
+    await expect(style.textDecorationLine).toContain('underline');
+    await expect(style.textDecorationColor).toBe('rgba(255, 255, 255, 0.28)');
   },
 };

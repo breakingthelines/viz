@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useId, type CSSProperties, type ReactNode } from 'react';
 import type { EntityLink } from './types';
 
 /**
@@ -57,7 +57,7 @@ function ContextLine({
   if (context.team) {
     parts.push(
       linkable && context.team.href ? (
-        <a key="team" href={context.team.href} style={{ color: 'inherit' }}>
+        <a key="team" href={context.team.href} className="btl-sl-ent" style={{ color: 'inherit' }}>
           {context.team.label}
         </a>
       ) : (
@@ -68,7 +68,12 @@ function ContextLine({
   if (context.competition) {
     parts.push(
       linkable && context.competition.href ? (
-        <a key="competition" href={context.competition.href} style={{ color: 'inherit' }}>
+        <a
+          key="competition"
+          href={context.competition.href}
+          className="btl-sl-ent"
+          style={{ color: 'inherit' }}
+        >
           {context.competition.label}
         </a>
       ) : (
@@ -101,7 +106,7 @@ function RowContent({ item, nameAsLink }: RowContentProps) {
       <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: WHITE }}>
           {nameAsLink && item.href ? (
-            <a href={item.href} style={{ color: 'inherit' }}>
+            <a href={item.href} className="btl-sl-ent" style={{ color: 'inherit' }}>
               {item.name}
             </a>
           ) : (
@@ -124,50 +129,93 @@ function RowContent({ item, nameAsLink }: RowContentProps) {
   );
 }
 
+// The reset (`all: unset`) and the hover/focus-visible/pressed backgrounds
+// below live in the scoped stylesheet, not inline: an inline style always
+// wins over a stylesheet rule regardless of selector specificity, so an
+// inline `all: unset` would permanently cancel this button's own
+// `:hover`/`:focus-visible`/`[aria-pressed="true"]` CSS rules. Only the
+// layout values that never need to respond to interaction state stay here.
 const rowStyle: CSSProperties = {
-  all: 'unset',
-  boxSizing: 'border-box',
-  width: '100%',
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1fr) auto',
   gap: 12,
   alignItems: 'center',
   padding: '10px 0',
   borderTop: `1px solid ${LINE}`,
-  cursor: 'pointer',
 };
 
 export function SimilarList({ items, onSelect }: SimilarListProps) {
+  const scopeClass = `btl-sl-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontFamily: 'Inter, sans-serif' }}>
-      {items.map((item) =>
-        onSelect ? (
-          <li key={item.id}>
-            <button
-              type="button"
-              aria-pressed={!!item.pressed}
-              onClick={() => onSelect(item.id)}
-              style={rowStyle}
+    <div className={scopeClass}>
+      <style>{`
+        .${scopeClass} .btl-sl-row {
+          all: unset;
+          box-sizing: border-box;
+          width: 100%;
+          cursor: pointer;
+          background: transparent;
+          transition: background 0.15s;
+        }
+        .${scopeClass} .btl-sl-row:hover,
+        .${scopeClass} .btl-sl-row:focus-visible {
+          background: rgba(255, 255, 255, 0.04);
+          box-shadow: -8px 0 0 rgba(255, 255, 255, 0.04), 8px 0 0 rgba(255, 255, 255, 0.04);
+          outline: none;
+        }
+        .${scopeClass} .btl-sl-row[aria-pressed="true"] {
+          background: rgba(255, 255, 255, 0.07);
+          box-shadow: -8px 0 0 rgba(255, 255, 255, 0.07), 8px 0 0 rgba(255, 255, 255, 0.07);
+        }
+        .${scopeClass} .btl-sl-ent {
+          color: inherit;
+          text-decoration: underline;
+          text-decoration-color: rgba(255, 255, 255, 0.28);
+          text-underline-offset: 3px;
+          text-decoration-thickness: 1px;
+        }
+        .${scopeClass} .btl-sl-ent:hover,
+        .${scopeClass} .btl-sl-ent:focus-visible {
+          text-decoration-color: currentColor;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .${scopeClass} .btl-sl-row {
+            transition: none;
+          }
+        }
+      `}</style>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontFamily: 'Inter, sans-serif' }}>
+        {items.map((item) =>
+          onSelect ? (
+            <li key={item.id}>
+              <button
+                type="button"
+                className="btl-sl-row"
+                aria-pressed={!!item.pressed}
+                onClick={() => onSelect(item.id)}
+                style={rowStyle}
+              >
+                <RowContent item={item} nameAsLink={false} />
+              </button>
+            </li>
+          ) : (
+            <li
+              key={item.id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gap: 12,
+                alignItems: 'center',
+                padding: '10px 0',
+                borderTop: `1px solid ${LINE}`,
+              }}
             >
-              <RowContent item={item} nameAsLink={false} />
-            </button>
-          </li>
-        ) : (
-          <li
-            key={item.id}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) auto',
-              gap: 12,
-              alignItems: 'center',
-              padding: '10px 0',
-              borderTop: `1px solid ${LINE}`,
-            }}
-          >
-            <RowContent item={item} nameAsLink />
-          </li>
-        )
-      )}
-    </ul>
+              <RowContent item={item} nameAsLink />
+            </li>
+          )
+        )}
+      </ul>
+    </div>
   );
 }

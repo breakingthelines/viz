@@ -13,12 +13,15 @@ import { formatMetricValue, formatPercentile } from './format';
  * appended whenever the caller passes one (typically only when the two
  * seasons differ).
  *
- * The mock paints these bars at two flat colours (`#eb0000` / `rgba(255,255,255,.78)`)
- * rather than the percentile ramp; this component uses the ramp instead, per
- * spec §4.1's "red ramp for the subject, white ramp for the other" — the one
- * place this build intentionally departs from the mock's own CSS, so a weak
- * value on either side reads as quieter than a strong one, as it does on the
- * wheel and the per-90 rows.
+ * The bars themselves ramp exactly as the mock's own `drawBars` does: its
+ * flat-looking `.h2h .ht.l i{background:#eb0000}` / `.ht.r i{background:
+ * rgba(255,255,255,.78)}` CSS is overridden inline by `colour(a)` /
+ * `colourW(b)` — the same ramp this component calls through `ramp()` — so
+ * there is no departure here. The value *text*, though, stays flat per the
+ * mock's `.hv b{color:#fff}` / `.hr.win-l .hv.l b{color:#eb0000}` /
+ * `.hr.win-r .hv.r b{color:#fff}`: only the left (subject) value turns red
+ * when it is the stronger side; the right (comparison) value is always
+ * white.
  */
 
 export interface ComparisonBarsRow {
@@ -73,7 +76,11 @@ interface SideValueProps {
 }
 
 function SideValue({ value, percentile, unit, side, stronger, align }: SideValueProps) {
-  const colour = ramp(percentile, side);
+  // The value text is flat, not ramped (mock: `.hv b{color:#fff}`,
+  // `.hr.win-l .hv.l b{color:#eb0000}`, `.hr.win-r .hv.r b{color:#fff}`):
+  // only the left/subject side ever turns red, and only when it is the
+  // stronger side. The right/comparison side is always white.
+  const textColour = side === 'subject' && stronger ? '#eb0000' : '#ffffff';
   return (
     <span
       style={{
@@ -87,7 +94,7 @@ function SideValue({ value, percentile, unit, side, stronger, align }: SideValue
       <b
         style={{
           fontSize: 14,
-          color: stronger ? colour : '#ffffff',
+          color: textColour,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
@@ -123,6 +130,7 @@ function SideBar({ percentile, side, fillFrom }: SideBarProps) {
       }}
     >
       <span
+        className="btl-cb-fill"
         style={{
           position: 'absolute',
           top: 0,
@@ -174,6 +182,14 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
             font-size: 11px;
           }
         }
+        .${scopeClass} .btl-cb-fill {
+          transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .${scopeClass} .btl-cb-fill {
+            transition: none;
+          }
+        }
       `}</style>
       <div
         style={{
@@ -214,7 +230,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
                   unit={row.unit}
                   side="subject"
                   stronger={leftStronger}
-                  align="right"
+                  align="left"
                 />
                 <SideBar percentile={leftP} side="subject" fillFrom="right" />
                 <span
@@ -230,7 +246,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
                   unit={row.unit}
                   side="comparison"
                   stronger={rightStronger}
-                  align="left"
+                  align="right"
                 />
               </div>
             );

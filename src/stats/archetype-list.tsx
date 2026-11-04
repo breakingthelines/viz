@@ -1,4 +1,4 @@
-import { useMemo, type KeyboardEvent } from 'react';
+import { useId, useMemo, type CSSProperties } from 'react';
 import { ramp } from '../brand/colour';
 import { formatPercentile } from './format';
 
@@ -18,7 +18,18 @@ import { formatPercentile } from './format';
  * clicking the same one again deselects it (`onToggle` — this component is
  * controlled, so the caller owns `selectedId` and decides whether a second
  * click clears it, matching the mock's own pin/unpin toggle). Enter and
- * Space act the same as a click, on every row including muted ones.
+ * Space act the same as a click, on every interactive row.
+ *
+ * A row is interactive only when `onToggle` is passed: a value row then
+ * renders as a real `<button>` inside its `<li>` (never `role="button"` on
+ * the `<li>` itself, which breaks the `aria-allowed-role` and `list` axe
+ * rules) with the percentile folded into its accessible name through
+ * `aria-describedby` rather than overriding it with `aria-label`, so a
+ * screen reader still hears the rank. Event-only (`pending`/`locked`) rows
+ * and, when the caller passes no `onToggle` (for example a read-only
+ * Overview `compact` card), value rows too, render as plain, non-tabbable
+ * list items — the mock's own `role-ev` rows carry no `tabindex` and no
+ * handlers either.
  */
 
 export interface ArchetypeListItem {
@@ -70,44 +81,26 @@ interface RowProps {
   item: ArchetypeListItem;
   selected: boolean;
   compact: boolean;
+  interactive: boolean;
   onHover?: (id: string | null) => void;
   onToggle?: (id: string) => void;
 }
 
-function Row({ item, selected, compact, onHover, onToggle }: RowProps) {
+function Row({ item, selected, compact, interactive, onHover, onToggle }: RowProps) {
   const isEventOnly = item.state !== 'value';
   const percentile = item.percentile;
   const colour = ramp(percentile, 'subject');
+  const descId = useId();
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onToggle?.(item.id);
-    }
+  const gridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: compact ? '90px minmax(0, 1fr) 48px' : '110px minmax(0, 1fr) 56px',
+    alignItems: 'center',
+    gap: 14,
   };
 
-  return (
-    <li
-      role="button"
-      tabIndex={0}
-      aria-pressed={selected}
-      aria-label={item.metricLabels ? `${item.name}, ${item.metricLabels}` : item.name}
-      onMouseEnter={() => onHover?.(item.id)}
-      onMouseLeave={() => onHover?.(null)}
-      onClick={() => onToggle?.(item.id)}
-      onKeyDown={handleKeyDown}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: compact ? '90px minmax(0, 1fr) 48px' : '110px minmax(0, 1fr) 56px',
-        alignItems: 'center',
-        gap: 14,
-        padding: compact ? '7px 0' : '10px 0',
-        borderTop: `1px solid ${LINE}`,
-        cursor: 'pointer',
-        background: selected ? 'rgba(255, 255, 255, 0.07)' : 'transparent',
-        outline: 'none',
-      }}
-    >
+  const content = (
+    <>
       <span
         style={{
           fontSize: compact ? 13 : 14,
@@ -133,13 +126,13 @@ function Row({ item, selected, compact, onHover, onToggle }: RowProps) {
           }}
         >
           <span
+            className="btl-al-fill"
             style={{
               position: 'absolute',
               inset: '0 auto 0 0',
               width: `${percentile ?? 0}%`,
               background: colour,
               borderRadius: 3,
-              transition: 'width 350ms, background 350ms',
             }}
           />
         </span>
@@ -156,6 +149,71 @@ function Row({ item, selected, compact, onHover, onToggle }: RowProps) {
       >
         {isEventOnly ? '' : formatPercentile(percentile)}
       </span>
+    </>
+  );
+
+  // Read out for screen readers via `aria-describedby` on the interactive
+  // button only — never `aria-label`, which would replace the button's
+  // accessible name and drop the percentile a sighted user sees.
+  const description = item.metricLabels ? (
+    <span
+      id={descId}
+      style={{
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+      }}
+    >
+      {item.metricLabels}
+    </span>
+  ) : null;
+
+  // Event-only rows, and value rows when the caller passes no `onToggle`
+  // (a read-only placement such as the Overview `compact` card), are plain,
+  // non-interactive list items — never tabbable, never a button (spec §4.2,
+  // mock's own untabbable `role-ev` rows).
+  if (!interactive) {
+    return (
+      <li
+        className="btl-al-row"
+        style={{
+          ...gridStyle,
+          padding: compact ? '7px 0' : '10px 0',
+          borderTop: `1px solid ${LINE}`,
+        }}
+      >
+        {content}
+      </li>
+    );
+  }
+
+  return (
+    <li className="btl-al-row btl-al-interactive" style={{ borderTop: `1px solid ${LINE}` }}>
+      {/* The reset (`all: unset`) and the pressed/hover/focus-visible
+       * backgrounds below live in the scoped stylesheet, not inline:
+       * an inline style always wins over a stylesheet rule regardless of
+       * selector specificity, so an inline `all: unset` would permanently
+       * cancel this button's own `:hover`/`:focus-visible`/
+       * `[aria-pressed="true"]` CSS rules. Only the genuinely per-item
+       * layout values (grid columns, padding) stay inline. */}
+      <button
+        type="button"
+        className="btl-al-btn"
+        aria-pressed={selected}
+        aria-describedby={item.metricLabels ? descId : undefined}
+        onMouseEnter={() => onHover?.(item.id)}
+        onMouseLeave={() => onHover?.(null)}
+        onClick={() => onToggle?.(item.id)}
+        style={{
+          ...gridStyle,
+          padding: compact ? '7px 0' : '10px 0',
+        }}
+      >
+        {content}
+        {description}
+      </button>
     </li>
   );
 }
@@ -168,9 +226,39 @@ export function ArchetypeList({
   compact = false,
 }: ArchetypeListProps) {
   const ordered = useMemo(() => orderedItems(items), [items]);
+  const scopeClass = `btl-al-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter, sans-serif' }}>
+    <div
+      className={scopeClass}
+      style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter, sans-serif' }}
+    >
+      <style>{`
+        .${scopeClass} .btl-al-btn {
+          all: unset;
+          box-sizing: border-box;
+          width: 100%;
+          cursor: pointer;
+          background: transparent;
+        }
+        .${scopeClass} .btl-al-btn:hover,
+        .${scopeClass} .btl-al-btn:focus-visible {
+          background: rgba(255, 255, 255, 0.04);
+          outline: none;
+        }
+        .${scopeClass} .btl-al-btn[aria-pressed="true"] {
+          background: rgba(255, 255, 255, 0.07);
+          box-shadow: -8px 0 0 rgba(255, 255, 255, 0.07), 8px 0 0 rgba(255, 255, 255, 0.07);
+        }
+        .${scopeClass} .btl-al-fill {
+          transition: width 0.35s, background 0.35s;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .${scopeClass} .btl-al-fill {
+            transition: none;
+          }
+        }
+      `}</style>
       {!compact && (
         <h3 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 600, color: WHITE }}>
           Archetypes
@@ -183,6 +271,7 @@ export function ArchetypeList({
             item={item}
             selected={selectedId === item.id}
             compact={compact}
+            interactive={item.state === 'value' && !!onToggle}
             onHover={onHover}
             onToggle={onToggle}
           />
