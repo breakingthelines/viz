@@ -5,6 +5,28 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added: `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
+
+`@breakingthelines/viz/brand`: `BtlMark`, `Wordmark`, `ChartWatermark`,
+`PanelSignature` (pure SVG, so they compose inside an SVG chart — the player
+profile wheel's centre mark, a watermark painted behind a chart's data), the
+percentile colour ramp `ramp(p, target)` (muted grey up to full BTL red at
+the 90th percentile for the subject, full white for a comparison player —
+geometry taken verbatim from the approved player-profile mock,
+`scratchpad/prof/wheel2.py`), and `SocialFrame` / `useSocialFrameExport`, the
+shared 1080x1350 social-card shell every profile panel will export through,
+built on the existing `useImageSave`.
+
+Also added an empty `./stats` subpath barrel, reserved for the player-profile
+stat charts (`PercentileWheel`, `ComparisonBars`, `PercentileRows`,
+`ArchetypeList`, `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`)
+landing in later rounds.
+
+No version bump: this round (PF-V1) only adds the brand primitives and the
+reserved subpath; the release lands with PF-V4 (viz 0.17.0).
+
 ## [0.16.1]
 
 ### Fixed: crests and Line breaking hover headshots load in any cache order
