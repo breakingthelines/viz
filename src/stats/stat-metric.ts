@@ -27,8 +27,12 @@ export interface StatMetric {
   median: number | null;
   state: MetricState;
   /**
-   * The key archetypes focus this metric by, when it differs from `key`
-   * (for example a possession-adjusted variant focused through its base key).
+   * The registry's `focus_key`: the wheel metric this one highlights as,
+   * when it differs from `key`. Set on a variant that is never on the wheel,
+   * for example `tkl_padj` with `focusKey: 'tkl'`; wheel metrics such as
+   * `tkl` and `int` leave it unset. Charts match a focused key against
+   * `focusKey ?? key`, so callers resolve an archetype's metric keys through
+   * the registry before passing them as `focusKeys`.
    */
   focusKey?: string;
 }

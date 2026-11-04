@@ -55,12 +55,23 @@ export interface PercentileWheelProps {
   ariaLabel: string;
   comparison?: PercentileWheelComparison | null;
   /**
-   * Metrics to highlight, matched against `focusKey ?? key` (an archetype's
-   * metrics, say). Hover, tap and keyboard focus take over while active.
+   * Wheel metric keys to highlight, for example an archetype's
+   * `ListArchetypeFits.focus_keys`. These must already be resolved through
+   * the registry's `focus_key` (`tkl_padj` and `int_padj` arrive as `tkl`
+   * and `int`): a key matches a metric whose `key` or `focusKey` equals it,
+   * and an unresolved `tkl_padj` matches nothing on the wheel. When no key
+   * matches, nothing dims. Hover, tap and keyboard focus take over while
+   * active.
    */
   focusKeys?: string[] | null;
   /** Called with the metric `key` on hover, tap or keyboard focus, and with `null` when it ends. */
   onFocus?: (key: string | null) => void;
+  /**
+   * Announce the focused metric from the wheel's own polite live region.
+   * Pass `false` when the caller's readout is the live region (the Stats
+   * panel, spec §4.2), so a screen reader does not hear each move twice.
+   */
+  announce?: boolean;
   /** `social` is the export card: static, long labels, no interaction. */
   variant?: 'web' | 'social';
   /** Grow-in on mount. Always off under reduced motion. */
@@ -146,10 +157,23 @@ function cmpPercentile(
   return p !== null && p !== undefined && Number.isFinite(p) ? Math.round(p) : null;
 }
 
+/** A value as the readout shows it: two decimals per 90, a whole number with % for a rate. */
+function formatMetricValue(v: number, unit: StatMetric['unit']): string {
+  return unit === 'percent' ? `${Math.round(v)}%` : v.toFixed(2);
+}
+
+const finite = (v: number | null): v is number => v !== null && Number.isFinite(v);
+
 function describe(m: StatMetric, comparison: PercentileWheelComparison | null | undefined): string {
   if (isEvent(m)) return `${m.label}, event data`;
-  if (!hasValue(m)) return `${m.label}, no data`;
-  let text = `${m.label}, ${ordinal(Math.round(m.percentile))} percentile`;
+  let text = m.label;
+  if (hasValue(m)) {
+    if (finite(m.value)) text += `, ${formatMetricValue(m.value, m.unit)}`;
+    text += `, ${ordinal(Math.round(m.percentile))} percentile`;
+    if (finite(m.median)) text += `, median ${formatMetricValue(m.median, m.unit)}`;
+  } else {
+    text += ', no data';
+  }
   const c = cmpPercentile(comparison, m.key);
   if (comparison && c !== null) text += `; ${comparison.name}, ${ordinal(c)}`;
   return text;
@@ -166,11 +190,12 @@ export function PercentileWheel({
   animate = true,
   labels = 'auto',
   surface = '#151515',
+  announce = true,
 }: PercentileWheelProps) {
   const interactive = variant === 'web';
   const layout = useMemo(() => layoutWheel(metrics, groupOrder), [metrics, groupOrder]);
   const [active, setActive] = useState<string | null>(null);
-  const [announce, setAnnounce] = useState('');
+  const [liveText, setLiveText] = useState('');
   const lastPointer = useRef<string>('mouse');
 
   const activate = useCallback(
@@ -187,9 +212,12 @@ export function PercentileWheel({
     if (active) return new Set([active]);
     if (!focusKeys || focusKeys.length === 0) return null;
     const wanted = new Set(focusKeys);
-    return new Set(
-      metrics.filter((m) => wanted.has(m.focusKey ?? m.key) || wanted.has(m.key)).map((m) => m.key)
+    const lit = new Set(
+      metrics.filter((m) => wanted.has(m.key) || wanted.has(m.focusKey ?? m.key)).map((m) => m.key)
     );
+    // Keys that are all off the wheel (an archetype built on event metrics
+    // this league lacks, say) must not dim every wedge.
+    return lit.size > 0 ? lit : null;
   }, [active, focusKeys, metrics]);
   const on = (key: string) => (onKeys?.has(key) ? ' btl-pw-on' : '');
 
@@ -207,14 +235,14 @@ export function PercentileWheel({
     else if (e.key === 'Escape' && active) {
       e.preventDefault();
       activate(null);
-      setAnnounce('');
+      setLiveText('');
       return;
     }
     if (next === null) return;
     e.preventDefault();
     const m = order[next];
     activate(m.key);
-    setAnnounce(describe(m, comparison));
+    setLiveText(describe(m, comparison));
   };
 
   const onHitEnter = (key: string) => (e: PointerEvent<SVGPathElement>) => {
@@ -299,7 +327,7 @@ export function PercentileWheel({
       })}
       <g data-overlay={comparison ? comparison.name : undefined}>
         {layout.slices
-          .filter((s) => hasValue(s.metric))
+          .filter((s) => !isEvent(s.metric))
           .map((s) => {
             const c = cmpPercentile(comparison, s.metric.key);
             return (
@@ -389,7 +417,7 @@ export function PercentileWheel({
           </text>
         );
       })}
-      {layout.labels.map((L, i) => {
+      {layout.shortLabels.map((L, i) => {
         const m = layout.slices[i].metric;
         return (
           <text
@@ -440,7 +468,7 @@ export function PercentileWheel({
         interactive
           ? () => {
               if (active) activate(null);
-              setAnnounce('');
+              setLiveText('');
             }
           : undefined
       }
@@ -460,9 +488,11 @@ export function PercentileWheel({
               <li key={m.key}>{describe(m, comparison)}</li>
             ))}
           </ul>
-          <span aria-live="polite" style={SR_ONLY}>
-            {announce}
-          </span>
+          {announce && (
+            <span aria-live="polite" style={SR_ONLY}>
+              {liveText}
+            </span>
+          )}
         </>
       )}
     </div>

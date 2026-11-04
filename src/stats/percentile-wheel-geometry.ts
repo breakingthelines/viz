@@ -25,8 +25,14 @@ export const RADIUS_FLOOR = 3;
 export const INSIDE_FROM = 32;
 /** Labels sit on this radius before collision handling. */
 export const LABEL_RADIUS = OUTER_RADIUS + 16;
-/** Minimum vertical distance between two labels on the same side. */
+/** Minimum vertical distance between two long labels on the same side (12.5 px text). */
 export const LABEL_SPACING = 16;
+/** Short labels are drawn at this size, for narrow screens. */
+export const SHORT_LABEL_SIZE = 22;
+/** Minimum vertical distance between two short labels that overlap horizontally: the tallest line box a 22 px label measures in the browser (29) plus 1. */
+export const SHORT_LABEL_SPACING = 30;
+/** Short labels never sit lower than this baseline, so the bottom row stays inside the view box. */
+const SHORT_LABEL_MAX_Y = WHEEL_HEIGHT - 8;
 /** Hit areas reach this far past the outer radius, so the label region is hoverable too. */
 export const HIT_OVERREACH = 30;
 
@@ -86,7 +92,81 @@ export interface WheelLabel {
 
 export interface WheelLayout {
   slices: WheelSlice[];
+  /** Long labels, placed exactly as the mock places them. */
   labels: WheelLabel[];
+  /** Short labels, placed with their own spacing (see `layoutShortLabels`). */
+  shortLabels: WheelLabel[];
+}
+
+/**
+ * Generous width estimate for a short label at `SHORT_LABEL_SIZE` (Inter
+ * semibold averages under 0.6 em a character), so a collision is never missed.
+ */
+export function shortLabelWidth(text: string): number {
+  return text.length * SHORT_LABEL_SIZE * 0.64;
+}
+
+/** Horizontal extent of a label from its anchor point. */
+export function labelExtent(L: WheelLabel, width: number): [number, number] {
+  const x0 = L.anchor === 'start' ? L.x : L.anchor === 'end' ? L.x - width : L.x - width / 2;
+  return [x0, x0 + width];
+}
+
+function labelSide(am: number): 'r' | 'l' | 'm' {
+  const c = Math.cos((am * Math.PI) / 180);
+  return c > 0.08 ? 'r' : c < -0.08 ? 'l' : 'm';
+}
+
+function labelAt(slice: WheelSlice): { x: number; y: number; side: 'r' | 'l' | 'm' } {
+  const [x, y] = polar(LABEL_RADIUS, slice.am);
+  const side = labelSide(slice.am);
+  const dy = side === 'm' ? 8 * Math.sin((slice.am * Math.PI) / 180) : 0;
+  return { x, y: y + 4 + dy, side };
+}
+
+const ANCHOR = { r: 'start', l: 'end', m: 'middle' } as const;
+
+/**
+ * Short-label placement for narrow screens. The mock's 16-unit spacing was
+ * sized for 12.5 px long labels and never checks the top and bottom
+ * (middle-anchored) labels, so 22 px short labels collide on a crowded wheel.
+ * Here every label, middle ones included, is checked against every label it
+ * overlaps horizontally: top to bottom, a label closer than
+ * `SHORT_LABEL_SPACING` to one above it moves down; then, if the lowest row
+ * has run past the view box, bottom to top, the same rule moves labels up.
+ */
+export function layoutShortLabels(slices: WheelSlice[]): WheelLabel[] {
+  const items = slices.map((s) => {
+    const at = labelAt(s);
+    const L: WheelLabel = { key: s.metric.key, x: at.x, y: at.y, anchor: ANCHOR[at.side] };
+    return { L, span: labelExtent(L, shortLabelWidth(s.metric.shortLabel)) };
+  });
+  type Item = (typeof items)[number];
+  const across = (a: Item, b: Item) => a.span[0] < b.span[1] && b.span[0] < a.span[1];
+  // `dir` 1 moves labels down, -1 moves them up. Repeats until no label
+  // moves, so a label moved past one neighbour is checked against the rest.
+  const separate = (dir: 1 | -1) => {
+    const list = [...items].sort((p, q) => dir * (p.L.y - q.L.y));
+    for (let pass = 0; pass < list.length; pass++) {
+      let moved = false;
+      for (let j = 1; j < list.length; j++) {
+        for (let i = 0; i < j; i++) {
+          const gap = dir * (list[j].L.y - list[i].L.y);
+          if (across(list[i], list[j]) && gap < SHORT_LABEL_SPACING) {
+            list[j].L.y = list[i].L.y + dir * SHORT_LABEL_SPACING;
+            moved = true;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+  };
+  separate(1);
+  if (items.some((it) => it.L.y > SHORT_LABEL_MAX_Y)) {
+    for (const it of items) it.L.y = Math.min(it.L.y, SHORT_LABEL_MAX_Y);
+    separate(-1);
+  }
+  return items.map((it) => it.L);
 }
 
 /**
@@ -109,7 +189,7 @@ export function layoutWheel(metrics: StatMetric[], groupOrder: string[]): WheelL
     .map((x) => x.m);
 
   const n = ordered.length;
-  if (n === 0) return { slices: [], labels: [] };
+  if (n === 0) return { slices: [], labels: [], shortLabels: [] };
   const span = (360 - order.length * GROUP_GAP) / n;
 
   const slices: WheelSlice[] = [];
@@ -124,13 +204,8 @@ export function layoutWheel(metrics: StatMetric[], groupOrder: string[]): WheelL
     a += span;
   });
 
-  const placed = slices.map((s) => {
-    const [x, y] = polar(LABEL_RADIUS, s.am);
-    const c = Math.cos((s.am * Math.PI) / 180);
-    const side: 'r' | 'l' | 'm' = c > 0.08 ? 'r' : c < -0.08 ? 'l' : 'm';
-    const dy = side === 'm' ? 8 * Math.sin((s.am * Math.PI) / 180) : 0;
-    return { key: s.metric.key, x, y: y + 4 + dy, side };
-  });
+  // Long labels: the mock's own placement, kept exact for the golden test.
+  const placed = slices.map((s) => ({ key: s.metric.key, ...labelAt(s) }));
   for (const side of ['r', 'l'] as const) {
     const column = placed.filter((L) => L.side === side).sort((p, q) => p.y - q.y);
     for (let j = 1; j < column.length; j++) {
@@ -139,9 +214,9 @@ export function layoutWheel(metrics: StatMetric[], groupOrder: string[]): WheelL
       }
     }
   }
-  const anchor = { r: 'start', l: 'end', m: 'middle' } as const;
   return {
     slices,
-    labels: placed.map(({ key, x, y, side }) => ({ key, x, y, anchor: anchor[side] })),
+    labels: placed.map(({ key, x, y, side }) => ({ key, x, y, anchor: ANCHOR[side] })),
+    shortLabels: layoutShortLabels(slices),
   };
 }
