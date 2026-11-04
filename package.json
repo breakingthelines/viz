@@ -17,6 +17,8 @@
   "imports": {
     "#/lib/*": "./src/lib/*",
     "#/components/*": "./src/components/*",
+    "#/brand/*": "./src/brand/*",
+    "#/stats/*": "./src/stats/*",
     "#/football/*": "./src/football/*",
     "#/generated/*": "./src/generated/*",
     "#/utils/*": "./src/utils/*",
@@ -59,6 +61,14 @@
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
+    },
+    "./brand": {
+      "types": "./dist/brand/index.d.ts",
+      "import": "./dist/brand/index.js"
+    },
+    "./stats": {
+      "types": "./dist/stats/index.d.ts",
+      "import": "./dist/stats/index.js"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
