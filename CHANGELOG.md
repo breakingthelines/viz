@@ -7,7 +7,46 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Added: `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
+## [0.17.0]
+
+### Added: `./stats` subpath — `FormChart`, `SeasonLines`, `LeagueLadder`
+
+`@breakingthelines/viz/stats` ships its first three player-profile stat
+charts (spec §4.1, `profile-spec.md`), pixel-matched to the approved mock
+(`scratchpad/prof/`):
+
+- **`FormChart`** — the Overview form strip: rating bars on the rating ramp
+  (`ratingColour`), goal/assist marks, opponent and result rows, paging
+  earlier/later through the loaded matches in steps of 5 (default window
+  10), a date range and window stats (average rating, goals, assists,
+  minutes) computed from whatever is currently visible. Paging past the
+  oldest loaded match calls `onOlder` instead of running out of data, so a
+  host can keep fetching further back across seasons (mock:
+  `prof/page2.py:form_chart` and its JS at `page2.py:365-384`).
+- **`SeasonLines`** — per-90 output by season as one or more lines, each
+  point labelled, season labels carrying a club-and-minutes caption. A
+  `null` value breaks a series' line for that season rather than
+  interpolating across the gap or drawing a zero (2023/2024 pass accuracy
+  and similar rates are frequently absent — spec §1.5). Generalised beyond
+  the mock's fixed two-series, fixed-`ymax` chart (`prof/build.py:seasons_chart`)
+  so the entity-agnostic compare engine's later team/manager templates (spec
+  §3.6) can reuse it.
+- **`LeagueLadder`** — the league-strength ladder in "Next move": index
+  bars with the subject's own league picked out in red and bold (mock:
+  `prof/nextmove.py:ladder`). Takes an optional `renderName` render prop so
+  a host can route a league's name through its own link component (e.g. a
+  router `Link`) instead of a plain anchor, on top of the plain `href` every
+  other chart in this subpath uses.
+
+All three render a faint `ChartWatermark` behind their data (`FormChart`,
+`SeasonLines`) per spec §4.4; copy follows `btl-copy-register` (no hint
+lines, no em dashes, no mono fonts).
+
+`PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList` and
+`SimilarList` (PF-V2/PF-V3) are not in this release; they add their own
+exports to `./stats` as each lands.
+
+### Added (PF-V1): `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
 
 `@breakingthelines/viz/brand`: `BtlMark`, `Wordmark`, `ChartWatermark`,
 `PanelSignature` (pure SVG, so they compose inside an SVG chart — the player
@@ -18,14 +57,6 @@ geometry taken verbatim from the approved player-profile mock,
 `scratchpad/prof/wheel2.py`), and `SocialFrame` / `useSocialFrameExport`, the
 shared 1080x1350 social-card shell every profile panel will export through,
 built on the existing `useImageSave`.
-
-Also added an empty `./stats` subpath barrel, reserved for the player-profile
-stat charts (`PercentileWheel`, `ComparisonBars`, `PercentileRows`,
-`ArchetypeList`, `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`)
-landing in later rounds.
-
-No version bump: this round (PF-V1) only adds the brand primitives and the
-reserved subpath; the release lands with PF-V4 (viz 0.17.0).
 
 ## [0.16.1]
 

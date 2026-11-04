@@ -3,10 +3,19 @@
  * `PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
  * `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`.
  *
- * Empty for now. The subpath and this barrel exist so PF-V2 to PF-V4 land
- * their components here without a package-exports change; they add their
- * exports to this file as each one ships. `@breakingthelines/viz/brand`
- * (mark, wordmark, watermark, signature, the percentile colour ramp,
- * `SocialFrame`) already ships from PF-V1.
+ * PF-V4 lands `FormChart`, `SeasonLines` and `LeagueLadder` here. The rest
+ * (`PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
+ * `SimilarList`, from PF-V2/PF-V3) add their own exports as each ships.
+ * `@breakingthelines/viz/brand` (mark, wordmark, watermark, signature, the
+ * percentile colour ramp, `SocialFrame`) already ships from PF-V1.
  */
-export {};
+export { FormChart } from './form-chart';
+export type { FormChartMatch, FormChartProps } from './form-chart';
+
+export { SeasonLines } from './season-lines';
+export type { SeasonLinesProps, SeasonLinesSeason, SeasonLinesSeries } from './season-lines';
+
+export { LeagueLadder } from './league-ladder';
+export type { LeagueLadderProps, LeagueLadderRow } from './league-ladder';
+
+export type { EntityLink } from './types';
