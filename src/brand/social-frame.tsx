@@ -1,21 +1,36 @@
-import { type ReactNode, useRef } from 'react';
+import { forwardRef, type ReactNode, useRef } from 'react';
 import { useImageSave } from '#/components/use-image-save';
-import { ChartWatermark, PanelSignature } from './wordmark';
+import { Wordmark } from './wordmark';
 
 /**
  * The shared social-card shell every profile panel exports through (spec
- * §4.1, §4.4): a fixed-aspect frame carrying a title, a subtitle, an
- * optional context line, the panel's own content, a faint watermark behind
- * it, the full-strength signature bottom-right, and a footer.
+ * §4.1, §4.4, `board_social` — `scratchpad/prof/build.py:372-388`): a
+ * fixed-aspect frame carrying a header (photo, title, subtitle, a
+ * full-strength wordmark top right), an optional context line, the panel's
+ * own content, a divider, and a footer.
  *
- * Laid out at 540 x 675 CSS px and captured at `scale: 2` through the
- * existing `useImageSave` (`#/components/use-image-save`), giving the
- * 1080 x 1350 export every panel shares. `format` is a forward-looking knob
- * for a future size (e.g. a square card); only `'1080x1350'` ships now.
+ * Laid out at HALF of `board_social`'s own numbers (that board ships at
+ * 1080x1350; this frame is captured at `scale: 2` to reach the same output
+ * size — see `useSocialFrameExport` below), so every measurement here is the
+ * mock's divided by two: 32px padding (64), a 52px round photo (104), a
+ * 26px/700 title (52), an 11px muted subtitle (22), a 20px-tall wordmark
+ * (40, inside the mock's own 64px-tall mark group) and a 9px muted footer
+ * (18). The mock's chart-level watermark is NOT repeated at the frame level
+ * — `ChartWatermark` already renders inside whatever chart a caller passes
+ * as `children` (spec §4.4), so a frame-level one would double it.
+ *
+ * Captured through the existing `useImageSave` (`#/components/use-image-save`),
+ * giving the 1080 x 1350 export every panel shares. `format` is a
+ * forward-looking knob for a future size (e.g. a square card); only
+ * `'1080x1350'` ships now.
  */
 
-const FRAME_WIDTH = 540;
-const FRAME_HEIGHT = 675;
+/** The frame's CSS-px size, exported so a test can capture at this exact size without duplicating the number. */
+export const FRAME_WIDTH = 540;
+export const FRAME_HEIGHT = 675;
+
+const MUTED = '#a29e9e';
+const LIGHT = '#d9d6d6';
 
 export interface SocialFrameProps {
   /** The panel's own title (spec §4.4: the panel title). */
@@ -32,8 +47,6 @@ export interface SocialFrameProps {
   children: ReactNode;
   /** Export size. Only one ships now. */
   format?: '1080x1350';
-  /** File name (without extension) used when saving. Defaults to a slug of `title`. */
-  fileName?: string;
 }
 
 function slugify(s: string): string {
@@ -76,15 +89,16 @@ export function useSocialFrameExport(fileName: string): UseSocialFrameExportResu
   return { ref, save, overlay, saving };
 }
 
-export function SocialFrame({
-  title,
-  subtitle,
-  imageUrl,
-  context,
-  footer = 'breakingthelines.com',
-  children,
-  ref,
-}: SocialFrameProps & { ref?: React.Ref<HTMLDivElement> }) {
+/**
+ * `forwardRef`, not a plain `ref` prop: the peer range is `^18 || ^19`, and a
+ * plain `ref` prop only forwards automatically on React 19. On React 18 it
+ * is silently dropped — `useSocialFrameExport`'s `ref.current` stays `null`
+ * and `save()` no-ops with no error.
+ */
+export const SocialFrame = forwardRef<HTMLDivElement, SocialFrameProps>(function SocialFrame(
+  { title, subtitle, imageUrl, context, footer = 'breakingthelines.com', children },
+  ref
+) {
   return (
     <div
       ref={ref}
@@ -94,62 +108,55 @@ export function SocialFrame({
         position: 'relative',
         width: FRAME_WIDTH,
         height: FRAME_HEIGHT,
-        background: '#151515',
+        background: '#0d0d0d',
         color: '#ffffff',
         fontFamily: 'Inter, sans-serif',
+        fontVariantNumeric: 'tabular-nums',
         display: 'flex',
         flexDirection: 'column',
-        padding: 28,
+        gap: 14,
+        padding: 32,
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
     >
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <ChartWatermark width={FRAME_WIDTH} height={FRAME_HEIGHT} />
-      </div>
-
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 14 }}>
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt=""
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              flexShrink: 0,
-            }}
-          />
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>{title}</div>
-          <div style={{ fontSize: 13, color: '#a29e9e' }}>{subtitle}</div>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt=""
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.2 }}>{title}</div>
+            <div style={{ fontSize: 11, color: MUTED }}>{subtitle}</div>
+          </div>
         </div>
+        <Wordmark height={20} markFill="#E20613" />
       </div>
 
-      {context && (
-        <div style={{ position: 'relative', fontSize: 12, color: '#a29e9e', marginTop: 10 }}>
-          {context}
-        </div>
-      )}
+      {context && <div style={{ fontSize: 10, color: LIGHT }}>{context}</div>}
 
-      <div style={{ position: 'relative', flex: 1, marginTop: 16, display: 'flex', minHeight: 0 }}>
-        {children}
-      </div>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>{children}</div>
 
       <div
         style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 16,
+          borderTop: '1px solid rgba(255,255,255,0.12)',
+          paddingTop: 9,
         }}
       >
-        <span style={{ fontSize: 11, color: '#a29e9e' }}>{footer}</span>
-        <PanelSignature />
+        <span style={{ fontSize: 9, color: MUTED }}>{footer}</span>
       </div>
     </div>
   );
-}
+});

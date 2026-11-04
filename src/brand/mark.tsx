@@ -25,11 +25,33 @@ export interface BtlMarkProps {
   size: number;
   /** Fill colour. Defaults to the BTL brand red. */
   fill?: string;
+  /**
+   * `false` when the mark is the only thing identifying something — e.g.
+   * standalone brand use — so it needs an accessible name. Defaults to
+   * `true`: most placements (the wheel's centre, a decorative flourish)
+   * already sit inside their own labelled container, and the mock marks
+   * this mark `aria-hidden="true"` (`mark_g`, `scratchpad/prof/wheel2.py`).
+   */
+  decorative?: boolean;
 }
 
-export function BtlMark({ size, fill = '#E20613' }: BtlMarkProps) {
+export function BtlMark({ size, fill = '#E20613', decorative = true }: BtlMarkProps) {
   const height = (size * MARK_HEIGHT) / MARK_WIDTH;
   const titleId = useId();
+  if (decorative) {
+    return (
+      <svg
+        width={size}
+        height={height}
+        viewBox={`0 0 ${MARK_WIDTH} ${MARK_HEIGHT}`}
+        aria-hidden
+        focusable="false"
+      >
+        <path d={MARK_L} fill={fill} />
+        <path d={MARK_R} fill={fill} />
+      </svg>
+    );
+  }
   return (
     <svg
       width={size}

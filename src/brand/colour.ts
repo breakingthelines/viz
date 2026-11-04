@@ -46,7 +46,23 @@ function toHex(channel: number): string {
  */
 export function ramp(p: number | null, target: 'subject' | 'comparison'): string {
   const to = target === 'subject' ? SUBJECT_TARGET : COMPARISON_TARGET;
-  const t = clamp01((p ?? 0) / FULL_STRENGTH_PERCENTILE) ** EXPONENT;
+  // A non-finite p (NaN, from §3.5's server-side null-as-NaN convention, or
+  // from a proto JSON "NaN" string parsed into a number) is treated the same
+  // as `null` — the base grey — rather than producing an invalid colour
+  // (`#NaNNaNNaN`). `p ?? 0` alone does not catch this: `??` only substitutes
+  // on `null`/`undefined`, and `NaN` is neither.
+  const safeP = p !== null && Number.isFinite(p) ? p : 0;
+  const t = clamp01(safeP / FULL_STRENGTH_PERCENTILE) ** EXPONENT;
   const [r, g, b] = BASE.map((base, i) => base + (to[i] - base) * t);
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Maps a match rating (roughly 0-10) to the subject ramp colour (mock:
+ * `rating_colour`, `scratchpad/prof/page2.py:46`): clamps `(r - 6) / 2` to
+ * `0..1` and scales it to `0..90` before ramping, so a rating of 6 or below
+ * sits at the base grey and 8 or above reaches full BTL red.
+ */
+export function ratingColour(r: number): string {
+  return ramp(clamp01((r - 6) / 2) * FULL_STRENGTH_PERCENTILE, 'subject');
 }

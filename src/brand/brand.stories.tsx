@@ -29,8 +29,36 @@ export const WordmarkDefault: Story = {
 
 export const Watermark: Story = {
   render: () => (
-    <div style={{ background: '#151515', width: 480, height: 240, position: 'relative' }}>
-      <ChartWatermark width={480} height={240} />
+    <div style={{ background: '#151515', width: 480, height: 240 }}>
+      <svg width={480} height={240} viewBox="0 0 480 240">
+        <ChartWatermark cx={240} cy={120} />
+      </svg>
+    </div>
+  ),
+};
+
+/**
+ * Centred on the form chart's own plot area (`prof/page2.py:169`), at the
+ * mock's fixed mark height of 56 — not scaled to the viewport, which is how
+ * a 720x488 wheel or a 680x230 form chart previously overflowed.
+ */
+export const WatermarkFormChart: Story = {
+  render: () => (
+    <div style={{ background: '#151515', width: 680, height: 230 }}>
+      <svg width={680} height={230} viewBox="0 0 680 230">
+        <ChartWatermark cx={340} cy={102} />
+      </svg>
+    </div>
+  ),
+};
+
+/** Centred on a 720x488 wheel-sized viewport, at the same fixed mark height. */
+export const WatermarkWheel: Story = {
+  render: () => (
+    <div style={{ background: '#151515', width: 720, height: 488 }}>
+      <svg width={720} height={488} viewBox="0 0 720 488">
+        <ChartWatermark cx={360} cy={244} />
+      </svg>
     </div>
   ),
 };

@@ -116,30 +116,35 @@ export function Wordmark({ height, fill = '#ffffff', markFill, opacity = 1 }: Wo
 }
 
 export interface ChartWatermarkProps {
-  /** Chart viewport width. */
-  width: number;
-  /** Chart viewport height. */
-  height: number;
+  /** Centre x of the watermark, in the chart's own coordinate space — the
+   * plot area's centre, not necessarily the full SVG's (mock: `prof/page2.py`
+   * `form_chart` centres on the 680x230 plot area at `(340, 102)`; `prof/build.py`
+   * `board_social`'s seasons chart centres on `(W / 2, (Hh - B + T) / 2)`, not
+   * the chart's full height). */
+  cx: number;
+  /** Centre y of the watermark, same coordinate space as `cx`. */
+  cy: number;
+  /**
+   * Mark height. Defaults to 56 — the mock's fixed watermark size, used
+   * verbatim for both the 680x230 form chart (`prof/page2.py:169`) and the
+   * 1060x250 Seasons chart (`prof/build.py:238`); it does not scale with the
+   * chart's own size.
+   */
+  markHeight?: number;
 }
 
 /**
- * A faint wordmark, centred behind a chart's data (spec §4.4: "a faint
- * wordmark sits behind every chart"). Fixed at opacity 0.14, as the mock.
- * Render first in a chart's SVG so the data paints over it.
+ * A faint wordmark, centred on a point a caller chooses — typically a
+ * chart's plot area, not its full viewport (spec §4.4: "a faint wordmark
+ * sits behind every chart"). Fixed at opacity 0.14, as the mock.
+ *
+ * Renders a plain `<g>`, not its own `<svg>`, so a caller composes it
+ * directly inside the chart's existing SVG (mock: `wordmark_g` inserted as
+ * one more element of the chart's own markup) — render it first so the
+ * chart's data paints over it.
  */
-export function ChartWatermark({ width, height }: ChartWatermarkProps) {
-  const h = Math.min(width, height) * 0.5;
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden
-      focusable="false"
-    >
-      <WordmarkGroup cx={width / 2} cy={height / 2} h={h} fill="#ffffff" opacity={0.14} />
-    </svg>
-  );
+export function ChartWatermark({ cx, cy, markHeight = 56 }: ChartWatermarkProps) {
+  return <WordmarkGroup cx={cx} cy={cy} h={markHeight} fill="#ffffff" opacity={0.14} />;
 }
 
 /** Fixed size of the panel signature (mock: `panel_mark`, viewBox `0 0 120 36`, rendered 62x19). */
@@ -153,19 +158,21 @@ const SIGNATURE_VIEWBOX_HEIGHT = 36;
  * any screenshot or crop still carries the brand (spec §4.4). Fixed size —
  * position it with the panel's own layout (e.g. a flex row ending in
  * `justify-end`), the same way the mock does.
+ *
+ * `aria-hidden`, like the mock's `panel_mark` (`aria-hidden="true"`): it
+ * repeats on every panel (about 20 on a player page) and would otherwise
+ * have a screen reader announce "Breaking The Lines" that many times.
  */
 export function PanelSignature() {
-  const titleId = useId();
-  const h = SIGNATURE_VIEWBOX_HEIGHT * 0.72;
+  const h = SIGNATURE_VIEWBOX_HEIGHT;
   return (
     <svg
       width={SIGNATURE_WIDTH}
       height={SIGNATURE_HEIGHT}
       viewBox={`0 0 ${SIGNATURE_VIEWBOX_WIDTH} ${SIGNATURE_VIEWBOX_HEIGHT}`}
-      role="img"
-      aria-labelledby={titleId}
+      aria-hidden
+      focusable="false"
     >
-      <title id={titleId}>Breaking The Lines</title>
       <WordmarkGroup
         cx={SIGNATURE_VIEWBOX_WIDTH / 2}
         cy={SIGNATURE_VIEWBOX_HEIGHT / 2}
