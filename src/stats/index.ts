@@ -3,10 +3,26 @@
  * `PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
  * `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`.
  *
- * Empty for now. The subpath and this barrel exist so PF-V2 to PF-V4 land
- * their components here without a package-exports change; they add their
- * exports to this file as each one ships. `@breakingthelines/viz/brand`
- * (mark, wordmark, watermark, signature, the percentile colour ramp,
- * `SocialFrame`) already ships from PF-V1.
+ * PF-V3 ships `ComparisonBars`, `PercentileRows`, `ArchetypeList` and
+ * `SimilarList`, plus the shared types and formatting every block in this
+ * subpath uses. The rest land here the same way as each of PF-V2 and PF-V4
+ * ships. `@breakingthelines/viz/brand` (mark, wordmark, watermark,
+ * signature, the percentile colour ramp, `SocialFrame`) already ships from
+ * PF-V1.
  */
-export {};
+
+export { ComparisonBars } from './comparison-bars';
+export type { ComparisonBarsProps, ComparisonBarsRow } from './comparison-bars';
+
+export { PercentileRows } from './percentile-rows';
+export type { PercentileRowsProps } from './percentile-rows';
+
+export { ArchetypeList } from './archetype-list';
+export type { ArchetypeListProps, ArchetypeListItem } from './archetype-list';
+
+export { SimilarList } from './similar-list';
+export type { SimilarListProps, SimilarListItem } from './similar-list';
+
+export { ordinal, formatMetricValue, formatPercentile } from './format';
+
+export type { EntityLink, MetricState, StatMetric } from './types';
