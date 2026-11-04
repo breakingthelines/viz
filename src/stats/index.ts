@@ -9,4 +9,4 @@
  * (mark, wordmark, watermark, signature, the percentile colour ramp,
  * `SocialFrame`) already ships from PF-V1.
  */
-export {};
+export * from './percentile-wheel';
