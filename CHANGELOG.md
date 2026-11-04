@@ -40,11 +40,25 @@ charts (spec §4.1, `profile-spec.md`), pixel-matched to the approved mock
 
 All three render a faint `ChartWatermark` behind their data (`FormChart`,
 `SeasonLines`) per spec §4.4; copy follows `btl-copy-register` (no hint
-lines, no em dashes, no mono fonts).
+lines, no em dashes, no mono fonts). Both render bare by default — a
+`framed` prop opts into the card-style border, so a host panel that already
+supplies its own card chrome does not get a card inside a card.
+`FormChart`'s bars switch the chart's `<svg>` from `role="img"` to
+`role="group"` whenever any bar links, so a keyboard user's focus lands on
+an accessible name (date, result, rating, G/A), not a presentational
+image's single label; `SeasonLines` carries the same values as a visually
+hidden table, and both take an `ariaLabel` override.
 
-`PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList` and
-`SimilarList` (PF-V2/PF-V3) are not in this release; they add their own
-exports to `./stats` as each lands.
+`PercentileWheel` (PF-V2, #84) and `ComparisonBars`/`PercentileRows`/
+`ArchetypeList`/`SimilarList` (PF-V3, #86) ship their own `./stats` exports
+from their own PRs, each with "no version bump: the release lands with
+PF-V4". That makes this PR's merge order load-bearing: #84 and #86 merge
+first, this branch rebases onto both (`src/stats/types.ts` is an add/add
+conflict between #85 and #86 — keep #86's, the superset — and
+`src/stats/index.ts` combines all eight exports), and only then does this
+0.17.0 entry get amended to cover all eight blocks and the version actually
+ships. Until that rebase happens, this entry and the `0.17.0` tag describe
+only `FormChart`, `SeasonLines` and `LeagueLadder`.
 
 ### Added (PF-V1): `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
 

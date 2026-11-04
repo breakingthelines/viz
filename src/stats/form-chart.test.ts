@@ -3,6 +3,8 @@ import {
   clampWindowEnd,
   computeWindowStats,
   formatWindowRange,
+  formBarAccessibleName,
+  formChartBarWidth,
   formChartGridValues,
   goalAssistMarker,
   type FormChartMatch,
@@ -92,5 +94,52 @@ describe('formatWindowRange', () => {
       match({ id: 'b', date: '2 Nov 2026' }),
     ]);
     expect(range).toBe('8 Sep 2026 to 2 Nov 2026');
+  });
+});
+
+describe('formChartBarWidth', () => {
+  it('divides the plot width by the window size, not by how many matches are loaded', () => {
+    // Mock: `bw = (W - L*2) / n`, W=680, L=8, n the window size.
+    expect(formChartBarWidth(10)).toBeCloseTo((680 - 16) / 10, 5);
+  });
+
+  it('grows the bars when the window itself is smaller', () => {
+    expect(formChartBarWidth(3)).toBeCloseTo((680 - 16) / 3, 5);
+  });
+});
+
+describe('formBarAccessibleName', () => {
+  it('carries the date, opponent, result, rating and G/A — not just result and opponent', () => {
+    const name = formBarAccessibleName(
+      match({
+        id: 'a',
+        date: '8 Sep 2026',
+        opponent: { label: 'AZ' },
+        result: 'W',
+        score: '2-1',
+        venue: 'H',
+        rating: 7.4,
+        goals: 1,
+        assists: 1,
+      })
+    );
+    expect(name).toContain('8 Sep 2026');
+    expect(name).toContain('Won 2-1 vs AZ');
+    expect(name).toContain('home');
+    expect(name).toContain('rating 7.4');
+    expect(name).toContain('1 goal');
+    expect(name).toContain('1 assist');
+  });
+
+  it('omits goal/assist mentions when there are none', () => {
+    const name = formBarAccessibleName(match({ id: 'a', goals: 0, assists: 0 }));
+    expect(name).not.toContain('goal');
+    expect(name).not.toContain('assist');
+  });
+
+  it('pluralises more than one goal or assist', () => {
+    const name = formBarAccessibleName(match({ id: 'a', goals: 2, assists: 3 }));
+    expect(name).toContain('2 goals');
+    expect(name).toContain('3 assists');
   });
 });

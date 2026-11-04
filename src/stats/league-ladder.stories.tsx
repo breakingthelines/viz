@@ -47,6 +47,18 @@ export const OwnLeagueOutsideTheTop: Story = {
   },
 };
 
+/** The mock's `.ent` underline (`prof/wheel2.py:546-547`) is the only visible mark that a name links anywhere, since the default anchor otherwise renders with no underline at all. */
+export const LinksAreUnderlined: Story = {
+  name: 'The default anchor carries the mock underline, not a bare link',
+  args: { rows: ROWS.slice(0, 3) },
+  play: async ({ canvasElement }) => {
+    const anchor = canvasElement.querySelector('a');
+    const style = anchor ? getComputedStyle(anchor) : undefined;
+    expect(style?.textDecorationLine).toContain('underline');
+    expect(style?.textUnderlineOffset).toBe('3px');
+  },
+};
+
 export const NoResolvedLeagues: Story = {
   name: 'Unresolved provider ids render as plain text',
   args: { rows: ROWS.map(({ href: _href, ...row }) => row) },

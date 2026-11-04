@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { cn } from '#/lib/utils';
 import { ChartWatermark } from '../brand/wordmark';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
@@ -23,6 +24,10 @@ export interface SeasonLinesSeries {
 export interface SeasonLinesProps {
   seasons: SeasonLinesSeason[];
   series: SeasonLinesSeries[];
+  /** Overrides the svg's `aria-label` (default "Per 90 output by season"). Set this to describe what the series actually hold when a caller reuses the chart for a different metric pair. */
+  ariaLabel?: string;
+  /** Wraps the chart in its own card chrome (border, background, margin, padding). Defaults to `false` so a host panel that already supplies card chrome does not get a card inside a card. */
+  framed?: boolean;
 }
 
 /** Viewbox + layout, taken verbatim from the mock (`prof/build.py:seasons_chart`). */
@@ -31,7 +36,9 @@ const VB_H = 250;
 const PAD_T = 28;
 const PAD_B = 52;
 const PAD_L = 40;
-const PAD_L_EXTRA = 70;
+/** How far right of `PAD_L` the first data point sits, and how far short of `VB_W` the last one sits (mock: `L + 70 + i * (W - L - 160) / (n-1)`, so the data span runs from `PAD_L + 70` to `VB_W - 90`, inside the wider gridline span of `PAD_L` to `VB_W - PAD_R`). */
+const DATA_LEFT_INSET = 70;
+const DATA_RIGHT_INSET = 90;
 const PAD_R = 12;
 const WATERMARK_CX = VB_W / 2;
 const WATERMARK_CY = (VB_H - PAD_B + PAD_T) / 2;
@@ -40,26 +47,68 @@ const SUBJECT_COLOUR = '#eb0000';
 const SECONDARY_COLOUR = '#d9d6d6';
 const MUTED = '#a29e9e';
 const WHITE = '#ffffff';
-const GRID_STEP = 1;
 
-/**
- * A "nice" axis ceiling: the smallest multiple of {@link GRID_STEP} strictly
- * above the largest value, with a floor so a near-empty series still gets a
- * readable axis (mock: a fixed `ymax = 4.0`; this generalises it to whatever
- * data a caller passes, including a future team/manager template).
- */
-export function seasonLinesYMax(series: SeasonLinesSeries[]): number {
+function largestValue(series: SeasonLinesSeries[]): number {
   let max = 0;
   for (const s of series) for (const v of s.values) if (v !== null && v > max) max = v;
-  if (max <= 0) return GRID_STEP * 4;
-  return (Math.floor(max / GRID_STEP) + 1) * GRID_STEP;
+  return max;
 }
 
-/** Gridline values from 0 to `yMax` inclusive, one per {@link GRID_STEP}. */
-export function seasonLinesGridValues(yMax: number): number[] {
+/**
+ * A "nice" gridline step (1/2/5 x 10^k) for roughly 4-5 ticks over
+ * `[0, target]`, so a per-90 rate (small, fractional) and a per-90-minutes
+ * count in the dozens both get a readable axis rather than one gridline per
+ * integer.
+ */
+function niceStep(target: number): number {
+  const rough = target / 4;
+  if (rough <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const fraction = rough / magnitude;
+  const nice = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+  return nice * magnitude;
+}
+
+/**
+ * The gridline step for this data (mock: a fixed step of 1, for its
+ * `ymax = 4.0`; this generalises it — see {@link niceStep} — so a team or
+ * manager template with a different scale still gets 4-5 gridlines rather
+ * than, say, one per unit across a 0-62 per-90-minutes count).
+ */
+export function seasonLinesGridStep(series: SeasonLinesSeries[]): number {
+  return niceStep(Math.max(4, largestValue(series)));
+}
+
+/**
+ * A "nice" axis ceiling: the smallest multiple of {@link seasonLinesGridStep}
+ * strictly above the largest value, with a floor of 4 so a near-empty
+ * series still gets the mock's own axis (mock: a fixed `ymax = 4.0`; this
+ * generalises it to whatever data a caller passes, including a future
+ * team/manager template).
+ */
+export function seasonLinesYMax(series: SeasonLinesSeries[]): number {
+  const target = Math.max(4, largestValue(series));
+  const step = niceStep(target);
+  return Math.ceil(target / step) * step;
+}
+
+/** Gridline values from 0 to `yMax` inclusive, one per `step`. */
+export function seasonLinesGridValues(yMax: number, step: number = 1): number[] {
   const out: number[] = [];
-  for (let v = 0; v <= yMax + 1e-9; v += GRID_STEP) out.push(Number(v.toFixed(2)));
+  for (let v = 0; v <= yMax + 1e-9; v += step) out.push(Number(v.toFixed(2)));
   return out;
+}
+
+/**
+ * The x position of the `i`th of `n` data points (mock:
+ * `L + 70 + i * (W - L - 160) / (n-1)`). A single point centres in the full
+ * data span rather than landing at its left edge.
+ */
+export function seasonLinesXFor(i: number, n: number): number {
+  const dataLeft = PAD_L + DATA_LEFT_INSET;
+  const dataRight = VB_W - DATA_RIGHT_INSET;
+  if (n <= 1) return (dataLeft + dataRight) / 2;
+  return finite(dataLeft + (i * (dataRight - dataLeft)) / (n - 1), dataLeft);
 }
 
 /**
@@ -97,16 +146,24 @@ function colourFor(role: SeasonLinesSeries['role']): string {
  * A `null` value breaks that series' line for that season rather than
  * drawing a zero or interpolating across the gap. A faint wordmark sits
  * behind the data (spec §4.4).
+ *
+ * Renders bare by default — `framed` opts into the card-style border that
+ * earlier shipped unconditionally, which doubled up with a host panel that
+ * already supplies its own card chrome.
  */
-export function SeasonLines({ seasons, series }: SeasonLinesProps) {
+export function SeasonLines({
+  seasons,
+  series,
+  ariaLabel = 'Per 90 output by season',
+  framed = false,
+}: SeasonLinesProps) {
   const uid = useId();
   const yMax = seasonLinesYMax(series);
-  const plotLeft = PAD_L + PAD_L_EXTRA;
-  const plotRight = VB_W - PAD_R;
-  const plotWidth = plotRight - plotLeft;
+  const gridStep = seasonLinesGridStep(series);
+  const gridLeft = PAD_L;
+  const gridRight = VB_W - PAD_R;
   const n = seasons.length;
-  const xFor = (i: number): number =>
-    n <= 1 ? (plotLeft + plotRight) / 2 : finite(plotLeft + (i * plotWidth) / (n - 1), plotLeft);
+  const xFor = (i: number): number => seasonLinesXFor(i, n);
   const baselineY = VB_H - PAD_B;
   const yFor = (v: number): number =>
     finite(PAD_T + (baselineY - PAD_T) * (1 - v / yMax), baselineY);
@@ -115,7 +172,10 @@ export function SeasonLines({ seasons, series }: SeasonLinesProps) {
     <figure
       data-slot="season-lines"
       style={{ fontFamily: BLOCK_FONT_STACK }}
-      className="my-6 flex flex-col gap-3 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4"
+      className={cn(
+        'flex flex-col gap-3',
+        framed && 'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4'
+      )}
     >
       <div className="flex flex-wrap gap-4">
         {series.map((s) => (
@@ -136,23 +196,23 @@ export function SeasonLines({ seasons, series }: SeasonLinesProps) {
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         role="img"
-        aria-label="Per 90 output by season"
+        aria-label={ariaLabel}
         className="block w-full"
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         <ChartWatermark cx={WATERMARK_CX} cy={WATERMARK_CY} />
 
-        {seasonLinesGridValues(yMax).map((v) => (
+        {seasonLinesGridValues(yMax, gridStep).map((v) => (
           <g key={`grid-${v}`}>
             <line
-              x1={plotLeft}
-              x2={plotRight}
+              x1={gridLeft}
+              x2={gridRight}
               y1={yFor(v)}
               y2={yFor(v)}
               stroke="white"
               strokeOpacity={v === 0 ? 0.12 : 0.06}
             />
-            <text x={plotLeft - 10} y={yFor(v) + 4} textAnchor="end" fontSize={11} fill={MUTED}>
+            <text x={gridLeft - 10} y={yFor(v) + 4} textAnchor="end" fontSize={11} fill={MUTED}>
               {v}
             </text>
           </g>
@@ -209,6 +269,32 @@ export function SeasonLines({ seasons, series }: SeasonLinesProps) {
           </g>
         ))}
       </svg>
+
+      <table className="sr-only">
+        <caption>{ariaLabel}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Season</th>
+            <th scope="col">Club and minutes</th>
+            {series.map((s) => (
+              <th key={s.label} scope="col">
+                {s.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {seasons.map((season, i) => (
+            <tr key={season.label}>
+              <th scope="row">{season.label}</th>
+              <td>{season.caption}</td>
+              {series.map((s) => (
+                <td key={s.label}>{s.values[i] === null ? 'No data' : s.values[i]?.toFixed(2)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </figure>
   );
 }

@@ -34,6 +34,10 @@ const WHITE = '#ffffff';
 const LIGHT = '#d9d6d6';
 const LINE = 'rgba(255,255,255,0.08)';
 
+/** The mock's `.ent` link style (`prof/wheel2.py:546-547`): a muted underline that goes full colour on hover and focus, the only visible mark that a name links anywhere. */
+const ENTITY_LINK_CLASS =
+  'underline [text-decoration-color:rgba(255,255,255,0.28)] [text-underline-offset:3px] [text-decoration-thickness:1px] hover:[text-decoration-color:currentColor] focus-visible:[text-decoration-color:currentColor]';
+
 /** Clamp a league index into a sane bar width — the index is a 0-100 scale already, but a future rating version could in principle push past 100. */
 export function leagueLadderBarWidth(index: number): number {
   return Math.min(100, Math.max(0, Number.isFinite(index) ? index : 0));
@@ -57,7 +61,7 @@ export function LeagueLadder({ rows, renderName }: LeagueLadderProps) {
       {rows.map((row) => {
         const own = Boolean(row.highlight);
         const defaultNode: ReactNode = row.href ? (
-          <a href={row.href} style={{ color: own ? WHITE : LIGHT }}>
+          <a href={row.href} className={ENTITY_LINK_CLASS} style={{ color: own ? WHITE : LIGHT }}>
             {row.name}
           </a>
         ) : (

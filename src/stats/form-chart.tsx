@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
 import { ratingColour } from '../brand/colour';
 import { ChartWatermark } from '../brand/wordmark';
@@ -15,7 +15,7 @@ import type { EntityLink } from './types';
  */
 export interface FormChartMatch {
   id: string;
-  /** Already formatted for display (mock: `dfmt(date, true)`, e.g. "8 Sep"). */
+  /** Already formatted for display (mock: `dfmt(date, true)`, e.g. "8 Sep 2026"). */
   date: string;
   opponent: EntityLink;
   result: 'W' | 'D' | 'L';
@@ -48,10 +48,14 @@ export interface FormChartProps {
   step?: number;
   /** Rating axis domain. Mock default [5, 10]. */
   yDomain?: [number, number];
+  /** The rating whose gridline draws brighter (mock: fixed at 7, the rating where its colour ramp starts warming). Default 7. */
+  emphasisRating?: number;
   /** True when the host can load matches earlier than `matches[0]`. */
   hasOlder?: boolean;
   /** Requests earlier matches (the host prepends them and keeps the same visual position — spec: "pages back through every rated match", across seasons). */
   onOlder?: () => void;
+  /** Wraps the chart in its own card chrome (border, background, margin, padding). Defaults to `false` so a host panel that already supplies card chrome does not get a card inside a card. */
+  framed?: boolean;
 }
 
 /** Viewbox + layout, taken verbatim from the mock (`prof/page2.py:form_chart`, JS at `page2.py:365-384`). */
@@ -67,6 +71,8 @@ const WATERMARK_CY = 102;
 const DEFAULT_WINDOW = 10;
 const DEFAULT_STEP = 5;
 const DEFAULT_Y_DOMAIN: [number, number] = [5, 10];
+/** The rating where the mock's brighter gridline sits (mock: `v === 7 ? 0.12 : 0.05`) — not `yDomain[0] + 1`, which only happens to equal 7 for the default `[5, 10]` domain. */
+const DEFAULT_EMPHASIS_RATING = 7;
 
 const MUTED = '#a29e9e';
 const WHITE = '#ffffff';
@@ -93,6 +99,17 @@ export function clampWindowEnd(total: number, end: number, windowSize: number): 
   return Math.min(total, Math.max(windowSize, end));
 }
 
+/**
+ * A bar's width, over the whole window size rather than however many
+ * matches currently fill it (mock: `bw = (W - L*2) / n`, `n` the window
+ * size). With fewer loaded matches than a full window, the bars stay the
+ * same width and sit flush left, with empty room to their right, rather
+ * than growing to fill the gap.
+ */
+export function formChartBarWidth(windowSize: number): number {
+  return (VB_W - PAD_L * 2) / windowSize;
+}
+
 /** The "G"/"A" marker string for a bar (mock: `Array(g+1).join('G')+Array(a+1).join('A')`, i.e. `g` G's then `a` A's). */
 export function goalAssistMarker(goals: number, assists: number): string {
   return 'G'.repeat(Math.max(0, goals)) + 'A'.repeat(Math.max(0, assists));
@@ -115,7 +132,7 @@ export function computeWindowStats(matches: FormChartMatch[]): {
   };
 }
 
-/** "8 Sep to 2 Nov 2026" — the dates of the first and last visible match (mock: `.frange`). */
+/** "8 Sep 2026 to 2 Nov 2026" — the dates of the first and last visible match (mock: `.frange`). */
 export function formatWindowRange(matches: FormChartMatch[]): string {
   if (matches.length === 0) return '';
   const first = matches[0]?.date ?? '';
@@ -124,6 +141,26 @@ export function formatWindowRange(matches: FormChartMatch[]): string {
 }
 
 const RESULT_LABEL: Record<FormChartMatch['result'], string> = { W: 'Won', D: 'Drew', L: 'Lost' };
+const VENUE_LABEL: Record<FormChartMatch['venue'], string> = { H: 'home', A: 'away' };
+
+/**
+ * The accessible name for one bar's link (spec §4.5/a11y): a screen reader
+ * hears the date, opponent, result, rating and goal/assist contribution —
+ * the same facts the bar's visible labels carry, since `role="img"` on the
+ * chart's `<svg>` would otherwise make a keyboard focus land on this link
+ * with no announced name beyond the chart's own title.
+ */
+export function formBarAccessibleName(match: FormChartMatch): string {
+  const parts = [
+    match.date,
+    `${RESULT_LABEL[match.result]} ${match.score} vs ${match.opponent.label}`,
+    VENUE_LABEL[match.venue],
+    `rating ${match.rating.toFixed(1)}`,
+  ];
+  if (match.goals > 0) parts.push(`${match.goals} goal${match.goals === 1 ? '' : 's'}`);
+  if (match.assists > 0) parts.push(`${match.assists} assist${match.assists === 1 ? '' : 's'}`);
+  return parts.join(', ');
+}
 
 /**
  * The Overview form strip (spec §4.1, §4.2: "last 10 rated matches as bars
@@ -140,8 +177,10 @@ export function FormChart({
   window: windowSize = DEFAULT_WINDOW,
   step = DEFAULT_STEP,
   yDomain = DEFAULT_Y_DOMAIN,
+  emphasisRating = DEFAULT_EMPHASIS_RATING,
   hasOlder = false,
   onOlder,
+  framed = false,
 }: FormChartProps) {
   // Tracked as "how far back from the newest match" rather than an absolute
   // index, so the window stays visually put when `matches` grows at the
@@ -150,23 +189,53 @@ export function FormChart({
   // the stable quantity).
   const [offsetFromEnd, setOffsetFromEnd] = useState(0);
 
-  // A fresh subject (a different `matches` identity with fewer rows than
-  // the current offset implies, e.g. switching player) resets the window
-  // rather than rendering an empty slice.
+  // Set while a click on "Earlier matches" at the oldest loaded match is
+  // waiting for the host to prepend more (`onOlder`). Guards against a
+  // double click firing `onOlder` twice, and tells the effect below to step
+  // the window back once `matches` actually grows, rather than leaving the
+  // window parked on the same matches until a second click.
+  const [pendingOlder, setPendingOlder] = useState(false);
+
+  const newestId = matches.length > 0 ? matches[matches.length - 1]?.id : undefined;
+  const prevNewestId = useRef(newestId);
+  const prevLength = useRef(matches.length);
+
   useEffect(() => {
+    const subjectChanged = newestId !== prevNewestId.current;
+    const grew = matches.length > prevLength.current;
+    prevNewestId.current = newestId;
+    prevLength.current = matches.length;
+
+    if (subjectChanged) {
+      // A different player's matches (even one that happens to share a
+      // length) opens on the newest window rather than keeping a stale
+      // offset from whoever was shown before.
+      setOffsetFromEnd(0);
+      setPendingOlder(false);
+      return;
+    }
+    if (grew && pendingOlder) {
+      setOffsetFromEnd((prev) => Math.min(matches.length - windowSize, prev + step));
+      setPendingOlder(false);
+      return;
+    }
+    // Defensive clamp for any other length change (e.g. the host trims the
+    // array) that is not a subject switch or a pending `onOlder` response.
     setOffsetFromEnd((prev) => Math.min(prev, Math.max(0, matches.length - windowSize)));
-  }, [matches.length, windowSize]);
+  }, [newestId, matches.length, windowSize, step, pendingOlder]);
 
   const end = clampWindowEnd(matches.length, matches.length - offsetFromEnd, windowSize);
   const start = Math.max(0, end - windowSize);
   const visible = matches.slice(start, end);
 
   const atOldestLoaded = start <= 0;
-  const earlierDisabled = atOldestLoaded && !hasOlder;
+  const earlierDisabled = atOldestLoaded && (pendingOlder || !hasOlder);
   const laterDisabled = offsetFromEnd <= 0;
 
   const goEarlier = () => {
     if (atOldestLoaded) {
+      if (pendingOlder) return;
+      setPendingOlder(true);
       onOlder?.();
       return;
     }
@@ -178,14 +247,18 @@ export function FormChart({
 
   const stats = computeWindowStats(visible);
   const range = formatWindowRange(visible);
-  const barWidth = visible.length > 0 ? (VB_W - PAD_L * 2) / visible.length : 0;
+  const barWidth = formChartBarWidth(windowSize);
   const baselineY = VB_H - PAD_B;
+  const hasLinks = visible.some((m) => Boolean(m.href ?? m.opponent.href));
 
   return (
     <figure
       data-slot="form-chart"
       style={{ fontFamily: BLOCK_FONT_STACK }}
-      className="my-6 flex flex-col gap-3 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4"
+      className={cn(
+        'flex flex-col gap-3',
+        framed && 'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4'
+      )}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap gap-6">
@@ -215,7 +288,12 @@ export function FormChart({
 
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        role="img"
+        // Children are presentational to assistive tech under `role="img"` —
+        // a screen reader would announce only this label and a keyboard
+        // user's focus would land on hidden per-match links with no
+        // accessible name. `role="group"` lets each bar's own link (below)
+        // be reached and announced individually when any bar links.
+        role={hasLinks ? 'group' : 'img'}
         aria-label="Match ratings"
         className="block w-full"
         style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -229,7 +307,7 @@ export function FormChart({
             y1={ratingToY(v, yDomain)}
             y2={ratingToY(v, yDomain)}
             stroke="white"
-            strokeOpacity={v === yDomain[0] + 1 ? 0.12 : 0.05}
+            strokeOpacity={v === emphasisRating ? 0.12 : 0.05}
           />
         ))}
         {visible.map((m, i) => (
@@ -284,11 +362,12 @@ function NavButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex size-6 items-center justify-center rounded-[4px] text-white transition-opacity',
-        disabled ? 'cursor-default opacity-30' : 'opacity-100 hover:bg-white/10'
+        'flex size-6 items-center justify-center rounded-[4px] text-[#a29e9e] transition-colors',
+        'hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white',
+        disabled ? 'cursor-default opacity-30' : 'opacity-100'
       )}
     >
-      <svg width={14} height={14} viewBox="0 0 256 256" fill="currentColor" aria-hidden>
+      <svg width={16} height={16} viewBox="0 0 256 256" fill="currentColor" aria-hidden>
         <path d={d} />
       </svg>
     </button>
@@ -313,6 +392,7 @@ function FormBar({
   const cx = x + width / 2;
   const inset = Math.min(7, width / 4);
   const marker = goalAssistMarker(match.goals, match.assists);
+  const href = match.href ?? match.opponent.href;
   const bar = (
     <g data-slot="form-bar">
       <title>{match.title}</title>
@@ -346,6 +426,19 @@ function FormBar({
         fontSize={12}
         fontWeight={600}
         fill={WHITE}
+        // The mock's `.ent` underline (`wheel2.py:546-547`) is the only mark
+        // that a name links anywhere; this bar links as a whole, so the
+        // opponent name carries that same visual cue when it does.
+        style={
+          href
+            ? {
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(255,255,255,0.28)',
+                textUnderlineOffset: '3px',
+                textDecorationThickness: '1px',
+              }
+            : undefined
+        }
       >
         {match.opponent.label}
       </text>
@@ -360,13 +453,9 @@ function FormBar({
       </text>
     </g>
   );
-  const href = match.href ?? match.opponent.href;
   if (!href) return bar;
   return (
-    <a
-      href={href}
-      aria-label={`${RESULT_LABEL[match.result]} ${match.score}, vs ${match.opponent.label}`}
-    >
+    <a href={href} aria-label={formBarAccessibleName(match)}>
       {bar}
     </a>
   );
