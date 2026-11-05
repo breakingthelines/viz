@@ -7,47 +7,92 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Added: `./stats` — `ComparisonBars`, `PercentileRows`, `ArchetypeList`, `SimilarList`
+## [0.17.0]
 
-`@breakingthelines/viz/stats`: `ComparisonBars` ("Side by side" — mirrored
-bars ramping to full BTL red for the subject and full white for the compared
-player, grouped, each row's stronger value highlighted, a fixed median tick,
-names carrying a season label when the caller passes one); `PercentileRows`
-(the per-90 table rows — value, ramp bar, median tick, ordinal — with
-`pending`/`locked` event-only rows rendered dashed and muted, no number, and
-the muted "Event data" state label); `ArchetypeList` (held archetypes
-bright, the rest muted, sorted by percentile with event-only rows always
-last; click selects and pins, click again deselects, Enter/Space act the
-same, hover previews through `onHover`, all gated on `onToggle` being
-passed — a row with no toggle handler, such as a read-only `compact`
-placement, is never tabbable or hoverable); `SimilarList` (quick picks
-reading "N% similar", the one being compared against reading "On the
-wheel" — as compare buttons the name never links, as a plain list it does).
-Plus the shared `StatMetric`/`EntityLink` types and the
-`ordinal`/`formatMetricValue` formatting every block in this subpath uses.
+### Added: `./stats` subpath (the full player-profile stat chart set)
 
-No version bump: the release lands with PF-V4 (viz 0.17.0), once
-`PercentileWheel`, `FormChart`, `SeasonLines` and `LeagueLadder` also ship.
+`@breakingthelines/viz/stats` ships all eight player-profile stat charts
+(spec §4.1, `profile-spec.md`), pixel-matched to the approved mocks
+(`scratchpad/prof/`):
 
-### Added: `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
+- **`PercentileWheel`**: one wedge per metric on the rating wheel, length
+  and colour set by the metric's percentile against the shared colour ramp,
+  on a faint full-length track with a dashed median ring and the BTL mark at
+  centre. A comparison player draws as an outline wedge ramping toward
+  white. Pending and locked event metrics draw as dashed outlines with no
+  number. `focusKeys` dims every wedge but the ones an archetype calls out;
+  a `social` variant renders the static export card (mock:
+  `scratchpad/prof/wheel2.py:wheel`).
+- **`ComparisonBars`** ("Side by side"): mirrored bars ramping to full BTL
+  red for the subject and full white for the compared player, grouped, each
+  row's stronger value highlighted, a fixed median tick, names carrying a
+  season label when the caller passes one.
+- **`PercentileRows`**: the per-90 table rows, value, ramp bar, median
+  tick, ordinal, with `pending`/`locked` event-only rows rendered dashed and
+  muted, no number, and the muted "Event data" state label.
+- **`ArchetypeList`**: held archetypes bright, the rest muted, sorted by
+  percentile with event-only rows always last. Click selects and pins,
+  click again deselects, Enter/Space act the same, hover previews through
+  `onHover`, all gated on `onToggle` being passed: a row with no toggle
+  handler, such as a read-only `compact` placement, is never tabbable or
+  hoverable.
+- **`SimilarList`**: quick picks reading "N% similar", the one being
+  compared against reading "On the wheel". As compare buttons the name
+  never links; as a plain list it does.
+- **`FormChart`**: the Overview form strip, rating bars on the rating ramp
+  (`ratingColour`), goal/assist marks, opponent and result rows, paging
+  earlier/later through the loaded matches in steps of 5 (default window
+  10), a date range and window stats (average rating, goals, assists,
+  minutes) computed from whatever is currently visible. Paging past the
+  oldest loaded match calls `onOlder` instead of running out of data, so a
+  host can keep fetching further back across seasons (mock:
+  `prof/page2.py:form_chart` and its JS at `page2.py:365-384`).
+- **`SeasonLines`**: per-90 output by season as one or more lines, each
+  point labelled, season labels carrying a club-and-minutes caption. A
+  `null` value breaks a series' line for that season rather than
+  interpolating across the gap or drawing a zero (2023/2024 pass accuracy
+  and similar rates are frequently absent, spec §1.5). Generalised beyond
+  the mock's fixed two-series, fixed-`ymax` chart (`prof/build.py:seasons_chart`)
+  so the entity-agnostic compare engine's later team/manager templates (spec
+  §3.6) can reuse it.
+- **`LeagueLadder`**: the league-strength ladder in "Next move", index
+  bars with the subject's own league picked out in red and bold (mock:
+  `prof/nextmove.py:ladder`). Takes an optional `renderName` render prop so
+  a host can route a league's name through its own link component (e.g. a
+  router `Link`) instead of a plain anchor, on top of the plain `href` every
+  other chart in this subpath uses.
+
+`FormChart` and `SeasonLines` render a faint `ChartWatermark` behind their
+data per spec §4.4; copy follows `btl-copy-register` (no hint lines, no em
+dashes, no mono fonts). Both render bare by default: a `framed` prop opts
+into the card-style border, so a host panel that already supplies its own
+card chrome does not get a card inside a card. `FormChart`'s bars switch the
+chart's `<svg>` from `role="img"` to `role="group"` whenever any bar links,
+so a keyboard user's focus lands on an accessible name (date, result,
+rating, G/A), not a presentational image's single label; `SeasonLines`
+carries the same values as a visually hidden table, and both take an
+`ariaLabel` override. The subject's red is `#eb0000` for fills, strokes and
+bars throughout the subpath; red text (`SeasonLines`'s per-point value
+label) uses the brighter `#ff3b3b` instead, since `#eb0000` on the dark
+panel background fails colour contrast.
+
+Every block in this subpath shares one set of plain-data types
+(`StatMetric`, `MetricState`, `EntityLink`, `src/stats/stat-metric.ts`) and
+formatting helpers (`ordinal`, `formatMetricValue`, `formatPercentile`,
+`src/stats/format.ts`) so a host adapts its RPC response once rather than
+once per chart.
+
+### Added (PF-V1): `./brand` subpath (mark, wordmark, percentile ramp, `SocialFrame`)
 
 `@breakingthelines/viz/brand`: `BtlMark`, `Wordmark`, `ChartWatermark`,
-`PanelSignature` (pure SVG, so they compose inside an SVG chart — the player
+`PanelSignature` (pure SVG, so they compose inside an SVG chart: the player
 profile wheel's centre mark, a watermark painted behind a chart's data), the
 percentile colour ramp `ramp(p, target)` (muted grey up to full BTL red at
-the 90th percentile for the subject, full white for a comparison player —
+the 90th percentile for the subject, full white for a comparison player,
 geometry taken verbatim from the approved player-profile mock,
 `scratchpad/prof/wheel2.py`), and `SocialFrame` / `useSocialFrameExport`, the
 shared 1080x1350 social-card shell every profile panel will export through,
 built on the existing `useImageSave`.
-
-Also added an empty `./stats` subpath barrel, reserved for the player-profile
-stat charts (`PercentileWheel`, `ComparisonBars`, `PercentileRows`,
-`ArchetypeList`, `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`)
-landing in later rounds.
-
-No version bump: this round (PF-V1) only adds the brand primitives and the
-reserved subpath; the release lands with PF-V4 (viz 0.17.0).
 
 ## [0.16.1]
 
