@@ -199,12 +199,25 @@ export function FormChart({
   const newestId = matches.length > 0 ? matches[matches.length - 1]?.id : undefined;
   const prevNewestId = useRef(newestId);
   const prevLength = useRef(matches.length);
+  const prevHasOlder = useRef(hasOlder);
 
   useEffect(() => {
     const subjectChanged = newestId !== prevNewestId.current;
     const grew = matches.length > prevLength.current;
+    const hasOlderDropped = prevHasOlder.current && !hasOlder;
     prevNewestId.current = newestId;
     prevLength.current = matches.length;
+    prevHasOlder.current = hasOlder;
+
+    if (hasOlderDropped) {
+      // The host now says there is nothing further to load. Whether that
+      // is a normal "fully loaded" signal or the host's answer to a
+      // prepend that came back empty or failed, a `pendingOlder` left set
+      // would otherwise wait forever for a `matches` growth that is never
+      // coming, leaving "Earlier matches" disabled for good even though
+      // `earlierDisabled` already covers the `!hasOlder` case on its own.
+      setPendingOlder(false);
+    }
 
     if (subjectChanged) {
       // A different player's matches (even one that happens to share a
@@ -222,7 +235,7 @@ export function FormChart({
     // Defensive clamp for any other length change (e.g. the host trims the
     // array) that is not a subject switch or a pending `onOlder` response.
     setOffsetFromEnd((prev) => Math.min(prev, Math.max(0, matches.length - windowSize)));
-  }, [newestId, matches.length, windowSize, step, pendingOlder]);
+  }, [newestId, matches.length, windowSize, step, pendingOlder, hasOlder]);
 
   const end = clampWindowEnd(matches.length, matches.length - offsetFromEnd, windowSize);
   const start = Math.max(0, end - windowSize);

@@ -61,6 +61,12 @@ export const NoLink: Story = {
  * same click cycle (not a click later), a second click while the fetch is
  * "in flight" is ignored, and the caller's prepended matches let paging
  * continue (spec: "pages back through every rated match", across seasons).
+ *
+ * The prepend itself is deferred one macrotask (`setTimeout`), rather than
+ * applied synchronously inside `onOlder`, so a click fired before the host
+ * has actually prepended anything exercises the real double-click guard
+ * (`pendingOlder`) instead of merely landing on a window that has already
+ * moved off the boundary by the time the second click runs.
  */
 function PagingHarness() {
   const [earliestOffset, setEarliestOffset] = useState(20);
@@ -76,13 +82,17 @@ function PagingHarness() {
         hasOlder
         onOlder={() => {
           setOlderCalls((n) => n + 1);
-          const next = earliestOffset - 20;
-          setEarliestOffset(next);
-          // A realistically larger prepend than one window/step, so a
-          // further click after the prepend steps back within the loaded
-          // data instead of immediately hitting the oldest-loaded edge
-          // again.
-          setMatches((prev) => [...buildMatches(20, next), ...prev]);
+          // Deferred: a fetch stands in for this. Anything that checks the
+          // guard against a second click must do so before this fires.
+          setTimeout(() => {
+            const next = earliestOffset - 20;
+            setEarliestOffset(next);
+            // A realistically larger prepend than one window/step, so a
+            // further click after the prepend steps back within the loaded
+            // data instead of immediately hitting the oldest-loaded edge
+            // again.
+            setMatches((prev) => [...buildMatches(20, next), ...prev]);
+          }, 0);
         }}
       />
     </div>
@@ -97,11 +107,12 @@ export const Paging: Story = {
     const earlier = canvas.getByRole('button', { name: 'Earlier matches' });
     const later = canvas.getByRole('button', { name: 'Later matches' });
     const olderCalls = () => canvas.getByTestId('older-calls').textContent ?? '';
+    const range = () => canvas.getByText(/to/, { selector: 'span' }).textContent;
 
     // Resting on the newest window: "later" has nowhere further to go.
     expect(later).toBeDisabled();
     expect(earlier).not.toBeDisabled();
-    expect(olderCalls()).toContain('0');
+    expect(olderCalls()).toBe('onOlder calls: 0');
 
     await userEvent.click(earlier);
     expect(later, 'stepping earlier must re-enable later').not.toBeDisabled();
@@ -110,33 +121,96 @@ export const Paging: Story = {
     expect(later, 'back at the newest window, later is disabled again').toBeDisabled();
 
     // Page back to the oldest loaded match (14 loaded, window 10, step 5 —
-    // one click lands exactly on the oldest loaded match).
+    // one click lands exactly on the oldest loaded match: m20 to m29).
     await userEvent.click(earlier);
+    expect(range(), 'resting exactly on the oldest loaded window, before any prepend').toBe(
+      '21 Jan to 3 May'
+    );
 
     // A double click right at the oldest loaded match — before the host's
-    // prepend has resolved — must call `onOlder` only once, not twice.
+    // deferred prepend has resolved — must call `onOlder` only once, not
+    // twice. Both fires happen before the harness's `setTimeout` runs, so
+    // `matches` has not grown yet and the window is still parked on the
+    // boundary: this actually exercises the `pendingOlder` guard, rather
+    // than landing on a click that moved off the boundary already.
     fireEvent.click(earlier);
     fireEvent.click(earlier);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(olderCalls(), 'a double click at the boundary fires onOlder only once').toContain('1');
+    expect(
+      olderCalls(),
+      'a double click at the boundary, before the prepend resolves, fires onOlder only once'
+    ).toBe('onOlder calls: 1');
+
+    // Let the deferred prepend resolve.
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // The window moves to the newly prepended matches on this same click
     // cycle, so the visible range already reflects them without a further
-    // click.
-    const rangeAfterPrepend = canvas.getByText(/to/, { selector: 'span' }).textContent;
-    expect(
-      rangeAfterPrepend,
-      "the window shows the host's prepended matches once onOlder resolves"
-    ).toContain('Jan');
+    // click: m15 to m24.
+    expect(range(), "the window shows the host's prepended matches once onOlder resolves").toBe(
+      '16 Jan to 25 May'
+    );
 
     // One more click, now inside the newly-prepended data rather than back
     // at the boundary, steps back by `step` (5) within what is loaded —
-    // it does not call onOlder again.
+    // it does not call onOlder again: m10 to m19.
     await userEvent.click(earlier);
+    expect(range(), 'stepping within already-loaded data moves the window').toBe(
+      '11 Jan to 20 May'
+    );
+    expect(olderCalls(), 'stepping within already-loaded data does not call onOlder again').toBe(
+      'onOlder calls: 1'
+    );
+  },
+};
+
+/**
+ * A click at the oldest loaded match whose `onOlder` fetch fails: the host
+ * never prepends anything and instead flips `hasOlder` to `false`, then
+ * (say the subject's games get re-synced) back to `true` with the data
+ * still unchanged. Without clearing `pendingOlder` when `hasOlder` first
+ * drops, it would stay stuck forever and "Earlier matches" would never
+ * re-enable even once `hasOlder` says there is more to load again.
+ */
+function FailedOlderHarness() {
+  const [hasOlder, setHasOlder] = useState(true);
+  return (
+    <div>
+      <button type="button" data-testid="flip-has-older" onClick={() => setHasOlder((v) => !v)}>
+        flip hasOlder (currently {String(hasOlder)})
+      </button>
+      <FormChart matches={buildMatches(14, 20)} hasOlder={hasOlder} onOlder={() => {}} />
+    </div>
+  );
+}
+
+export const RecoversAfterFailedOlderFetch: Story = {
+  name: 'Earlier re-enables once hasOlder returns true after a failed fetch',
+  args: { matches: [] },
+  render: () => <FailedOlderHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const earlier = canvas.getByRole('button', { name: 'Earlier matches' });
+    const flip = canvas.getByTestId('flip-has-older');
+
+    // Step to the oldest loaded match (14 loaded, window 10, step 5 — one
+    // click lands exactly on it), then ask for more; the fetch never
+    // prepends anything.
+    await userEvent.click(earlier);
+    await userEvent.click(earlier);
+    expect(earlier, 'still waiting on the (failed) fetch').toBeDisabled();
+
+    // The host's fetch failed and it reports there is nothing more, for
+    // now, by dropping hasOlder.
+    await userEvent.click(flip);
+    expect(earlier, 'hasOlder is false, so there is genuinely nothing to page into').toBeDisabled();
+
+    // The host finds out there is more after all (a re-sync, a retry) and
+    // raises hasOlder again, with matches unchanged.
+    await userEvent.click(flip);
     expect(
-      olderCalls(),
-      'stepping within already-loaded data does not call onOlder again'
-    ).toContain('1');
+      earlier,
+      'hasOlder is true again: the earlier failed fetch must not leave this stuck disabled'
+    ).not.toBeDisabled();
   },
 };
 

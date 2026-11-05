@@ -47,6 +47,14 @@ const SUBJECT_COLOUR = '#eb0000';
 const SECONDARY_COLOUR = '#d9d6d6';
 const MUTED = '#a29e9e';
 const WHITE = '#ffffff';
+/**
+ * `#eb0000` is for fills and strokes only (the line, its point, the legend
+ * swatch) — as text on the chart's dark background it fails colour
+ * contrast (4.29:1, axe `color-contrast`). The subject's per-point value
+ * label uses this brighter red instead, so it stays readable without
+ * changing the line/point colour itself.
+ */
+const SUBJECT_TEXT_COLOUR = '#ff3b3b';
 
 function largestValue(series: SeasonLinesSeries[]): number {
   let max = 0;
@@ -135,6 +143,11 @@ function colourFor(role: SeasonLinesSeries['role']): string {
   return role === 'subject' ? SUBJECT_COLOUR : SECONDARY_COLOUR;
 }
 
+/** As {@link colourFor}, but for text: the subject's text reads in the brighter `#ff3b3b`, never the fill/stroke `#eb0000`. */
+function textColourFor(role: SeasonLinesSeries['role']): string {
+  return role === 'subject' ? SUBJECT_TEXT_COLOUR : SECONDARY_COLOUR;
+}
+
 /**
  * Per-90 output across seasons (spec §4.1, §4.2: "per-90 lines by season
  * with club and minutes labels"; mock `prof/build.py:seasons_chart`, which
@@ -220,6 +233,7 @@ export function SeasonLines({
 
         {series.map((s) => {
           const colour = colourFor(s.role);
+          const textColour = textColourFor(s.role);
           return (
             <g key={s.label} data-slot="season-line">
               {seasonLinesRuns(s.values).map((run, runIndex) => (
@@ -240,7 +254,7 @@ export function SeasonLines({
                       y={yFor(v) - 9}
                       textAnchor="middle"
                       fontSize={11}
-                      fill={colour}
+                      fill={textColour}
                     >
                       {v.toFixed(2)}
                     </text>
