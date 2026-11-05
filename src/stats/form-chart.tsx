@@ -4,7 +4,7 @@ import { ratingColour } from '../brand/colour';
 import { ChartWatermark } from '../brand/wordmark';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
-import type { EntityLink } from './types';
+import type { EntityLink } from './stat-metric';
 
 /**
  * One rated match in the form strip (spec §4.1; mock `prof/page2.py:form_rows`
