@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fireEvent, userEvent, within } from 'storybook/test';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { FormChart, type FormChartMatch } from './form-chart';
 
 const OPPONENTS = ['AZ', 'PSV', 'Ajax', 'Feyenoord', 'Twente', 'Utrecht', 'Sparta', 'Go Ahead'];
@@ -123,8 +123,10 @@ export const Paging: Story = {
     // Page back to the oldest loaded match (14 loaded, window 10, step 5 —
     // one click lands exactly on the oldest loaded match: m20 to m29).
     await userEvent.click(earlier);
-    expect(range(), 'resting exactly on the oldest loaded window, before any prepend').toBe(
-      '21 Jan to 3 May'
+    await waitFor(() =>
+      expect(range(), 'resting exactly on the oldest loaded window, before any prepend').toBe(
+        '21 Jan to 3 May'
+      )
     );
 
     // A double click right at the oldest loaded match — before the host's
@@ -140,22 +142,29 @@ export const Paging: Story = {
       'a double click at the boundary, before the prepend resolves, fires onOlder only once'
     ).toBe('onOlder calls: 1');
 
-    // Let the deferred prepend resolve.
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Let the deferred prepend resolve: wait for the window to actually
+    // move to the host's prepended matches, rather than a fixed delay a
+    // busier CI runner can easily outrun (the host's `setTimeout(…, 0)` is
+    // not guaranteed to fire within any particular wall-clock window).
+    await waitFor(() =>
+      expect(range(), "the window shows the host's prepended matches once onOlder resolves").toBe(
+        '16 Jan to 25 May'
+      )
+    );
 
-    // The window moves to the newly prepended matches on this same click
-    // cycle, so the visible range already reflects them without a further
-    // click: m15 to m24.
-    expect(range(), "the window shows the host's prepended matches once onOlder resolves").toBe(
-      '16 Jan to 25 May'
+    // The prepend resolving does not call onOlder a second time either.
+    expect(olderCalls(), 'the prepend resolving does not call onOlder again').toBe(
+      'onOlder calls: 1'
     );
 
     // One more click, now inside the newly-prepended data rather than back
     // at the boundary, steps back by `step` (5) within what is loaded —
     // it does not call onOlder again: m10 to m19.
     await userEvent.click(earlier);
-    expect(range(), 'stepping within already-loaded data moves the window').toBe(
-      '11 Jan to 20 May'
+    await waitFor(() =>
+      expect(range(), 'stepping within already-loaded data moves the window').toBe(
+        '11 Jan to 20 May'
+      )
     );
     expect(olderCalls(), 'stepping within already-loaded data does not call onOlder again').toBe(
       'onOlder calls: 1'
