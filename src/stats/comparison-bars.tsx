@@ -17,11 +17,14 @@ import { formatMetricValue, formatPercentile } from './format';
  * flat-looking `.h2h .ht.l i{background:#eb0000}` / `.ht.r i{background:
  * rgba(255,255,255,.78)}` CSS is overridden inline by `colour(a)` /
  * `colourW(b)` — the same ramp this component calls through `ramp()` — so
- * there is no departure here. The value *text*, though, stays flat per the
- * mock's `.hv b{color:#fff}` / `.hr.win-l .hv.l b{color:#eb0000}` /
- * `.hr.win-r .hv.r b{color:#fff}`: only the left (subject) value turns red
- * when it is the stronger side; the right (comparison) value is always
- * white.
+ * there is no departure here, and bar fills stay `#eb0000`. The value
+ * *text*, though, stays flat per the mock's `.hv b{color:#fff}` /
+ * `.hr.win-l .hv.l b{color:#eb0000}` / `.hr.win-r .hv.r b{color:#fff}`:
+ * only the left (subject) value turns red when it is the stronger side;
+ * the right (comparison) value is always white. Red text uses `#ff3b3b`,
+ * not the mock's `#eb0000` — 5.63:1 on `#090909` against `#eb0000`'s
+ * 4.29:1, the coordinator's fix for the stats blocks' `color-contrast`
+ * failures. Only fills (bars) keep `#eb0000`.
  */
 
 export interface ComparisonBarsRow {
@@ -79,8 +82,10 @@ function SideValue({ value, percentile, unit, side, stronger, align }: SideValue
   // The value text is flat, not ramped (mock: `.hv b{color:#fff}`,
   // `.hr.win-l .hv.l b{color:#eb0000}`, `.hr.win-r .hv.r b{color:#fff}`):
   // only the left/subject side ever turns red, and only when it is the
-  // stronger side. The right/comparison side is always white.
-  const textColour = side === 'subject' && stronger ? '#eb0000' : '#ffffff';
+  // stronger side. The right/comparison side is always white. Red text is
+  // `#ff3b3b` (5.63:1 on `#090909`), not the mock's `#eb0000` (4.29:1) —
+  // fills keep `#eb0000`.
+  const textColour = side === 'subject' && stronger ? '#ff3b3b' : '#ffffff';
   return (
     <span
       style={{
@@ -201,7 +206,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
           fontWeight: 700,
         }}
       >
-        <span style={{ color: '#eb0000' }}>{nameWithSeason(left)}</span>
+        <span style={{ color: '#ff3b3b' }}>{nameWithSeason(left)}</span>
         <span style={{ color: '#ffffff', textAlign: 'right' }}>{nameWithSeason(right)}</span>
       </div>
       {groups.map(({ group, rows: groupRowsForGroup }) => (

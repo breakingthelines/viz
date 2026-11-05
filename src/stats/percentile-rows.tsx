@@ -94,7 +94,6 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
         borderTop: `1px solid ${LINE}`,
         background: focused ? FOCUS_BG : 'transparent',
         boxShadow: focused ? '-8px 0 0 ' + FOCUS_BG + ', 8px 0 0 ' + FOCUS_BG : 'none',
-        transition: 'background 150ms, box-shadow 150ms',
       }}
     >
       <span style={{ fontSize: 13, color: LIGHT }}>{metric.label}</span>
@@ -140,7 +139,7 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
           style={{
             fontSize: 12,
             fontWeight: 600,
-            color: percentile !== null && percentile >= 90 ? '#eb0000' : MUTED,
+            color: percentile !== null && percentile >= 90 ? '#ff3b3b' : MUTED,
             textAlign: 'right',
             fontVariantNumeric: 'tabular-nums',
           }}
@@ -169,6 +168,9 @@ export function PercentileRows({ groups, focusKeys, onFocus }: PercentileRowsPro
       <style>{`
         .${scopeClass} .btl-pr-fill {
           transition: width 0.35s, background 0.35s;
+        }
+        .${scopeClass} .btl-pr-row {
+          transition: background 150ms, box-shadow 150ms;
         }
         @media (prefers-reduced-motion: reduce) {
           .${scopeClass} .btl-pr-fill,

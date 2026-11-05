@@ -76,6 +76,7 @@ const meta = {
   parameters: {
     layout: 'padded',
     backgrounds: { default: 'dark' },
+    a11y: { test: 'error' },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof PercentileRows>;

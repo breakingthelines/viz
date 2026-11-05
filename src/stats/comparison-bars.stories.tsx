@@ -43,6 +43,7 @@ const meta = {
   parameters: {
     layout: 'padded',
     backgrounds: { default: 'dark' },
+    a11y: { test: 'error' },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof ComparisonBars>;
@@ -102,9 +103,10 @@ export const VerifyGroupedAndNullHandling: Story = {
 /**
  * Exact-colour coverage for the stronger/weaker highlight (mock `.hv b`,
  * `.hr.win-l .hv.l b`, `.hr.win-r .hv.r b`): a stronger left value is flat
- * `#eb0000` even below the 90th percentile ramp threshold, a stronger right
- * value stays plain white (the right side never highlights), and a weaker
- * value on either side stays plain white.
+ * `#ff3b3b` (the coordinator's accessible red text, not the mock's
+ * `#eb0000` fill colour) even below the 90th percentile ramp threshold, a
+ * stronger right value stays plain white (the right side never
+ * highlights), and a weaker value on either side stays plain white.
  */
 export const VerifyStrongerHighlightColours: Story = {
   args: {
@@ -140,9 +142,9 @@ export const VerifyStrongerHighlightColours: Story = {
     )!;
     const [leftValue1, rightValue1] = [...belowNinetyLeftStrongerRow.querySelectorAll('b')];
     // Left (54th) is stronger here, well below the 90th-percentile ramp
-    // threshold — must still be flat #eb0000, not a dim ramped shade.
+    // threshold — must still be flat #ff3b3b, not a dim ramped shade.
     await expect(leftValue1!.textContent).toBe('0.30');
-    await expect(getComputedStyle(leftValue1!).color).toBe('rgb(235, 0, 0)');
+    await expect(getComputedStyle(leftValue1!).color).toBe('rgb(255, 59, 59)');
     await expect(rightValue1!.textContent).toBe('0.10');
     await expect(getComputedStyle(rightValue1!).color).toBe('rgb(255, 255, 255)');
 

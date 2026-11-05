@@ -212,8 +212,8 @@ function Row({ item, selected, compact, interactive, onHover, onToggle }: RowPro
         }}
       >
         {content}
-        {description}
       </button>
+      {description}
     </li>
   );
 }
