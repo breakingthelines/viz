@@ -1,6 +1,6 @@
 /**
- * Plain-data metric shape shared by the profile stat charts (spec §4.1).
- * No protos: a caller adapts its RPC response into this.
+ * Plain-data shapes shared by the profile stat charts (spec §4.1).
+ * No protos: a caller adapts its RPC response into these.
  */
 
 /**
@@ -35,4 +35,13 @@ export interface StatMetric {
    * the registry before passing them as `focusKeys`.
    */
   focusKey?: string;
+}
+
+/** A team, competition or player mention that links to its BTL entity page
+ * (spec §4.2 "Entity links"). `href` is optional only for a provider id
+ * identity has not resolved yet; once a `SubjectRef` resolves, the caller
+ * always passes it (spec §4.1). */
+export interface EntityLink {
+  label: string;
+  href?: string;
 }

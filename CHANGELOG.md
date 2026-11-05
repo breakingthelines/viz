@@ -7,6 +7,28 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added: `./stats` — `ComparisonBars`, `PercentileRows`, `ArchetypeList`, `SimilarList`
+
+`@breakingthelines/viz/stats`: `ComparisonBars` ("Side by side" — mirrored
+bars ramping to full BTL red for the subject and full white for the compared
+player, grouped, each row's stronger value highlighted, a fixed median tick,
+names carrying a season label when the caller passes one); `PercentileRows`
+(the per-90 table rows — value, ramp bar, median tick, ordinal — with
+`pending`/`locked` event-only rows rendered dashed and muted, no number, and
+the muted "Event data" state label); `ArchetypeList` (held archetypes
+bright, the rest muted, sorted by percentile with event-only rows always
+last; click selects and pins, click again deselects, Enter/Space act the
+same, hover previews through `onHover`, all gated on `onToggle` being
+passed — a row with no toggle handler, such as a read-only `compact`
+placement, is never tabbable or hoverable); `SimilarList` (quick picks
+reading "N% similar", the one being compared against reading "On the
+wheel" — as compare buttons the name never links, as a plain list it does).
+Plus the shared `StatMetric`/`EntityLink` types and the
+`ordinal`/`formatMetricValue` formatting every block in this subpath uses.
+
+No version bump: the release lands with PF-V4 (viz 0.17.0), once
+`PercentileWheel`, `FormChart`, `SeasonLines` and `LeagueLadder` also ship.
+
 ### Added: `./brand` subpath — mark, wordmark, percentile ramp, `SocialFrame`
 
 `@breakingthelines/viz/brand`: `BtlMark`, `Wordmark`, `ChartWatermark`,
