@@ -1,5 +1,5 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
-import type { EntityLink } from './types';
+import type { EntityLink } from './stat-metric';
 
 /**
  * Quick picks and similar players (spec §4.1 `SimilarListProps`, mock

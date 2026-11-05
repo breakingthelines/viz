@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { PercentileRows, type PercentileRowsProps } from './percentile-rows';
-import type { StatMetric } from './types';
+import type { StatMetric } from './stat-metric';
 
 function metric(
   partial: Partial<StatMetric> & { key: string; label: string; group: string }

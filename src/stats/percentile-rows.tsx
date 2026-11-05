@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import { ramp } from '../brand/colour';
 import { formatMetricValue, formatPercentile } from './format';
-import type { StatMetric } from './types';
+import type { StatMetric } from './stat-metric';
 
 /**
  * The per-90 table rows, grouped (Shooting, Creating, Passing, Carrying,
