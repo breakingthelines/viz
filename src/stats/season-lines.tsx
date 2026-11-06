@@ -1,6 +1,5 @@
 import { useId } from 'react';
 import { cn } from '#/lib/utils';
-import { ChartWatermark } from '../brand/wordmark';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 
@@ -40,8 +39,6 @@ const PAD_L = 40;
 const DATA_LEFT_INSET = 70;
 const DATA_RIGHT_INSET = 90;
 const PAD_R = 12;
-const WATERMARK_CX = VB_W / 2;
-const WATERMARK_CY = (VB_H - PAD_B + PAD_T) / 2;
 
 const SUBJECT_COLOUR = '#eb0000';
 const SECONDARY_COLOUR = '#d9d6d6';
@@ -157,8 +154,8 @@ function textColourFor(role: SeasonLinesSeries['role']): string {
  * this chart with their own metrics.
  *
  * A `null` value breaks that series' line for that season rather than
- * drawing a zero or interpolating across the gap. A faint wordmark sits
- * behind the data (spec §4.4).
+ * drawing a zero or interpolating across the gap. No wordmark behind the
+ * data: the host panel's signature is the only brand mark (owner, 2026-11).
  *
  * Renders bare by default — `framed` opts into the card-style border that
  * earlier shipped unconditionally, which doubled up with a host panel that
@@ -213,8 +210,6 @@ export function SeasonLines({
         className="block w-full"
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
-        <ChartWatermark cx={WATERMARK_CX} cy={WATERMARK_CY} />
-
         {seasonLinesGridValues(yMax, gridStep).map((v) => (
           <g key={`grid-${v}`}>
             <line
