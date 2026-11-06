@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode, useRef } from 'react';
 import { useImageSave } from '#/components/use-image-save';
+import type { ShareLink } from '#/utils/share-payload';
 import { Wordmark } from './wordmark';
 
 /**
@@ -58,6 +59,11 @@ function slugify(s: string): string {
   );
 }
 
+export interface UseSocialFrameExportOptions {
+  /** The link and title the touch overlay's Share sends with the image. */
+  share?: ShareLink;
+}
+
 export interface UseSocialFrameExportResult {
   /** Ref to pass to the exported `SocialFrame` element. */
   ref: React.RefObject<HTMLDivElement | null>;
@@ -74,7 +80,10 @@ export interface UseSocialFrameExportResult {
  * share button needs only `const { ref, save, overlay } = useSocialFrameExport(fileName)`
  * and `<SocialFrame ref={ref} .../>`.
  */
-export function useSocialFrameExport(fileName: string): UseSocialFrameExportResult {
+export function useSocialFrameExport(
+  fileName: string,
+  options: UseSocialFrameExportOptions = {}
+): UseSocialFrameExportResult {
   const ref = useRef<HTMLDivElement>(null);
   const { save: saveImage, overlay, saving } = useImageSave();
   const save = async () => {
@@ -83,6 +92,7 @@ export function useSocialFrameExport(fileName: string): UseSocialFrameExportResu
       width: FRAME_WIDTH,
       height: FRAME_HEIGHT,
       scale: 2,
+      share: options.share,
     });
   };
   return { ref, save, overlay, saving };

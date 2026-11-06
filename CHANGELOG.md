@@ -7,6 +7,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.23.0]
+
+### Added: a link and title on a shared image
+
+`useImageSave`'s `save()` takes `share: { title?, text?, url? }`, and
+`useSocialFrameExport(fileName, { share })` passes it through. The touch
+overlay's Share sends the image with that link and title. When the browser's
+`canShare` refuses a file with a link, the image goes alone. A share target
+that drops the file or the link after the sheet opens cannot be detected
+here. Callers that pass nothing share exactly as before.
+
 ## [0.22.1]
 
 ### Fixed: in-wedge percentile numbers too big on phones
