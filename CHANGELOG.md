@@ -9,8 +9,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [0.21.0]
 
-Released after 0.20.0 (the smaller wheel numbers).
-
 ### Changed: the Seasons chart is a percentile trend (breaking)
 
 - New `SeasonTrend` replaces `SeasonLines`. One row per metric, seasons
@@ -32,6 +30,20 @@ Released after 0.20.0 (the smaller wheel numbers).
 - `LeagueLadder` and `SimilarList` links are no longer underlined. They turn
   BTL red on hover and focus (`--color-red-100` when the host defines it),
   as the form chart's labels do.
+
+## [0.20.0]
+
+### Changed: smaller in-wedge percentile numbers on `PercentileWheel`
+
+- The percentile number drawn inside each wedge is smaller: 11 (down from
+  13, about 15% smaller) at the wheel's full (desktop/`web`) width. Weight
+  stays 700.
+- New `tipSize` prop (default 11) lets a caller tune the number's size.
+  The narrow-screen size (`labels="short"`, or `auto` at 760 px and below)
+  scales with it but never drops under 22, the shipped value: at the
+  Stats tab's narrowest wheel (390 px phone width, a ~316 px rendered
+  wheel) 22 already measures the smallest legible size, so a caller
+  cannot shrink the narrow number past that floor.
 
 ## [0.19.0]
 
