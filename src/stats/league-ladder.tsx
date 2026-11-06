@@ -34,9 +34,12 @@ const WHITE = '#ffffff';
 const LIGHT = '#d9d6d6';
 const LINE = 'rgba(255,255,255,0.08)';
 
-/** The mock's `.ent` link style (`prof/wheel2.py:546-547`): a muted underline that goes full colour on hover and focus, the only visible mark that a name links anywhere. */
+/**
+ * BTL link style: never underlined, BTL red on hover and focus (the host's
+ * `--color-red-100` when it defines one), as the form chart's labels.
+ */
 const ENTITY_LINK_CLASS =
-  'underline [text-decoration-color:rgba(255,255,255,0.28)] [text-underline-offset:3px] [text-decoration-thickness:1px] hover:[text-decoration-color:currentColor] focus-visible:[text-decoration-color:currentColor]';
+  'no-underline transition-colors hover:text-[var(--color-red-100,#eb0000)]! focus-visible:text-[var(--color-red-100,#eb0000)]! focus-visible:outline-none';
 
 /** Clamp a league index into a sane bar width — the index is a 0-100 scale already, but a future rating version could in principle push past 100. */
 export function leagueLadderBarWidth(index: number): number {

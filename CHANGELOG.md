@@ -7,6 +7,32 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.21.0]
+
+Released after 0.20.0 (the smaller wheel numbers).
+
+### Changed: the Seasons chart is a percentile trend (breaking)
+
+- New `SeasonTrend` replaces `SeasonLines`. One row per metric, seasons
+  oldest to newest on x, the season's percentile in its ranked-against group
+  (0 to 100) on y, so every metric reads on the same scale. Points take the
+  wheel's ramp and carry their value as the label; the percentile ordinal is
+  in the hover tooltip and the hidden table. A season with a value but no
+  ranking draws hollow under the scale and breaks the line. `renderLabel`
+  lets the host draw a row's name as a control (the profile's metric
+  dropdown).
+- It fits its container. Up to `visibleSeasons` (default 5) share the
+  width; more scroll inside the chart, opening on the newest, with the row
+  names and the 0 / 50 / 100 scale pinned. Captions wrap, nothing clips.
+- Removed: `SeasonLines` and its `SeasonLinesProps`, `SeasonLinesSeason`
+  and `SeasonLinesSeries` types.
+
+### Changed: no underlined links in the profile lists
+
+- `LeagueLadder` and `SimilarList` links are no longer underlined. They turn
+  BTL red on hover and focus (`--color-red-100` when the host defines it),
+  as the form chart's labels do.
+
 ## [0.19.0]
 
 ### Changed: form chart labels, no wordmark behind the profile charts

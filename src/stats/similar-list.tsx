@@ -170,17 +170,17 @@ export function SimilarList({ items, onSelect }: SimilarListProps) {
         }
         .${scopeClass} .btl-sl-ent {
           color: inherit;
-          text-decoration: underline;
-          text-decoration-color: rgba(255, 255, 255, 0.28);
-          text-underline-offset: 3px;
-          text-decoration-thickness: 1px;
+          text-decoration: none;
+          transition: color 0.15s;
         }
         .${scopeClass} .btl-sl-ent:hover,
         .${scopeClass} .btl-sl-ent:focus-visible {
-          text-decoration-color: currentColor;
+          color: var(--color-red-100, #eb0000) !important;
+          outline: none;
         }
         @media (prefers-reduced-motion: reduce) {
-          .${scopeClass} .btl-sl-row {
+          .${scopeClass} .btl-sl-row,
+          .${scopeClass} .btl-sl-ent {
             transition: none;
           }
         }

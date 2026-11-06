@@ -47,15 +47,14 @@ export const OwnLeagueOutsideTheTop: Story = {
   },
 };
 
-/** The mock's `.ent` underline (`prof/wheel2.py:546-547`) is the only visible mark that a name links anywhere, since the default anchor otherwise renders with no underline at all. */
-export const LinksAreUnderlined: Story = {
-  name: 'The default anchor carries the mock underline, not a bare link',
+/** BTL links are never underlined: a league name links by colour on hover and focus only. */
+export const LinksAreNotUnderlined: Story = {
+  name: 'League links carry no underline',
   args: { rows: ROWS.slice(0, 3) },
   play: async ({ canvasElement }) => {
     const anchor = canvasElement.querySelector('a');
     const style = anchor ? getComputedStyle(anchor) : undefined;
-    expect(style?.textDecorationLine).toContain('underline');
-    expect(style?.textUnderlineOffset).toBe('3px');
+    expect(style?.textDecorationLine).toBe('none');
   },
 };
 
