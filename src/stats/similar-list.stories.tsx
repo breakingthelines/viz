@@ -169,14 +169,13 @@ export const VerifyFocusVisibleAndPressedStyling: Story = {
   },
 };
 
-/** Entity links use the mock's muted underline (`.ent`), not the browser's
- * default full-opacity one, and switch to `currentColor` on focus. */
-export const VerifyEntityLinkUnderlineStyle: Story = {
+/** Entity links are never underlined (BTL link style); they turn red on hover and focus. */
+export const VerifyEntityLinkStyle: Story = {
   args: { items: SIMILAR_PLAYERS },
   play: async ({ canvasElement }) => {
     const link = canvasElement.querySelector('a[href="/team/fulham"]') as HTMLElement;
-    const style = getComputedStyle(link);
-    await expect(style.textDecorationLine).toContain('underline');
-    await expect(style.textDecorationColor).toBe('rgba(255, 255, 255, 0.28)');
+    await expect(getComputedStyle(link).textDecorationLine).toBe('none');
+    const styleText = canvasElement.querySelector('style')?.textContent ?? '';
+    await expect(styleText).toContain('--color-red-100');
   },
 };

@@ -1,14 +1,15 @@
 /**
  * `@breakingthelines/viz/stats` — the player-profile stat charts (spec §4.1):
  * `PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
- * `FormChart`, `SeasonLines`, `LeagueLadder`, `SimilarList`.
+ * `FormChart`, `SeasonTrend`, `LeagueLadder`, `SimilarList`.
  *
  * PF-V2 ships `PercentileWheel`. PF-V3 ships `ComparisonBars`,
  * `PercentileRows`, `ArchetypeList` and `SimilarList`, plus the shared
  * types (`stat-metric.ts`) and formatting (`format.ts`) every block in
- * this subpath uses. PF-V4 lands `FormChart`, `SeasonLines` and
+ * this subpath uses. PF-V4 lands `FormChart`, the Seasons chart and
  * `LeagueLadder` here, reusing those shared types rather than its own
- * copy. `@breakingthelines/viz/brand` (mark, wordmark, watermark,
+ * copy (`SeasonTrend` replaced `SeasonLines` in 0.21.0).
+ * `@breakingthelines/viz/brand` (mark, wordmark, watermark,
  * signature, the percentile colour ramp, `SocialFrame`) already ships
  * from PF-V1.
  */
@@ -31,8 +32,19 @@ export type { SimilarListProps, SimilarListItem } from './similar-list';
 export { FormChart, formOpponentCode } from './form-chart';
 export type { FormChartMatch, FormChartOpponent, FormChartProps } from './form-chart';
 
-export { SeasonLines } from './season-lines';
-export type { SeasonLinesProps, SeasonLinesSeason, SeasonLinesSeries } from './season-lines';
+export {
+  SeasonTrend,
+  seasonTrendReading,
+  seasonTrendRuns,
+  seasonTrendX,
+  seasonTrendY,
+} from './season-trend';
+export type {
+  SeasonTrendPoint,
+  SeasonTrendProps,
+  SeasonTrendRow,
+  SeasonTrendSeason,
+} from './season-trend';
 
 export { LeagueLadder } from './league-ladder';
 export type { LeagueLadderProps, LeagueLadderRow } from './league-ladder';
