@@ -299,6 +299,35 @@ describe('PercentileWheel server render', () => {
     expect(render()).toContain('@media (max-width:760px)');
   });
 
+  describe('tip size (PF-polish wheel numbers)', () => {
+    it('defaults the in-wedge number to 11, weight 700, down from the shipped 13', () => {
+      const html = render();
+      expect(html).toMatch(/class="btl-pw-tip btl-pw-dm"[^>]*font-size="11"[^>]*font-weight="700"/);
+    });
+
+    it('takes a tipSize prop and renders it on every tip, at weight 700', () => {
+      const html = render({ tipSize: 9 });
+      // 14 value metrics in SUBJECT_METRICS (see `render` server-render tests above).
+      expect(count(html, /font-size="9"[^>]*font-weight="700"/g)).toBe(14);
+      expect(html).not.toContain('font-size="11"');
+    });
+
+    it('keeps the narrow (<=760px) tip at its 22 px ratio for a tipSize at or above the shipped 13', () => {
+      // 20 * (22/13) = 33.8..., above the 22 px floor, so the ratio applies.
+      const html = render({ tipSize: 20 });
+      expect(html).toContain('.btl-pw-short .btl-pw-tip{font-size:33.84615384615385px}');
+      expect(html).toContain('.btl-pw-auto .btl-pw-tip{font-size:33.84615384615385px}');
+    });
+
+    it('floors the narrow (<=760px) tip at 22px, so a small tipSize cannot shrink it past legibility', () => {
+      for (const tipSize of [11, 9, 4]) {
+        const html = render({ tipSize });
+        expect(html, `tipSize ${tipSize}`).toContain('.btl-pw-short .btl-pw-tip{font-size:22px}');
+        expect(html, `tipSize ${tipSize}`).toContain('.btl-pw-auto .btl-pw-tip{font-size:22px}');
+      }
+    });
+  });
+
   it('renders the social variant static, labelled as an image, with no hit areas', () => {
     const html = render({ variant: 'social' });
     expect(html).toContain('btl-pw-long');

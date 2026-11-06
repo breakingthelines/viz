@@ -80,6 +80,39 @@ export interface PercentileWheelProps {
   labels?: 'auto' | 'long' | 'short';
   /** Panel colour behind the wheel: the centre disc and the number halos use it. */
   surface?: string;
+  /**
+   * In-wedge percentile number size, in SVG user units at the wheel's full
+   * (desktop/`web`) width. Default 11 (down from 13, ~15% smaller, PF-polish
+   * wheel numbers). Weight is always 700; this only scales the digits.
+   *
+   * The narrow-screen size (`labels="short"`, or `auto` at 760 px and below)
+   * follows the same ratio to this prop as the shipped default (22:13) but
+   * never drops under `NARROW_TIP_FLOOR`: at the smallest supported wheel
+   * (a 316 px rendered width, the Stats tab at 390 px phone width) that
+   * floor is the smallest size that still renders at or above 10 px
+   * effective, so a caller cannot shrink the narrow number past legibility
+   * by passing a smaller `tipSize`.
+   */
+  tipSize?: number;
+}
+
+/** The shipped default before PF-polish's 15% cut (kept for the narrow ratio below). */
+const DEFAULT_TIP_SIZE = 11;
+const SHIPPED_BASE_TIP_SIZE = 13;
+const SHIPPED_NARROW_TIP_SIZE = 22;
+/** Ratio the narrow (<=760 px viewport) tip size keeps to the base tip size. */
+const NARROW_TIP_RATIO = SHIPPED_NARROW_TIP_SIZE / SHIPPED_BASE_TIP_SIZE;
+/**
+ * Narrow tip size never goes below this. 22 (today's shipped value) measures
+ * ~9.7 px effective at the Stats tab's narrowest wheel (390 px phone width,
+ * a 316 px rendered wheel): already at the 10 px legibility floor, so it is
+ * the floor itself, not just today's default.
+ */
+const NARROW_TIP_FLOOR = SHIPPED_NARROW_TIP_SIZE;
+
+/** The narrow-screen (`short`/`auto`<=760px) tip size for a given base `tipSize`. */
+function narrowTipSize(tipSize: number): number {
+  return Math.max(NARROW_TIP_FLOOR, tipSize * NARROW_TIP_RATIO);
 }
 
 const WHITE = '#ffffff';
@@ -90,7 +123,9 @@ const TRACK = 'rgba(255,255,255,0.035)';
 const DASHED = 'rgba(255,255,255,0.3)';
 const MEDIAN = 'rgba(255,255,255,0.28)';
 
-const CSS = `
+/** `narrowTip` is the narrow-screen tip size (`narrowTipSize(tipSize)`). */
+function cssFor(narrowTip: number): string {
+  return `
 @keyframes btl-pw-grow{from{transform:scale(0.35);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes btl-pw-tipin{from{opacity:0}to{opacity:1}}
 .btl-pw .btl-pw-slc{transform-box:view-box;transform-origin:${WHEEL_CX}px ${WHEEL_CY}px;animation:btl-pw-grow .7s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i)*40ms)}
@@ -107,11 +142,11 @@ const CSS = `
 .btl-pw .btl-pw-labs{display:none}
 .btl-pw.btl-pw-short .btl-pw-lab{display:none}
 .btl-pw.btl-pw-short .btl-pw-labs{display:inline}
-.btl-pw.btl-pw-short .btl-pw-tip{font-size:22px}
+.btl-pw.btl-pw-short .btl-pw-tip{font-size:${narrowTip}px}
 @media (max-width:760px){
 .btl-pw.btl-pw-auto .btl-pw-lab{display:none}
 .btl-pw.btl-pw-auto .btl-pw-labs{display:inline}
-.btl-pw.btl-pw-auto .btl-pw-tip{font-size:22px}
+.btl-pw.btl-pw-auto .btl-pw-tip{font-size:${narrowTip}px}
 }
 .btl-pw.btl-pw-static .btl-pw-slc,.btl-pw.btl-pw-static .btl-pw-tip{animation:none}
 .btl-pw:focus{outline:none}
@@ -121,6 +156,7 @@ const CSS = `
 .btl-pw .btl-pw-slc.btl-pw-solo,.btl-pw .btl-pw-ovl{transition:none}
 }
 `;
+}
 
 const SR_ONLY = {
   position: 'absolute',
@@ -191,8 +227,10 @@ export function PercentileWheel({
   labels = 'auto',
   surface = '#151515',
   announce = true,
+  tipSize = DEFAULT_TIP_SIZE,
 }: PercentileWheelProps) {
   const interactive = variant === 'web';
+  const css = useMemo(() => cssFor(narrowTipSize(tipSize)), [tipSize]);
   const layout = useMemo(() => layoutWheel(metrics, groupOrder), [metrics, groupOrder]);
   const [active, setActive] = useState<string | null>(null);
   const [liveText, setLiveText] = useState('');
@@ -371,7 +409,7 @@ export function PercentileWheel({
             x={t.x.toFixed(1)}
             y={t.y.toFixed(1)}
             textAnchor="middle"
-            fontSize={13}
+            fontSize={tipSize}
             fontWeight={700}
             fill={WHITE}
             stroke={t.inside ? undefined : surface}
@@ -479,7 +517,7 @@ export function PercentileWheel({
         margin: '0 auto',
       }}
     >
-      <style>{CSS}</style>
+      <style>{css}</style>
       {svg}
       {interactive && (
         <>
