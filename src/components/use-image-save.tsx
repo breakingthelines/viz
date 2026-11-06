@@ -34,7 +34,9 @@ export interface ImageSaveOptions extends Pick<
   /**
    * The link and title the overlay's Share sends with the image, so the
    * recipient gets the page as well as the picture. Dropped, and the image
-   * shared alone, on a target that cannot take both.
+   * shared alone, only when `navigator.canShare` refuses both together. What
+   * the chosen target does with them after the sheet opens (iOS apps may keep
+   * the link and drop the image) cannot be seen from here.
    */
   share?: ShareLink;
 }

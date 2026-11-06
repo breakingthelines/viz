@@ -7,8 +7,9 @@ export interface ShareLink {
 
 /**
  * The `navigator.share()` payload for a captured image: the file plus the
- * caller's link and title when given. A target that cannot take a file and a
- * link together gets the file alone, so the image always goes.
+ * caller's link and title when given, or the file alone when `canShare`
+ * refuses the two together. The check runs before a target is chosen, so a
+ * target that accepts the payload and then drops the file is not caught.
  * `canShare` is passed in so the choice is testable without a browser.
  */
 export function imageSharePayload(
