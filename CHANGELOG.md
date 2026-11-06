@@ -7,6 +7,26 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.19.0]
+
+### Changed: form chart labels, no wordmark behind the profile charts
+
+- `FormChart` draws the opponent and result under each bar as HTML in the
+  bar's own column, not as svg text, so ten names no longer run into each
+  other. A wide chart shows `opponent.shortLabel` (new, optional) or the
+  full name cut with an ellipsis, then "W 3-2, A". Under 36rem the chart
+  shows the crest from `opponent.crestSources` (new, optional, tried in
+  order) and the score; with no crest, or when every address fails, a
+  three-letter mark (`formOpponentCode`, new). The full name stays in the
+  tooltip and the accessible name.
+- The opponent name is no longer underlined. A linked label turns BTL red
+  on hover and focus. Each match has one link, on its label; the bar keeps
+  its link for the pointer only, and the chart's svg is always
+  `role="img"`.
+- `FormChart` and `SeasonLines` no longer draw `ChartWatermark` behind the
+  data. `ChartWatermark` itself still ships from `./brand`.
+- New exports: the `FormChartOpponent` type and `formOpponentCode`.
+
 ## [0.17.0]
 
 ### Added: `./stats` subpath (the full player-profile stat chart set)

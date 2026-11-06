@@ -245,26 +245,137 @@ export const SingleBarTooltip: Story = {
 };
 
 /**
- * When bars link, the chart's children are not purely presentational, so
- * `role="img"` (which would hide a focusable `<a>` from assistive tech
- * behind a single chart-wide label) gives way to `role="group"`, and each
- * bar's own accessible name carries the date, rating and G/A the mock's
- * visible labels show, not just the result and opponent.
+ * Each match is one link, on its label under the bar, and its accessible
+ * name carries the date, rating and G/A, not just the result and opponent.
+ * The bar links to the same place for a pointer but stays out of the tab
+ * order, so the chart itself remains a presentational image.
  */
-export const LinkedBarsAreAccessible: Story = {
-  name: 'Linked bars expose an accessible group, not a presentational image',
+export const LinkedLabelsAreAccessible: Story = {
+  name: 'One accessible link per match, on its label',
   args: { matches: buildMatches(3) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const svg = canvasElement.querySelector('svg[aria-label="Match ratings"]');
-    expect(svg?.getAttribute('role'), 'children are not presentational once a bar links').toBe(
-      'group'
-    );
+    expect(svg?.getAttribute('role')).toBe('img');
     const links = canvas.getAllByRole('link');
-    expect(links.length).toBe(3);
+    expect(links.length, 'one link per match, the bar link is hidden').toBe(3);
     const name = links[0]?.getAttribute('aria-label') ?? '';
     expect(name, 'carries the date beyond just result and opponent').toMatch(/\d/);
     expect(name, 'carries the rating beyond just result and opponent').toContain('rating');
+    expect(getComputedStyle(links[0] as Element).textDecorationLine, 'no underline at rest').toBe(
+      'none'
+    );
+  },
+};
+
+/** The owner's case: ten long club names under ten bars (Cole Palmer, 2026-27). */
+const LONG_NAMES: { label: string; shortLabel?: string }[] = [
+  { label: 'Fulham' },
+  { label: 'Brighton & Hove Albion', shortLabel: 'Brighton' },
+  { label: 'Aston Villa', shortLabel: 'Villa' },
+  { label: 'Leeds United', shortLabel: 'Leeds' },
+  { label: 'Hull City A.F.C.', shortLabel: 'Hull' },
+  { label: 'Brentford' },
+  { label: 'AFC Bournemouth', shortLabel: 'Bournemouth' },
+  { label: 'Tottenham Hotspur' },
+  { label: 'Nottingham Forest', shortLabel: 'Forest' },
+  { label: 'Manchester United', shortLabel: 'Man United' },
+];
+
+const CREST =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M2 2h14v7c0 4-3 6-7 7-4-1-7-3-7-7z" fill="#5b5b5b"/></svg>'
+  );
+
+function longNameMatches(): FormChartMatch[] {
+  return buildMatches(10).map((m, i) => {
+    const opponent = LONG_NAMES[i] ?? { label: 'Opponent' };
+    return { ...m, opponent: { ...opponent, href: `/team/${i}`, crestSources: [CREST] } };
+  });
+}
+
+/** No label runs past its own column: each is cut inside its cell. */
+async function expectLabelsInsideColumns(canvasElement: HTMLElement) {
+  const cells = Array.from(canvasElement.querySelectorAll('[data-slot="form-label"]'));
+  expect(cells.length).toBe(10);
+  for (const cell of cells) {
+    const box = cell.getBoundingClientRect();
+    for (const child of Array.from(cell.querySelectorAll('span, img'))) {
+      const r = child.getBoundingClientRect();
+      if (r.width === 0) continue;
+      expect(r.left, cell.getAttribute('title') ?? '').toBeGreaterThanOrEqual(box.left - 0.5);
+      expect(r.right, cell.getAttribute('title') ?? '').toBeLessThanOrEqual(box.right + 0.5);
+    }
+  }
+}
+
+export const LongOpponentNames: Story = {
+  name: 'Long opponent names, wide',
+  args: { matches: longNameMatches() },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 760 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    await expectLabelsInsideColumns(canvasElement);
+    const first = canvasElement.querySelector('[data-slot="form-label"]');
+    expect(first?.getAttribute('title'), 'the full name stays in the tooltip').toBe('Fulham');
+    const crests = Array.from(canvasElement.querySelectorAll('[data-slot="form-label"] img'));
+    expect(
+      crests.every((img) => img.getBoundingClientRect().width === 0),
+      'names, not crests, when there is room'
+    ).toBe(true);
+  },
+};
+
+export const NarrowWithoutCrests: Story = {
+  name: 'Phone width, no crest: three-letter marks',
+  args: {
+    matches: longNameMatches().map((m, i) => ({
+      ...m,
+      // The first opponent's only address fails, so it falls back too.
+      opponent: { ...m.opponent, crestSources: i === 0 ? ['/missing-crest.png'] : [] },
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 318 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(canvasElement.querySelectorAll('[data-slot="form-label"] img').length).toBe(0)
+    );
+    await expectLabelsInsideColumns(canvasElement);
+    const first = canvasElement.querySelector('[data-slot="form-label"]');
+    expect(first?.textContent).toContain('FUL');
+  },
+};
+
+export const LongOpponentNamesNarrow: Story = {
+  name: 'Long opponent names, phone width',
+  args: { matches: longNameMatches() },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 318 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    await expectLabelsInsideColumns(canvasElement);
+    const crests = Array.from(canvasElement.querySelectorAll('[data-slot="form-label"] img'));
+    expect(crests.length).toBe(10);
+    expect(
+      crests.every((img) => img.getBoundingClientRect().width > 0),
+      'crests stand in for names'
+    ).toBe(true);
   },
 };
 

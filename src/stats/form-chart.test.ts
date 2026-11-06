@@ -6,6 +6,7 @@ import {
   formBarAccessibleName,
   formChartBarWidth,
   formChartGridValues,
+  formOpponentCode,
   goalAssistMarker,
   type FormChartMatch,
 } from './form-chart';
@@ -141,5 +142,19 @@ describe('formBarAccessibleName', () => {
     const name = formBarAccessibleName(match({ id: 'a', goals: 2, assists: 3 }));
     expect(name).toContain('2 goals');
     expect(name).toContain('3 assists');
+  });
+});
+
+describe('formOpponentCode', () => {
+  it('takes three letters of the short name', () => {
+    expect(formOpponentCode({ label: 'Fulham' })).toBe('FUL');
+    expect(formOpponentCode({ label: 'Brighton & Hove Albion', shortLabel: 'Brighton' })).toBe(
+      'BRI'
+    );
+  });
+
+  it('skips spaces and punctuation', () => {
+    expect(formOpponentCode({ label: 'A.F.C. Wimbledon' })).toBe('AFC');
+    expect(formOpponentCode({ label: 'Go Ahead Eagles', shortLabel: "Go A'head" })).toBe('GOA');
   });
 });

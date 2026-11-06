@@ -15,9 +15,8 @@ import { Wordmark } from './wordmark';
  * mock's divided by two: 32px padding (64), a 52px round photo (104), a
  * 26px/700 title (52), an 11px muted subtitle (22), a 20px-tall wordmark
  * (40, inside the mock's own 64px-tall mark group) and a 9px muted footer
- * (18). The mock's chart-level watermark is NOT repeated at the frame level
- * — `ChartWatermark` already renders inside whatever chart a caller passes
- * as `children` (spec §4.4), so a frame-level one would double it.
+ * (18). There is no frame-level watermark: a card that wants the faint
+ * mark behind its chart draws `ChartWatermark` inside its own `children`.
  *
  * Captured through the existing `useImageSave` (`#/components/use-image-save`),
  * giving the 1080 x 1350 export every panel shares. `format` is a

@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '#/lib/utils';
 import { ratingColour } from '../brand/colour';
-import { ChartWatermark } from '../brand/wordmark';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import type { EntityLink } from './stat-metric';
+
+/**
+ * The opponent under a bar. `label` is the full name, carried by the
+ * tooltip and the accessible name; what shows under the bar is
+ * `shortLabel` on wide layouts and the crest on narrow ones, so ten
+ * neighbouring names never run into each other.
+ */
+export interface FormChartOpponent extends EntityLink {
+  /** A short form that fits under a bar ("Man United", "Brighton"). Falls back to `label`, cut with an ellipsis when it still does not fit. */
+  shortLabel?: string;
+  /** Crest addresses in the order to try them, shown under the bar in place of the name on narrow layouts. With none, or when every one fails to load, a three-letter mark ({@link formOpponentCode}) shows instead. */
+  crestSources?: readonly string[];
+}
 
 /**
  * One rated match in the form strip (spec §4.1; mock `prof/page2.py:form_rows`
@@ -17,7 +29,7 @@ export interface FormChartMatch {
   id: string;
   /** Already formatted for display (mock: `dfmt(date, true)`, e.g. "8 Sep 2026"). */
   date: string;
-  opponent: EntityLink;
+  opponent: FormChartOpponent;
   result: 'W' | 'D' | 'L';
   /** "2-1", from the subject's own side (mock: `us`-`them`). */
   score: string;
@@ -58,15 +70,19 @@ export interface FormChartProps {
   framed?: boolean;
 }
 
-/** Viewbox + layout, taken verbatim from the mock (`prof/page2.py:form_chart`, JS at `page2.py:365-384`). */
+/**
+ * Viewbox + layout, from the mock (`prof/page2.py:form_chart`, JS at
+ * `page2.py:365-384`), less the mock's 46-unit label strip under the
+ * baseline: the opponent and result labels are HTML under the svg
+ * ({@link FormLabels}), so they keep their own size at any width instead
+ * of scaling down with the chart, and can be cut with an ellipsis. The
+ * plot itself (154 units tall) is unchanged.
+ */
 const VB_W = 680;
-const VB_H = 230;
+const VB_H = 184;
 const PAD_T = 26;
-const PAD_B = 50;
+const PAD_B = 4;
 const PAD_L = 8;
-/** Watermark centre — the mock's fixed `wordmark_g(340, 102, ...)`, not derived from the padding (it sits slightly above the plot's true vertical centre). */
-const WATERMARK_CX = VB_W / 2;
-const WATERMARK_CY = 102;
 
 const DEFAULT_WINDOW = 10;
 const DEFAULT_STEP = 5;
@@ -165,8 +181,9 @@ export function formBarAccessibleName(match: FormChartMatch): string {
 /**
  * The Overview form strip (spec §4.1, §4.2: "last 10 rated matches as bars
  * coloured by rating, rating above, G/A marks, opponent and 'W 2-1, H'
- * below"; paging "back through every rated match", across seasons). A faint
- * wordmark sits behind the data (spec §4.4) via {@link ChartWatermark}.
+ * below"; paging "back through every rated match", across seasons). No
+ * wordmark behind the data: the host panel's signature is the only brand
+ * mark (owner, 2026-11).
  *
  * `matches` is the caller's current load, oldest to newest; this component
  * only windows over it and asks for more through {@link FormChartProps.onOlder}
@@ -262,14 +279,13 @@ export function FormChart({
   const range = formatWindowRange(visible);
   const barWidth = formChartBarWidth(windowSize);
   const baselineY = VB_H - PAD_B;
-  const hasLinks = visible.some((m) => Boolean(m.href ?? m.opponent.href));
 
   return (
     <figure
       data-slot="form-chart"
       style={{ fontFamily: BLOCK_FONT_STACK }}
       className={cn(
-        'flex flex-col gap-3',
+        '@container flex flex-col gap-3',
         framed && 'my-6 rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-4'
       )}
     >
@@ -299,41 +315,41 @@ export function FormChart({
         </div>
       </div>
 
-      <svg
-        viewBox={`0 0 ${VB_W} ${VB_H}`}
-        // Children are presentational to assistive tech under `role="img"` —
-        // a screen reader would announce only this label and a keyboard
-        // user's focus would land on hidden per-match links with no
-        // accessible name. `role="group"` lets each bar's own link (below)
-        // be reached and announced individually when any bar links.
-        role={hasLinks ? 'group' : 'img'}
-        aria-label="Match ratings"
-        className="block w-full"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        <ChartWatermark cx={WATERMARK_CX} cy={WATERMARK_CY} />
-        {formChartGridValues(yDomain).map((v) => (
-          <line
-            key={`grid-${v}`}
-            x1={0}
-            x2={VB_W}
-            y1={ratingToY(v, yDomain)}
-            y2={ratingToY(v, yDomain)}
-            stroke="white"
-            strokeOpacity={v === emphasisRating ? 0.12 : 0.05}
-          />
-        ))}
-        {visible.map((m, i) => (
-          <FormBar
-            key={m.id}
-            match={m}
-            x={PAD_L + i * barWidth}
-            width={barWidth}
-            top={ratingToY(m.rating, yDomain)}
-            baselineY={baselineY}
-          />
-        ))}
-      </svg>
+      <div className="flex flex-col gap-1.5">
+        <svg
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          // Presentational to assistive tech: each match's link and full
+          // accessible name live on its label under the chart, so a keyboard
+          // or screen reader user meets one link per match, not two.
+          role="img"
+          aria-label="Match ratings"
+          className="block w-full"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {formChartGridValues(yDomain).map((v) => (
+            <line
+              key={`grid-${v}`}
+              x1={0}
+              x2={VB_W}
+              y1={ratingToY(v, yDomain)}
+              y2={ratingToY(v, yDomain)}
+              stroke="white"
+              strokeOpacity={v === emphasisRating ? 0.12 : 0.05}
+            />
+          ))}
+          {visible.map((m, i) => (
+            <FormBar
+              key={m.id}
+              match={m}
+              x={PAD_L + i * barWidth}
+              width={barWidth}
+              top={ratingToY(m.rating, yDomain)}
+              baselineY={baselineY}
+            />
+          ))}
+        </svg>
+        <FormLabels matches={visible} windowSize={windowSize} />
+      </div>
     </figure>
   );
 }
@@ -432,44 +448,139 @@ function FormBar({
           {marker}
         </text>
       )}
-      <text
-        x={cx}
-        y={baselineY + 18}
-        textAnchor="middle"
-        fontSize={12}
-        fontWeight={600}
-        fill={WHITE}
-        // The mock's `.ent` underline (`wheel2.py:546-547`) is the only mark
-        // that a name links anywhere; this bar links as a whole, so the
-        // opponent name carries that same visual cue when it does.
-        style={
-          href
-            ? {
-                textDecoration: 'underline',
-                textDecorationColor: 'rgba(255,255,255,0.28)',
-                textUnderlineOffset: '3px',
-                textDecorationThickness: '1px',
-              }
-            : undefined
-        }
-      >
-        {match.opponent.label}
-      </text>
-      <text
-        x={cx}
-        y={baselineY + 34}
-        textAnchor="middle"
-        fontSize={11}
-        fill={match.result === 'W' ? WHITE : MUTED}
-      >
-        {`${match.result} ${match.score}, ${match.venue}`}
-      </text>
     </g>
   );
   if (!href) return bar;
+  // A pointer target only: the label under the bar is the same link for the
+  // keyboard and assistive tech (see `FormLabel`).
   return (
-    <a href={href} aria-label={formBarAccessibleName(match)}>
+    <a href={href} tabIndex={-1} aria-hidden="true">
       {bar}
     </a>
+  );
+}
+
+/**
+ * The opponent and result under each bar, as HTML laid over the same
+ * columns as the bars: the side padding and column width are the svg's own
+ * (`PAD_L`, one window slot per column) as percentages, so each label sits
+ * under its bar at any width.
+ */
+function FormLabels({ matches, windowSize }: { matches: FormChartMatch[]; windowSize: number }) {
+  const inset = `${(PAD_L / VB_W) * 100}%`;
+  return (
+    <ol
+      data-slot="form-chart-labels"
+      className="m-0 grid list-none p-0"
+      style={{
+        gridTemplateColumns: `repeat(${windowSize}, minmax(0, 1fr))`,
+        paddingLeft: inset,
+        paddingRight: inset,
+      }}
+    >
+      {matches.map((m) => (
+        <FormLabel key={m.id} match={m} />
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * The opponent's three-letter mark under a bar on a narrow chart when it
+ * has no crest (or every crest address fails): the first three letters of
+ * its short name, "FUL" for Fulham.
+ */
+export function formOpponentCode(opponent: FormChartOpponent): string {
+  const name = opponent.shortLabel || opponent.label;
+  return name
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .slice(0, 3)
+    .toUpperCase();
+}
+
+const LINK_HOVER =
+  'transition-colors group-hover:text-[var(--color-red-100,#eb0000)] group-focus-visible:text-[var(--color-red-100,#eb0000)]';
+
+/**
+ * One bar's label. Wide (the chart at 36rem and up): the opponent's short
+ * name, then "W 3-2, A". Narrow: the crest (or a three-letter mark), then
+ * the score, which reads from his side so it carries the result. A name
+ * never wraps into its neighbour: it is cut with an ellipsis when even the
+ * short form does not fit, and the full name stays in the tooltip and the
+ * accessible name. Plain text at rest, BTL red on hover when it links.
+ */
+function FormLabel({ match }: { match: FormChartMatch }) {
+  const sources = match.opponent.crestSources ?? [];
+  const [crestIndex, setCrestIndex] = useState(0);
+  const crest = sources[crestIndex];
+  const href = match.href ?? match.opponent.href;
+  const name = match.opponent.shortLabel || match.opponent.label;
+  const resultColour = match.result === 'W' ? WHITE : MUTED;
+  const content = (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'hidden w-full truncate text-[12px] leading-4 font-semibold tracking-[-0.2px] @xl:block',
+          href && LINK_HOVER
+        )}
+      >
+        {name}
+      </span>
+      {crest ? (
+        <img
+          src={crest}
+          alt=""
+          aria-hidden="true"
+          width={18}
+          height={18}
+          onError={() => setCrestIndex((i) => i + 1)}
+          className="block size-[18px] object-contain @xl:hidden"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'block w-full truncate text-[11px] leading-[18px] font-semibold @xl:hidden',
+            href && LINK_HOVER
+          )}
+        >
+          {formOpponentCode(match.opponent)}
+        </span>
+      )}
+      <span
+        aria-hidden="true"
+        className="mt-0.5 hidden w-full truncate text-[11px] leading-4 tabular-nums @xl:block"
+        style={{ color: resultColour }}
+      >
+        {`${match.result} ${match.score}, ${match.venue}`}
+      </span>
+      <span
+        aria-hidden="true"
+        className="mt-0.5 block w-full truncate text-[11px] leading-4 tabular-nums @xl:hidden"
+        style={{ color: resultColour }}
+      >
+        {match.score}
+      </span>
+    </>
+  );
+  const className = 'flex min-w-0 flex-col items-center text-center text-white no-underline';
+  return (
+    <li data-slot="form-label" className="min-w-0" title={match.opponent.label}>
+      {href ? (
+        <a
+          href={href}
+          aria-label={formBarAccessibleName(match)}
+          className={cn(className, 'group rounded-[2px] outline-offset-2')}
+        >
+          {content}
+        </a>
+      ) : (
+        <span className={className}>
+          {content}
+          <span className="sr-only">{formBarAccessibleName(match)}</span>
+        </span>
+      )}
+    </li>
   );
 }
