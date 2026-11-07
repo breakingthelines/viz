@@ -7,6 +7,38 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.22.0]
+
+### Changed: curved wheel labels with family arcs on `PercentileWheel`
+
+- Each metric label follows the arc outside its wedge, centred on it. Labels
+  in the bottom half run the other way so they read left to right. They
+  replace both horizontal label sets (the desktop long labels and the phone
+  short labels).
+- A thin arc per family (Shooting, Creating, Passing, Carrying, Defending,
+  the metrics' `group`) runs outside the labels and carries the family name.
+- Labels use plain words: Goals, Shots, On target, Assists, Key passes,
+  Passes, Accuracy, Dribbles, Success, Fouled, Tackles, Interceptions,
+  Duels, Win rate. Under its family a rate reads as a noun ("Accuracy"
+  under Passing). A key with no word uses its `shortLabel`.
+- Label sizes are set so neighbours never touch: 12.5 px on desktop and
+  about 9.5 px on a 390 px phone. Each pair keeps at least 0.5 em clear,
+  measured conservatively; "Tackles" and "Interceptions", the tightest pair,
+  draw about 0.8 em apart on a phone. Family names are about 9.2 px on a
+  phone and 11.5 px on desktop. A crowded wheel (the 22-metric event board) swaps a clashing
+  label to its `shortLabel`, then shrinks all labels together.
+- The view box is a square fitted to the rings (about 497 units, was
+  720 x 488), so the wheel draws larger on phones: a 316 px column now
+  scales it by 0.64, up from 0.44. On the web the wheel is at most its view
+  box wide, so desktop sizes are pixels. The social variant still fills its
+  column.
+- When two neighbouring percentile numbers would touch, both move out to one
+  shared radius, clear of the hub; one pushed past its wedge tip gets the
+  halo.
+- `labels` keeps its values: `long` draws the desktop sizes, `short` the
+  phone sizes, `auto` both, switched by CSS at 760 px. The phone percentile
+  numbers are their own elements now, not a CSS font-size override.
+
 ## [0.21.1]
 
 ### Fixed: a bare age reads like a season

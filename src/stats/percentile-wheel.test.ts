@@ -11,36 +11,52 @@ import {
 } from './percentile-wheel.fixture';
 import {
   INNER_RADIUS,
+  MIN_LABEL_GAP_EM,
+  NARROW_LABELS,
   OUTER_RADIUS,
-  SHORT_LABEL_SPACING,
-  WHEEL_HEIGHT,
-  WHEEL_WIDTH,
-  labelExtent,
+  WHEEL_CX,
+  WHEEL_CY,
+  WHEEL_LABELS,
+  WIDE_LABELS,
+  labelGaps,
+  layoutLabels,
+  layoutTips,
   layoutWheel,
-  shortLabelWidth,
   radiusFor,
   tipPosition,
+  viewBoxFor,
   wedgePath,
+  type WheelLabelStyle,
 } from './percentile-wheel-geometry';
 import goldenJson from './percentile-wheel.golden.json';
 import type { StatMetric } from './stat-metric';
 
-// `golden` is the approved mock's own SVG output (`scratchpad/prof/wheel2.py`,
+// `golden` holds the approved mock's own SVG output (`scratchpad/prof/wheel2.py`,
 // `wheel(False)` and `wheel(True)`), parsed into paths and positions per
-// metric: the wheel must draw the same shapes in the same places.
+// metric: the wheel must draw the same shapes in the same places. `curved`
+// pins the curved label layout (text, centre angle, baseline radius, flip)
+// and the family arcs, at both label sizes.
 
+type CurvedGolden = {
+  size: number;
+  labels: Record<string, [string, string, string, boolean]>;
+  families: [string, string, string, boolean][];
+};
 interface Golden {
   slc: Record<string, string>;
   tip: Record<string, [string, string, boolean, string]>;
-  lab: Record<string, [string, string, string]>;
   hit: Record<string, string>;
   track: string[];
   fills: Record<string, string>;
+  curved: { wide: CurvedGolden; narrow: CurvedGolden };
 }
 const golden = goldenJson as unknown as { subject: Golden; event: Golden };
 
+/** The families the live player-outfield template puts on the wheel (no Discipline). */
+const FAMILIES = ['Shooting', 'Creating', 'Passing', 'Carrying', 'Defending'];
+
 function checkAgainstMock(g: Golden, metrics: typeof SUBJECT_METRICS) {
-  const { slices, labels } = layoutWheel(metrics, GROUP_ORDER);
+  const slices = layoutWheel(metrics, GROUP_ORDER);
   const tracks = slices.map((s) => wedgePath(INNER_RADIUS, OUTER_RADIUS, s.a0, s.a1));
   expect(tracks).toEqual(g.track);
   for (const s of slices) {
@@ -56,8 +72,21 @@ function checkAgainstMock(g: Golden, metrics: typeof SUBJECT_METRICS) {
       expect(ramp(p, 'subject'), k).toBe(g.fills[k]);
     }
   }
-  for (const L of labels) {
-    expect([L.x.toFixed(1), L.y.toFixed(1), L.anchor], L.key).toEqual(g.lab[L.key]);
+  for (const [name, style] of [
+    ['wide', WIDE_LABELS],
+    ['narrow', NARROW_LABELS],
+  ] as const) {
+    const ring = layoutLabels(slices, style);
+    const want = g.curved[name];
+    expect(Number(ring.size.toFixed(2)), name).toBe(want.size);
+    for (const L of ring.labels) {
+      expect([L.text, L.am.toFixed(2), L.r.toFixed(1), L.flip], `${name} ${L.key}`).toEqual(
+        want.labels[L.key]
+      );
+    }
+    expect(
+      ring.families.map((f) => [f.name, f.a0.toFixed(2), f.a1.toFixed(2), f.path !== null])
+    ).toEqual(want.families);
   }
 }
 
@@ -66,7 +95,7 @@ describe('percentile wheel geometry', () => {
     checkAgainstMock(golden.subject, SUBJECT_METRICS);
   });
 
-  it('matches the mock with event wedges, including label collisions', () => {
+  it('matches the mock with event wedges', () => {
     checkAgainstMock(golden.event, withEventMetrics('pending'));
   });
 
@@ -83,91 +112,247 @@ describe('percentile wheel geometry', () => {
 
   it('orders by group and keeps input order inside a group', () => {
     const shuffled = [...SUBJECT_METRICS].reverse();
-    const keys = layoutWheel(shuffled, GROUP_ORDER).slices.map((s) => s.metric.key);
+    const keys = layoutWheel(shuffled, GROUP_ORDER).map((s) => s.metric.key);
     expect(keys.slice(0, 3)).toEqual(['sotp', 'shots', 'npg']);
     expect(keys.at(-1)).toBe('tkl');
   });
 
-  it('separates crowded labels by at least 16 on each side', () => {
-    const { labels } = layoutWheel(withEventMetrics('pending'), GROUP_ORDER);
-    for (const anchor of ['start', 'end'] as const) {
-      const ys = labels
-        .filter((l) => l.anchor === anchor)
-        .map((l) => l.y)
-        .sort((a, b) => a - b);
-      for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(16);
-    }
-  });
-
   it('handles no metrics', () => {
-    expect(layoutWheel([], GROUP_ORDER)).toEqual({ slices: [], labels: [], shortLabels: [] });
+    expect(layoutWheel([], GROUP_ORDER)).toEqual([]);
+    const ring = layoutLabels([], WIDE_LABELS);
+    expect(ring.labels).toEqual([]);
+    expect(ring.families).toEqual([]);
   });
 });
 
-/** Every pair of short labels that overlaps in both directions, and every label outside the view box. */
-function shortLabelClashes(metrics: StatMetric[], groupOrder: string[]) {
-  const { slices, shortLabels } = layoutWheel(metrics, groupOrder);
-  const boxes = shortLabels.map((L, i) => {
-    const text = slices[i].metric.shortLabel;
-    const [x0, x1] = labelExtent(L, shortLabelWidth(text));
-    // The tallest line box a 22 px label measures in Chromium: 22 above the baseline, 7 below.
-    return { text, x0, x1, y0: L.y - 22, y1: L.y + 7 };
-  });
-  const clashes: string[] = [];
-  boxes.forEach((a, i) => {
-    if (a.x0 < 0 || a.x1 > WHEEL_WIDTH || a.y0 < 0 || a.y1 > WHEEL_HEIGHT) {
-      clashes.push(`${a.text} outside`);
+const STYLES: [string, WheelLabelStyle][] = [
+  ['desktop', WIDE_LABELS],
+  ['phone', NARROW_LABELS],
+];
+
+/** Keys whose label is wider than its own wedge. */
+function overflow(metrics: StatMetric[], groups: string[], style: WheelLabelStyle) {
+  const slices = layoutWheel(metrics, groups);
+  const ring = layoutLabels(slices, style);
+  // More than half a degree wider than the wedge it is centred on.
+  return ring.labels.filter((L, i) => L.span > slices[i].a1 - slices[i].a0 + 0.5).map((L) => L.key);
+}
+
+describe('curved labels', () => {
+  it('names the wheel metrics in plain words, the families carrying the noun', () => {
+    for (const [, style] of STYLES) {
+      const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, FAMILIES), style);
+      expect(ring.size).toBe(style.size);
+      expect(ring.labels.map((L) => L.text)).toEqual([
+        'Goals',
+        'Shots',
+        'On target',
+        'Assists',
+        'Key passes',
+        'Passes',
+        'Accuracy',
+        'Dribbles',
+        'Success',
+        'Fouled',
+        'Tackles',
+        'Interceptions',
+        'Duels',
+        'Win rate',
+      ]);
+      expect(ring.labels.map((L) => L.text)).toEqual(
+        SUBJECT_METRICS.map((m) => WHEEL_LABELS[m.key])
+      );
     }
-    for (const b of boxes.slice(i + 1)) {
-      if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) {
-        clashes.push(`${a.text} / ${b.text}`);
+  });
+
+  it('falls back to the short label for a key it has no word for', () => {
+    const m: StatMetric = { ...SUBJECT_METRICS[0], key: 'xg', shortLabel: 'xG' };
+    const ring = layoutLabels(layoutWheel([m], ['Shooting']), WIDE_LABELS);
+    expect(ring.labels[0].text).toBe('xG');
+  });
+
+  // The owner's call on the curved-label prototype: the labels touched. Each
+  // label is centred on its wedge; this checks the arc every label takes up
+  // fits inside its wedge, or inside what its neighbours leave free, with
+  // at least MIN_LABEL_GAP_EM of clear space to the label either side.
+  it('fits every label inside its wedge with a clear gap to its neighbours', () => {
+    for (const groups of [FAMILIES, GROUP_ORDER]) {
+      for (const [name, style] of STYLES) {
+        const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, groups), style);
+        const gaps = labelGaps(ring.labels, ring.inner);
+        expect(gaps).toHaveLength(14);
+        for (const [i, g] of gaps.entries()) {
+          const pair = `${name}: ${ring.labels[i].text} / ${ring.labels[(i + 1) % 14].text}`;
+          expect(g, pair).toBeGreaterThanOrEqual(MIN_LABEL_GAP_EM * style.size);
+        }
+        // Only "Interceptions" on a phone is wider than its own wedge: it
+        // takes some of the room "Tackles" and "Duels" leave free.
+        expect(overflow(SUBJECT_METRICS, groups, style), name).toEqual(
+          name === 'phone' ? ['int'] : []
+        );
       }
     }
   });
-  return { clashes, shortLabels };
-}
 
-describe('short labels', () => {
-  it('keeps the 22-metric event wheel clear at 22 px', () => {
+  it('leaves at least 5 px between neighbours on a 390 px phone and 15 px on desktop', () => {
+    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    const wide = layoutLabels(slices, WIDE_LABELS);
+    const narrow = layoutLabels(slices, NARROW_LABELS);
+    const [, , vbWidth] = viewBoxFor([wide, narrow]);
+    // The Stats tab's wheel is 316 px wide on a 390 px phone; on desktop it
+    // is drawn at its view box size.
+    const phone = 316 / vbWidth;
+    expect(Math.min(...labelGaps(narrow.labels, narrow.inner)) * phone).toBeGreaterThan(5);
+    expect(Math.min(...labelGaps(wide.labels, wide.inner))).toBeGreaterThan(15);
+    // Label sizes as rendered: 9.5 px on the phone, 12.5 px on desktop.
+    expect(NARROW_LABELS.size * phone).toBeCloseTo(9.5, 1);
+    expect(NARROW_LABELS.family * phone).toBeGreaterThan(9);
+  });
+
+  it('keeps a crowded wheel clear by swapping to short labels, then shrinking', () => {
     const metrics = withEventMetrics('pending');
-    expect(metrics).toHaveLength(22);
-    // The long-label placement puts "Pass %" over "PrgP" and "Duel %" over "Duels".
-    const { clashes, shortLabels } = shortLabelClashes(metrics, GROUP_ORDER);
-    expect(clashes).toEqual([]);
-    const { labels } = layoutWheel(metrics, GROUP_ORDER);
-    const y = (ls: typeof labels, k: string) => ls.find((l) => l.key === k)!.y;
-    expect(Math.abs(y(shortLabels, 'acc') - y(shortLabels, 'prgp'))).toBeGreaterThanOrEqual(
-      SHORT_LABEL_SPACING
-    );
-    expect(Math.abs(y(labels, 'acc') - y(labels, 'prgp'))).toBeLessThan(SHORT_LABEL_SPACING);
-  });
-
-  it('keeps the subject wheel clear', () => {
-    expect(shortLabelClashes(SUBJECT_METRICS, GROUP_ORDER).clashes).toEqual([]);
-  });
-
-  it('checks the top and bottom labels too, for any metric count', () => {
+    for (const [, style] of STYLES) {
+      const ring = layoutLabels(layoutWheel(metrics, GROUP_ORDER), style);
+      for (const g of labelGaps(ring.labels, ring.inner)) {
+        expect(g).toBeGreaterThanOrEqual(MIN_LABEL_GAP_EM * ring.size - 1e-9);
+      }
+    }
     const pool = withEventMetrics('pending');
-    let middles = 0;
-    for (let n = 3; n <= 30; n++) {
-      const metrics = Array.from({ length: n }, (_, i) => ({
+    for (let n = 1; n <= 30; n++) {
+      const many = Array.from({ length: n }, (_, i) => ({
         ...pool[i % pool.length],
         key: `k${i}`,
         group: `G${Math.floor(i / 4)}`,
       }));
-      const groups = [...new Set(metrics.map((m) => m.group))];
-      const { clashes, shortLabels } = shortLabelClashes(metrics, groups);
-      expect(clashes, `${n} metrics`).toEqual([]);
-      middles += shortLabels.filter((l) => l.anchor === 'middle').length;
+      const groups = [...new Set(many.map((m) => m.group))];
+      for (const [, style] of STYLES) {
+        const ring = layoutLabels(layoutWheel(many, groups), style);
+        expect(ring.labels).toHaveLength(n);
+        for (const g of labelGaps(ring.labels, ring.inner)) {
+          expect(g, `${n} metrics`).toBeGreaterThanOrEqual(MIN_LABEL_GAP_EM * ring.size - 1e-9);
+        }
+      }
     }
-    expect(middles).toBeGreaterThan(0);
   });
 
-  it('leaves the long labels where the mock puts them', () => {
-    const { labels } = layoutWheel(withEventMetrics('pending'), GROUP_ORDER);
-    for (const L of labels) {
-      expect([L.x.toFixed(1), L.y.toFixed(1), L.anchor], L.key).toEqual(golden.event.lab[L.key]);
+  it('turns the bottom half over so it reads left to right', () => {
+    const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, FAMILIES), NARROW_LABELS);
+    for (const L of ring.labels) {
+      expect(L.flip, L.key).toBe(Math.sin((L.am * Math.PI) / 180) > 1e-9);
+      // Top: the text runs clockwise (sweep 1); bottom: counter-clockwise (sweep 0).
+      expect(L.path, L.key).toMatch(L.flip ? / 0 0 0 / : / 0 0 1 /);
     }
+    const flipped = ring.labels.filter((L) => L.flip).map((L) => L.key);
+    expect(flipped).toEqual(['ast', 'key', 'passes', 'acc', 'drs', 'drp', 'fd']);
+  });
+
+  it('draws one arc per family, named, in wheel order', () => {
+    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    for (const [, style] of STYLES) {
+      const ring = layoutLabels(slices, style);
+      expect(ring.families.map((f) => f.name)).toEqual(FAMILIES);
+      for (const f of ring.families) {
+        const own = slices.filter((s) => s.metric.group === f.name);
+        expect(f.a0).toBe(own[0].a0);
+        expect(f.a1).toBe(own.at(-1)!.a1);
+        expect(f.path, f.name).not.toBeNull();
+        expect(f.lines, f.name).toHaveLength(2);
+        expect(f.r).toBeGreaterThan(ring.inner + ring.size);
+      }
+    }
+  });
+
+  it('draws a family too short for its name as a plain arc', () => {
+    const one: StatMetric = { ...SUBJECT_METRICS[0], group: 'An unusually long family name' };
+    const slices = layoutWheel([...SUBJECT_METRICS, one], [...FAMILIES, one.group]);
+    const ring = layoutLabels(slices, WIDE_LABELS);
+    const f = ring.families.at(-1)!;
+    expect(f.path).toBeNull();
+    expect(f.lines).toHaveLength(1);
+  });
+
+  it('fits a square view box to the rings, so a phone draws the wheel larger', () => {
+    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    const rings = [layoutLabels(slices, WIDE_LABELS), layoutLabels(slices, NARROW_LABELS)];
+    const [x, y, w, h] = viewBoxFor(rings);
+    expect(w).toBe(h);
+    expect(x + w / 2).toBe(WHEEL_CX);
+    expect(y + h / 2).toBe(WHEEL_CY);
+    expect(w / 2).toBeGreaterThan(Math.max(...rings.map((r) => r.extent)));
+    // The old 720-wide box drew the wheel at 316 / 720 on a phone.
+    expect(316 / w).toBeGreaterThan(0.6);
+  });
+});
+
+/** Percentiles low enough that the numbers bunch up next to the hub. */
+function lowDefence(): StatMetric[] {
+  const low: Record<string, number> = { tkl: 18, int: 27, dw: 24, dwp: 30 };
+  return SUBJECT_METRICS.map((m) => (m.key in low ? { ...m, percentile: low[m.key] } : m));
+}
+
+describe('in-wedge numbers', () => {
+  it('leaves a number where the mock puts it when nothing is in its way', () => {
+    const slices = layoutWheel(SUBJECT_METRICS, GROUP_ORDER);
+    const tips = layoutTips(slices, 11);
+    for (const key of ['npg', 'sotp', 'key', 'drs', 'tkl']) {
+      const t = tips.find((x) => x.key === key)!;
+      const s = slices.find((x) => x.metric.key === key)!;
+      const want = tipPosition(t.p, s.am);
+      expect([t.x.toFixed(1), (t.y + 4.5).toFixed(1), t.inside], key).toEqual([
+        want.x.toFixed(1),
+        want.y.toFixed(1),
+        want.inside,
+      ]);
+    }
+  });
+
+  it('moves neighbouring numbers that collide out to one shared radius, clear of the hub', () => {
+    for (const size of [11, 22]) {
+      const slices = layoutWheel(lowDefence(), FAMILIES);
+      const tips = layoutTips(slices, size);
+      const r = (k: string) =>
+        Math.hypot(
+          tips.find((t) => t.key === k)!.x - WHEEL_CX,
+          tips.find((t) => t.key === k)!.y - WHEEL_CY
+        );
+      // At the phone size "24" (Duels) runs into "30" (Win rate): both go out
+      // to the radius "30" already had, never in toward the hub.
+      if (size === 22) {
+        expect(r('dw')).toBeCloseTo(r('dwp'), 6);
+        expect(r('dw')).toBeGreaterThan(tipPosition(24, 0).x - WHEEL_CX);
+      }
+      for (const t of tips) {
+        const w = String(t.p).length * 0.62 * size;
+        const h = 0.72 * size;
+        // Clear of the hub disc and the mark: the box's nearest corner is outside it.
+        const dx = Math.max(0, Math.abs(t.x - WHEEL_CX) - w / 2);
+        const dy = Math.max(0, Math.abs(t.y - WHEEL_CY) - h / 2);
+        expect(Math.hypot(dx, dy), `${size} ${t.key}`).toBeGreaterThanOrEqual(
+          INNER_RADIUS + 3 - 1e-6
+        );
+        expect(Math.hypot(t.x - WHEEL_CX, t.y - WHEEL_CY)).toBeLessThan(OUTER_RADIUS);
+      }
+      // No two neighbouring numbers overlap.
+      for (let i = 0; i < tips.length; i++) {
+        const a = tips[i];
+        const b = tips[(i + 1) % tips.length];
+        const wa = String(a.p).length * 0.62 * size;
+        const wb = String(b.p).length * 0.62 * size;
+        const h = 0.72 * size;
+        const apart = Math.abs(a.x - b.x) * 2 >= wa + wb || Math.abs(a.y - b.y) * 2 >= 2 * h;
+        expect(apart, `${size} ${a.key} / ${b.key}`).toBe(true);
+      }
+    }
+  });
+
+  it('gives a number pushed past its wedge tip the halo', () => {
+    const slices = layoutWheel(lowDefence(), FAMILIES);
+    const tips = layoutTips(slices, 22);
+    for (const t of tips) {
+      const r = Math.hypot(t.x - WHEEL_CX, t.y - WHEEL_CY);
+      expect(t.inside, t.key).toBe(r + 0.36 * 22 <= radiusFor(t.p) - 1);
+    }
+    expect(tips.find((t) => t.key === 'tkl')!.inside).toBe(false);
   });
 });
 
@@ -190,10 +375,14 @@ describe('PercentileWheel server render', () => {
   it('renders a complete wheel with no effects', () => {
     const html = render();
     expect(count(html, /class="btl-pw-slc btl-pw-solo/g)).toBe(14);
-    expect(count(html, /class="btl-pw-tip/g)).toBe(14);
+    // `auto` carries both label sizes, desktop (`btl-pw-w`) and phone (`btl-pw-n`); CSS shows one.
+    expect(count(html, /<g class="btl-pw-w">/g)).toBe(1);
+    expect(count(html, /<g class="btl-pw-n">/g)).toBe(1);
+    expect(count(html, /class="btl-pw-tip/g)).toBe(28);
     expect(count(html, /class="btl-pw-hit"/g)).toBe(14);
-    expect(count(html, /class="btl-pw-lab[ "]/g)).toBe(14);
-    expect(count(html, /class="btl-pw-labs[ "]/g)).toBe(14);
+    expect(count(html, /class="btl-pw-lab[ "]/g)).toBe(28);
+    expect(count(html, /<textPath /g)).toBe(28 + 10);
+    expect(count(html, /data-family="/g)).toBe(10);
     expect(html).toContain('stroke-dasharray="2 4"');
     expect(html).toContain('data-mark=""');
     expect(html).toContain('fill="#E20613"');
@@ -217,14 +406,58 @@ describe('PercentileWheel server render', () => {
     expect(html).toContain('<li>Non-penalty goals, 0.57, 85th percentile, median 0.30</li>');
   });
 
-  it('places short labels from their own layout', () => {
-    const metrics = withEventMetrics('pending');
-    const html = render({ metrics });
-    const { shortLabels } = layoutWheel(metrics, GROUP_ORDER);
-    const acc = shortLabels.find((l) => l.key === 'acc')!;
-    expect(html).toContain(
-      `class="btl-pw-labs" data-k="acc" x="${acc.x.toFixed(1)}" y="${acc.y.toFixed(1)}"`
+  it('draws each label on its own arc, centred on the wedge', () => {
+    const html = render({ labels: 'long' });
+    expect(count(html, /class="btl-pw-lab[ "]/g)).toBe(14);
+    expect(html).not.toContain('class="btl-pw-n"');
+    const slices = layoutWheel(SUBJECT_METRICS, GROUP_ORDER);
+    const ring = layoutLabels(slices, WIDE_LABELS);
+    for (const L of ring.labels) {
+      expect(html).toContain(`d="${L.path}"`);
+    }
+    // Every textPath points at a path drawn in the same wheel.
+    const ids = new Set([...html.matchAll(/<path id="([^"]+)"/g)].map((m) => m[1]));
+    const refs = [...html.matchAll(/<textPath href="#([^"]+)"/g)].map((m) => m[1]);
+    expect(refs).toHaveLength(14 + 5);
+    for (const r of refs) expect(ids.has(r), r).toBe(true);
+    expect(html).toMatch(/startOffset="50%">Interceptions<\/textPath>/);
+    expect(html).toMatch(/startOffset="50%">Defending<\/textPath>/);
+  });
+
+  it('gives two wheels on one page their own arc ids', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        'div',
+        null,
+        createElement(PercentileWheel, {
+          metrics: SUBJECT_METRICS,
+          groupOrder: GROUP_ORDER,
+          ariaLabel: 'a',
+        }),
+        createElement(PercentileWheel, {
+          metrics: SUBJECT_METRICS,
+          groupOrder: GROUP_ORDER,
+          ariaLabel: 'b',
+        })
+      )
     );
+    const ids = [...html.matchAll(/<path id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2 * 2 * (14 + 5));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('sizes the phone labels for the phone and draws the view box square', () => {
+    const html = render({ labels: 'short' });
+    expect(html).not.toContain('class="btl-pw-w"');
+    expect(html).toMatch(/class="btl-pw-lab" data-k="npg" font-size="15" font-weight="600"/);
+    const [x, y, w, h] = html
+      .match(/viewBox="([^"]+)"/)![1]
+      .split(' ')
+      .map(Number);
+    expect(w).toBe(h);
+    expect(x + w / 2).toBeCloseTo(WHEEL_CX, 0);
+    expect(y + h / 2).toBeCloseTo(WHEEL_CY, 0);
+    expect(w).toBeLessThan(510);
   });
 
   it('draws the comparison as white-ramp outlines with its percentile in the text alternative', () => {
@@ -234,7 +467,7 @@ describe('PercentileWheel server render', () => {
     expect(html).toContain(
       '<li>Shots on target %, 58%, 83rd percentile, median 46%; Comparison Player, 97th</li>'
     );
-    const { slices } = layoutWheel(SUBJECT_METRICS, GROUP_ORDER);
+    const slices = layoutWheel(SUBJECT_METRICS, GROUP_ORDER);
     const sotp = slices.find((s) => s.metric.key === 'sotp')!;
     expect(html).toContain(wedgePath(INNER_RADIUS, radiusFor(97), sotp.a0, sotp.a1));
   });
@@ -249,7 +482,7 @@ describe('PercentileWheel server render', () => {
       const html = render({ metrics: withEventMetrics(state) });
       expect(count(html, new RegExp(`data-state="${state}"`, 'g'))).toBe(8);
       expect(count(html, /stroke-dasharray="3 3"/g)).toBe(8);
-      expect(count(html, /class="btl-pw-tip/g)).toBe(14);
+      expect(count(html, /class="btl-pw-tip/g)).toBe(28);
       expect(html).toContain('<li>Progressive passes, event data</li>');
     }
   });
@@ -294,36 +527,47 @@ describe('PercentileWheel server render', () => {
 
   it('switches label sets and motion by class', () => {
     expect(render({ labels: 'short' })).toContain('btl-pw btl-pw-short');
+    expect(render()).toContain('.btl-pw.btl-pw-auto .btl-pw-n{display:inline}');
     expect(render({ animate: false })).toContain('btl-pw-static');
     expect(render()).toContain('@media (prefers-reduced-motion:reduce)');
     expect(render()).toContain('@media (max-width:760px)');
   });
 
   describe('tip size (PF-polish wheel numbers)', () => {
+    /** The tip font sizes in one label layer (`w` desktop, `n` phone). */
+    const tipSizes = (html: string, layer: 'w' | 'n') => {
+      const part =
+        html.split(`<g class="btl-pw-${layer}">`)[1]?.split('<g class="btl-pw-')[0] ?? '';
+      return [
+        ...part.matchAll(/class="btl-pw-tip[^"]*"[^>]*font-size="([^"]+)" font-weight="700"/g),
+      ].map((m) => Number(m[1]));
+    };
+
     it('defaults the in-wedge number to 11, weight 700, down from the shipped 13', () => {
       const html = render();
       expect(html).toMatch(/class="btl-pw-tip btl-pw-dm"[^>]*font-size="11"[^>]*font-weight="700"/);
+      expect(tipSizes(html, 'w')).toEqual(Array(14).fill(11));
     });
 
-    it('takes a tipSize prop and renders it on every tip, at weight 700', () => {
-      const html = render({ tipSize: 9 });
+    it('takes a tipSize prop and renders it on every desktop tip, at weight 700', () => {
+      const html = render({ tipSize: 9, labels: 'long' });
       // 14 value metrics in SUBJECT_METRICS (see `render` server-render tests above).
-      expect(count(html, /font-size="9"[^>]*font-weight="700"/g)).toBe(14);
+      expect(count(html, /font-size="9" font-weight="700"/g)).toBe(14);
       expect(html).not.toContain('font-size="11"');
     });
 
     it('keeps the narrow (<=760px) tip at its 22 px ratio for a tipSize at or above the shipped 13', () => {
       // 20 * (22/13) = 33.8..., above the 22 px floor, so the ratio applies.
       const html = render({ tipSize: 20 });
-      expect(html).toContain('.btl-pw-short .btl-pw-tip{font-size:33.84615384615385px}');
-      expect(html).toContain('.btl-pw-auto .btl-pw-tip{font-size:33.84615384615385px}');
+      expect(tipSizes(html, 'n')).toEqual(Array(14).fill(33.84615384615385));
+      expect(tipSizes(render({ tipSize: 20, labels: 'short' }), 'n')).toHaveLength(14);
     });
 
     it('floors the narrow (<=760px) tip at 22px, so a small tipSize cannot shrink it past legibility', () => {
       for (const tipSize of [11, 9, 4]) {
-        const html = render({ tipSize });
-        expect(html, `tipSize ${tipSize}`).toContain('.btl-pw-short .btl-pw-tip{font-size:22px}');
-        expect(html, `tipSize ${tipSize}`).toContain('.btl-pw-auto .btl-pw-tip{font-size:22px}');
+        expect(tipSizes(render({ tipSize }), 'n'), `tipSize ${tipSize}`).toEqual(
+          Array(14).fill(22)
+        );
       }
     });
   });
@@ -332,6 +576,9 @@ describe('PercentileWheel server render', () => {
     const html = render({ variant: 'social' });
     expect(html).toContain('btl-pw-long');
     expect(html).toContain('btl-pw-static');
+    // The card draws the desktop labels only.
+    expect(html).not.toContain('class="btl-pw-n"');
+    expect(count(html, /class="btl-pw-lab[ "]/g)).toBe(14);
     expect(html).toMatch(
       /<svg[^>]*role="img"[^>]*aria-label="Percentile wheel for Example Player"/
     );
@@ -357,7 +604,7 @@ describe('PercentileWheel server render', () => {
     );
     const html = render({ metrics, comparison: COMPARISON });
     expect(count(html, /class="btl-pw-ovl/g)).toBe(14);
-    const slice = layoutWheel(metrics, GROUP_ORDER).slices.find((s) => s.metric.key === 'int')!;
+    const slice = layoutWheel(metrics, GROUP_ORDER).find((s) => s.metric.key === 'int')!;
     expect(html).toContain(wedgePath(INNER_RADIUS, radiusFor(48), slice.a0, slice.a1));
     expect(html).toContain(`stroke:${ramp(48, 'comparison')}`);
     expect(html).toContain('<li>Interceptions, no data; Comparison Player, 48th</li>');
