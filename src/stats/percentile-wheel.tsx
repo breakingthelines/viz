@@ -3,6 +3,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   useCallback,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -12,14 +13,19 @@ import { MARK_L, MARK_R, MARK_WIDTH } from '../brand/mark';
 import {
   HIT_OVERREACH,
   INNER_RADIUS,
+  NARROW_LABELS,
   OUTER_RADIUS,
   WHEEL_CX,
   WHEEL_CY,
-  WHEEL_HEIGHT,
-  WHEEL_WIDTH,
+  WIDE_LABELS,
+  type LabelRing,
+  type WheelLabelStyle,
+  type WheelSlice,
+  layoutLabels,
+  layoutTips,
   layoutWheel,
   radiusFor,
-  tipPosition,
+  viewBoxFor,
   wedgePath,
 } from './percentile-wheel-geometry';
 import type { StatMetric } from './stat-metric';
@@ -36,8 +42,13 @@ export type { MetricState, StatMetric } from './stat-metric';
  * toward white. Pending and locked event metrics draw as dashed outlines with
  * no number.
  *
+ * Each label follows the arc outside its wedge, centred on it, and reads left
+ * to right in the bottom half too. A thin arc per family (Shooting, Creating
+ * and so on, the metrics' `group`) runs outside the labels and carries the
+ * family's name.
+ *
  * Pure SVG with a scoped stylesheet: the server render is complete, and the
- * narrow-width labels, grow-in and reduced-motion handling are CSS, so no
+ * phone-width labels, grow-in and reduced-motion handling are CSS, so no
  * effect runs before first paint. Hover, tap and keyboard focus are client
  * state; the readout belongs to the caller through `onFocus`.
  */
@@ -72,11 +83,15 @@ export interface PercentileWheelProps {
    * panel, spec §4.2), so a screen reader does not hear each move twice.
    */
   announce?: boolean;
-  /** `social` is the export card: static, long labels, no interaction. */
+  /** `social` is the export card: static, desktop labels, no interaction. */
   variant?: 'web' | 'social';
   /** Grow-in on mount. Always off under reduced motion. */
   animate?: boolean;
-  /** `auto` switches to short labels at 760 px and below. */
+  /**
+   * Label sizing. `long` draws the desktop sizes, `short` the phone sizes
+   * (larger in view box units, since the wheel is drawn smaller), and `auto`
+   * switches to the phone sizes at 760 px and below.
+   */
   labels?: 'auto' | 'long' | 'short';
   /** Panel colour behind the wheel: the centre disc and the number halos use it. */
   surface?: string;
@@ -87,11 +102,8 @@ export interface PercentileWheelProps {
    *
    * The narrow-screen size (`labels="short"`, or `auto` at 760 px and below)
    * follows the same ratio to this prop as the shipped default (22:13) but
-   * never drops under `NARROW_TIP_FLOOR`: at the smallest supported wheel
-   * (a 316 px rendered width, the Stats tab at 390 px phone width) that
-   * floor is the smallest size that still renders at or above 10 px
-   * effective, so a caller cannot shrink the narrow number past legibility
-   * by passing a smaller `tipSize`.
+   * never drops under `NARROW_TIP_FLOOR`, so a caller cannot shrink the
+   * narrow number past legibility by passing a smaller `tipSize`.
    */
   tipSize?: number;
 }
@@ -103,10 +115,9 @@ const SHIPPED_NARROW_TIP_SIZE = 22;
 /** Ratio the narrow (<=760 px viewport) tip size keeps to the base tip size. */
 const NARROW_TIP_RATIO = SHIPPED_NARROW_TIP_SIZE / SHIPPED_BASE_TIP_SIZE;
 /**
- * Narrow tip size never goes below this. 22 (today's shipped value) measures
- * ~9.7 px effective at the Stats tab's narrowest wheel (390 px phone width,
- * a 316 px rendered wheel): already at the 10 px legibility floor, so it is
- * the floor itself, not just today's default.
+ * Narrow tip size never goes below this. 22 measures about 14 px at the
+ * Stats tab's narrowest wheel (390 px phone width, a 316 px rendered wheel
+ * on a 497 unit view box).
  */
 const NARROW_TIP_FLOOR = SHIPPED_NARROW_TIP_SIZE;
 
@@ -122,10 +133,9 @@ const MARK_RED = '#E20613';
 const TRACK = 'rgba(255,255,255,0.035)';
 const DASHED = 'rgba(255,255,255,0.3)';
 const MEDIAN = 'rgba(255,255,255,0.28)';
+const FAMILY_LINE = 'rgba(255,255,255,0.22)';
 
-/** `narrowTip` is the narrow-screen tip size (`narrowTipSize(tipSize)`). */
-function cssFor(narrowTip: number): string {
-  return `
+const CSS = `
 @keyframes btl-pw-grow{from{transform:scale(0.35);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes btl-pw-tipin{from{opacity:0}to{opacity:1}}
 .btl-pw .btl-pw-slc{transform-box:view-box;transform-origin:${WHEEL_CX}px ${WHEEL_CY}px;animation:btl-pw-grow .7s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i)*40ms)}
@@ -139,14 +149,10 @@ function cssFor(narrowTip: number): string {
 .btl-pw.btl-pw-focus .btl-pw-lab:not(.btl-pw-on){opacity:.45}
 .btl-pw .btl-pw-lab.btl-pw-on{fill:#fff;font-weight:600}
 .btl-pw .btl-pw-hit{cursor:pointer}
-.btl-pw .btl-pw-labs{display:none}
-.btl-pw.btl-pw-short .btl-pw-lab{display:none}
-.btl-pw.btl-pw-short .btl-pw-labs{display:inline}
-.btl-pw.btl-pw-short .btl-pw-tip{font-size:${narrowTip}px}
+.btl-pw.btl-pw-auto .btl-pw-n{display:none}
 @media (max-width:760px){
-.btl-pw.btl-pw-auto .btl-pw-lab{display:none}
-.btl-pw.btl-pw-auto .btl-pw-labs{display:inline}
-.btl-pw.btl-pw-auto .btl-pw-tip{font-size:${narrowTip}px}
+.btl-pw.btl-pw-auto .btl-pw-w{display:none}
+.btl-pw.btl-pw-auto .btl-pw-n{display:inline}
 }
 .btl-pw.btl-pw-static .btl-pw-slc,.btl-pw.btl-pw-static .btl-pw-tip{animation:none}
 .btl-pw:focus{outline:none}
@@ -156,7 +162,6 @@ function cssFor(narrowTip: number): string {
 .btl-pw .btl-pw-slc.btl-pw-solo,.btl-pw .btl-pw-ovl{transition:none}
 }
 `;
-}
 
 const SR_ONLY = {
   position: 'absolute',
@@ -215,6 +220,29 @@ function describe(m: StatMetric, comparison: PercentileWheelComparison | null | 
   return text;
 }
 
+/** One set of labels and numbers: `w` for desktop sizes, `n` for phone sizes. */
+interface Layer {
+  id: 'w' | 'n';
+  ring: LabelRing;
+  tipSize: number;
+  tips: (ReturnType<typeof layoutTips>[number] & { index: number })[];
+}
+
+function layer(
+  id: Layer['id'],
+  slices: WheelSlice[],
+  style: WheelLabelStyle,
+  tipSize: number
+): Layer {
+  const index = new Map(slices.map((s) => [s.metric.key, s.index]));
+  return {
+    id,
+    ring: layoutLabels(slices, style),
+    tipSize,
+    tips: layoutTips(slices, tipSize).map((t) => ({ ...t, index: index.get(t.key) ?? 0 })),
+  };
+}
+
 export function PercentileWheel({
   metrics,
   groupOrder,
@@ -230,8 +258,17 @@ export function PercentileWheel({
   tipSize = DEFAULT_TIP_SIZE,
 }: PercentileWheelProps) {
   const interactive = variant === 'web';
-  const css = useMemo(() => cssFor(narrowTipSize(tipSize)), [tipSize]);
-  const layout = useMemo(() => layoutWheel(metrics, groupOrder), [metrics, groupOrder]);
+  const mode = variant === 'social' ? 'long' : labels;
+  const slices = useMemo(() => layoutWheel(metrics, groupOrder), [metrics, groupOrder]);
+  // The desktop labels, the phone labels, or both for `auto` (CSS picks one).
+  const layers = useMemo(() => {
+    const out: Layer[] = [];
+    if (mode !== 'short') out.push(layer('w', slices, WIDE_LABELS, tipSize));
+    if (mode !== 'long') out.push(layer('n', slices, NARROW_LABELS, narrowTipSize(tipSize)));
+    return out;
+  }, [mode, slices, tipSize]);
+  const viewBox = viewBoxFor(layers.map((l) => l.ring));
+  const uid = useId();
   const [active, setActive] = useState<string | null>(null);
   const [liveText, setLiveText] = useState('');
   const lastPointer = useRef<string>('mouse');
@@ -259,7 +296,7 @@ export function PercentileWheel({
   }, [active, focusKeys, metrics]);
   const on = (key: string) => (onKeys?.has(key) ? ' btl-pw-on' : '');
 
-  const order = layout.slices.map((s) => s.metric);
+  const order = slices.map((s) => s.metric);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!interactive || order.length === 0) return;
@@ -298,7 +335,7 @@ export function PercentileWheel({
 
   const rootClass = [
     'btl-pw',
-    `btl-pw-${variant === 'social' ? 'long' : labels}`,
+    `btl-pw-${mode}`,
     onKeys ? 'btl-pw-focus' : '',
     animate && variant === 'web' ? '' : 'btl-pw-static',
   ]
@@ -309,7 +346,7 @@ export function PercentileWheel({
 
   const svg = (
     <svg
-      viewBox={`0 0 ${WHEEL_WIDTH} ${WHEEL_HEIGHT}`}
+      viewBox={viewBox.map((v) => v.toFixed(1)).join(' ')}
       role={interactive ? undefined : 'img'}
       aria-label={interactive ? undefined : ariaLabel}
       aria-hidden={interactive ? true : undefined}
@@ -323,14 +360,14 @@ export function PercentileWheel({
         fontVariantNumeric: 'tabular-nums',
       }}
     >
-      {layout.slices.map((s) => (
+      {slices.map((s) => (
         <path
           key={`t-${s.metric.key}`}
           d={wedgePath(INNER_RADIUS, OUTER_RADIUS, s.a0, s.a1)}
           fill={TRACK}
         />
       ))}
-      {layout.slices.map((s) => {
+      {slices.map((s) => {
         const m = s.metric;
         const style = { '--i': s.index } as CSSProperties;
         if (isEvent(m)) {
@@ -364,7 +401,7 @@ export function PercentileWheel({
         );
       })}
       <g data-overlay={comparison ? comparison.name : undefined}>
-        {layout.slices
+        {slices
           .filter((s) => !isEvent(s.metric))
           .map((s) => {
             const c = cmpPercentile(comparison, s.metric.key);
@@ -395,35 +432,79 @@ export function PercentileWheel({
         pointerEvents="none"
         data-median=""
       />
-      {layout.slices.map((s) => {
-        const m = s.metric;
-        if (!hasValue(m)) return null;
-        const p = Math.round(m.percentile);
-        const t = tipPosition(p, s.am);
-        return (
-          <text
-            key={`n-${m.key}`}
-            className={`btl-pw-tip btl-pw-dm${on(m.key)}`}
-            data-k={m.key}
-            style={{ '--i': s.index } as CSSProperties}
-            x={t.x.toFixed(1)}
-            y={t.y.toFixed(1)}
-            textAnchor="middle"
-            fontSize={tipSize}
-            fontWeight={700}
-            fill={WHITE}
-            stroke={t.inside ? undefined : surface}
-            strokeWidth={t.inside ? undefined : 4}
-            paintOrder={t.inside ? undefined : 'stroke'}
-            strokeLinejoin={t.inside ? undefined : 'round'}
-            pointerEvents="none"
-          >
-            {p}
-          </text>
-        );
-      })}
+      {layers.map((L) => (
+        <g key={L.id} className={`btl-pw-${L.id}`}>
+          {L.tips.map((t) => (
+            <text
+              key={`n-${t.key}`}
+              className={`btl-pw-tip btl-pw-dm${on(t.key)}`}
+              data-k={t.key}
+              style={{ '--i': t.index } as CSSProperties}
+              x={t.x.toFixed(1)}
+              y={t.baseline.toFixed(1)}
+              textAnchor="middle"
+              fontSize={L.tipSize}
+              fontWeight={700}
+              fill={WHITE}
+              stroke={t.inside ? undefined : surface}
+              strokeWidth={t.inside ? undefined : 4}
+              paintOrder={t.inside ? undefined : 'stroke'}
+              strokeLinejoin={t.inside ? undefined : 'round'}
+              pointerEvents="none"
+            >
+              {t.p}
+            </text>
+          ))}
+          {L.ring.labels.map((lab, i) => (
+            <g key={`l-${lab.key}`}>
+              <path id={`${uid}${L.id}-${i}`} d={lab.path} fill="none" />
+              <text
+                className={`btl-pw-lab${on(lab.key)}`}
+                data-k={lab.key}
+                fontSize={L.ring.size}
+                fontWeight={L.ring.style.weight}
+                fill={hasValue(slices[i].metric) ? LIGHT : MUTED}
+                textAnchor="middle"
+                pointerEvents="none"
+              >
+                <textPath href={`#${uid}${L.id}-${i}`} startOffset="50%">
+                  {lab.text}
+                </textPath>
+              </text>
+            </g>
+          ))}
+          {L.ring.families.map((f, i) => (
+            <g key={`f-${f.name}-${i}`} data-family={f.name} pointerEvents="none">
+              {f.lines.map((d) => (
+                <path
+                  key={d}
+                  d={d}
+                  fill="none"
+                  stroke={FAMILY_LINE}
+                  strokeWidth={L.ring.style.line}
+                />
+              ))}
+              {f.path ? (
+                <>
+                  <path id={`${uid}${L.id}-f${i}`} d={f.path} fill="none" />
+                  <text
+                    fontSize={L.ring.style.family}
+                    fontWeight={L.ring.style.familyWeight}
+                    fill={MUTED}
+                    textAnchor="middle"
+                  >
+                    <textPath href={`#${uid}${L.id}-f${i}`} startOffset="50%">
+                      {f.name}
+                    </textPath>
+                  </text>
+                </>
+              ) : null}
+            </g>
+          ))}
+        </g>
+      ))}
       {interactive &&
-        layout.slices.map((s) => (
+        slices.map((s) => (
           <path
             key={`h-${s.metric.key}`}
             className="btl-pw-hit"
@@ -437,43 +518,6 @@ export function PercentileWheel({
             onClick={onHitClick(s.metric.key)}
           />
         ))}
-      {layout.labels.map((L, i) => {
-        const m = layout.slices[i].metric;
-        return (
-          <text
-            key={`l-${L.key}`}
-            className={`btl-pw-lab${on(L.key)}`}
-            data-k={L.key}
-            x={L.x.toFixed(1)}
-            y={L.y.toFixed(1)}
-            textAnchor={L.anchor}
-            fontSize={12.5}
-            fill={hasValue(m) ? LIGHT : MUTED}
-            pointerEvents="none"
-          >
-            {m.label}
-          </text>
-        );
-      })}
-      {layout.shortLabels.map((L, i) => {
-        const m = layout.slices[i].metric;
-        return (
-          <text
-            key={`ls-${L.key}`}
-            className={`btl-pw-labs${on(L.key)}`}
-            data-k={L.key}
-            x={L.x.toFixed(1)}
-            y={L.y.toFixed(1)}
-            textAnchor={L.anchor}
-            fontSize={22}
-            fontWeight={600}
-            fill={hasValue(m) ? LIGHT : MUTED}
-            pointerEvents="none"
-          >
-            {m.shortLabel}
-          </text>
-        );
-      })}
       <circle
         cx={WHEEL_CX}
         cy={WHEEL_CY}
@@ -513,11 +557,13 @@ export function PercentileWheel({
       style={{
         position: 'relative',
         width: '100%',
-        maxWidth: variant === 'social' ? 952 : WHEEL_WIDTH,
+        // On the web the wheel is drawn at its view box size at most, so the
+        // desktop label sizes are pixels; the export card fills its column.
+        maxWidth: variant === 'social' ? 952 : Math.round(viewBox[2]),
         margin: '0 auto',
       }}
     >
-      <style>{css}</style>
+      <style>{CSS}</style>
       {svg}
       {interactive && (
         <>

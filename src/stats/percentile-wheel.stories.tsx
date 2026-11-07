@@ -3,6 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { PercentileWheel, type PercentileWheelProps } from './percentile-wheel';
 import type { StatMetric } from './stat-metric';
+import { MIN_LABEL_GAP_EM, OUTER_RADIUS } from './percentile-wheel-geometry';
+import { interWidth } from './inter-width';
 import {
   COMPARISON,
   GROUP_ORDER,
@@ -13,7 +15,8 @@ import {
 /**
  * Drawn to the approved mock (`scratchpad/prof/wheel2.py`, `wheel()`): the
  * subject's per-90 percentiles against Eredivisie midfielders, a comparison
- * player's outline, and the event-data board's pending wedges.
+ * player's outline, and the event-data board's pending wedges. Labels follow
+ * the arc outside each wedge, with a named arc per family outside them.
  */
 
 function ordinal(n: number) {
@@ -139,7 +142,9 @@ async function checkEventWedges(canvasElement: HTMLElement, state: 'pending' | '
     await expect(canvasElement.querySelector(`.btl-pw-tip[data-k="${k}"]`)).toBeNull();
     await expect(canvasElement.querySelector(`.btl-pw-ovl[data-k="${k}"]`)).toBeNull();
   }
-  await expect(canvasElement.querySelectorAll('.btl-pw-tip').length).toBe(14);
+  for (const layer of canvasElement.querySelectorAll('.btl-pw-w, .btl-pw-n')) {
+    await expect(layer.querySelectorAll('.btl-pw-tip').length).toBe(14);
+  }
   const hit = canvasElement.querySelector('.btl-pw-hit[data-k="prgp"]')!;
   await userEvent.hover(hit);
   await expect(canvas.getByTestId('readout')).toHaveTextContent('Progressive passes, event data');
@@ -156,32 +161,66 @@ export const Locked: Story = {
   play: ({ canvasElement }) => checkEventWedges(canvasElement, 'locked'),
 };
 
-/** The 22-metric event wheel at phone width: no two short labels overlap. */
+/**
+ * The labels as the browser draws them on their arcs, in the layer on show:
+ * each one's real text length against the width the layout planned for, and
+ * the clear angle to the next label, at the label band's inner edge.
+ */
+function measureLabels(root: Element) {
+  const svg = root.querySelector('svg')!;
+  const vb = svg.viewBox.baseVal;
+  const cx = vb.x + vb.width / 2;
+  const cy = vb.y + vb.height / 2;
+  const layer = [...root.querySelectorAll<SVGGElement>('.btl-pw-w, .btl-pw-n')].find(
+    (g) => getComputedStyle(g).display !== 'none'
+  )!;
+  const texts = [...layer.querySelectorAll<SVGTextElement>('text.btl-pw-lab')];
+  const size = Number(texts[0].getAttribute('font-size'));
+  const deg = (p: DOMPoint) => (Math.atan2(p.y - cy, p.x - cx) * 180) / Math.PI;
+  const spans = texts.map((t) => {
+    const a = deg(t.getStartPositionOfChar(0));
+    const b = deg(t.getEndPositionOfChar(t.getNumberOfChars() - 1));
+    // Clockwise start and length: the bottom half runs counter-clockwise.
+    const d = (((b - a) % 360) + 360) % 360;
+    return d > 180 ? { start: b, d: 360 - d } : { start: a, d };
+  });
+  const inner = OUTER_RADIUS + 9;
+  const gaps = spans.map((s, i) => {
+    const n = spans[(i + 1) % spans.length];
+    const g = (((n.start - (s.start + s.d)) % 360) + 360) % 360;
+    return {
+      pair: `${texts[i].textContent} / ${texts[(i + 1) % texts.length].textContent}`,
+      g: (g * Math.PI * inner) / 180,
+    };
+  });
+  const widths = texts.map((t) => ({
+    text: t.textContent ?? '',
+    drawn: t.getComputedTextLength(),
+    planned: interWidth(t.textContent ?? '', size, 600),
+  }));
+  return { layer, size, gaps, widths };
+}
+
+async function checkLabelsClear(root: Element, count: number) {
+  const { size, gaps, widths } = measureLabels(root);
+  await expect(widths.length).toBe(count);
+  // Every label is drawn whole (a textPath drops what runs off its arc) and
+  // no wider than the layout planned for, give or take 1% of kerning and
+  // the whole-pixel glyph advances a small rendered size snaps to.
+  for (const w of widths) {
+    await expect(w.drawn, w.text).toBeGreaterThan(0);
+    await expect(w.drawn, w.text).toBeLessThanOrEqual(w.planned * 1.01 + 2);
+  }
+  for (const { pair, g } of gaps) {
+    await expect(g, pair).toBeGreaterThanOrEqual(MIN_LABEL_GAP_EM * size);
+  }
+}
+
+/** The 22-metric event wheel at phone width: every label clear of its neighbours. */
 export const EventNarrow: Story = {
   args: { metrics: withEventMetrics('pending'), labels: 'short' },
   render: (args) => <Panel {...args} width={358} />,
-  play: async ({ canvasElement }) => {
-    const labels = [...canvasElement.querySelectorAll<SVGTextElement>('.btl-pw-labs')];
-    await expect(labels.length).toBe(22);
-    const boxes = labels.map((el) => ({ k: el.dataset.k, b: el.getBBox() }));
-    const clashes: string[] = [];
-    boxes.forEach(({ k, b }, i) => {
-      for (const o of boxes.slice(i + 1)) {
-        const c = o.b;
-        if (
-          b.x < c.x + c.width &&
-          c.x < b.x + b.width &&
-          b.y < c.y + c.height &&
-          c.y < b.y + b.height
-        ) {
-          clashes.push(`${k} / ${o.k}`);
-        }
-      }
-      if (b.y < 0 || b.y + b.height > 488 || b.x < 0 || b.x + b.width > 720)
-        clashes.push(`${k} outside`);
-    });
-    await expect(clashes).toEqual([]);
-  },
+  play: ({ canvasElement }) => checkLabelsClear(canvasElement.querySelector('.btl-pw')!, 22),
 };
 
 /**
@@ -225,10 +264,11 @@ export const Social: Story = {
     await expect(root.querySelector('.btl-pw-hit')).toBeNull();
     await expect(root.querySelector('[aria-live]')).toBeNull();
     await expect(root.classList.contains('btl-pw-static')).toBe(true);
-    const long = root.querySelector('.btl-pw-lab') as SVGTextElement;
-    const short = root.querySelector('.btl-pw-labs') as SVGTextElement;
-    await expect(getComputedStyle(long).display).not.toBe('none');
-    await expect(getComputedStyle(short).display).toBe('none');
+    // Desktop label sizes only, on their arcs, with the family names outside.
+    await expect(root.querySelector('.btl-pw-n')).toBeNull();
+    await expect(getComputedStyle(root.querySelector('.btl-pw-w')!).display).not.toBe('none');
+    await expect(root.querySelectorAll('[data-family]').length).toBe(5);
+    await checkLabelsClear(root, 14);
     const slc = root.querySelector('.btl-pw-slc') as SVGPathElement;
     await expect(getComputedStyle(slc).animationName).toBe('none');
     await expect(root.querySelectorAll('.btl-pw-ovl').length).toBe(14);
@@ -239,10 +279,10 @@ export const Narrow: Story = {
   args: { labels: 'short', comparison: COMPARISON },
   render: (args) => <Panel {...args} width={358} />,
   play: async ({ canvasElement }) => {
-    const long = canvasElement.querySelector('.btl-pw-lab') as SVGTextElement;
-    const short = canvasElement.querySelector('.btl-pw-labs') as SVGTextElement;
-    await expect(getComputedStyle(long).display).toBe('none');
-    await expect(getComputedStyle(short).display).not.toBe('none');
+    const root = canvasElement.querySelector('.btl-pw')!;
+    await expect(root.querySelector('.btl-pw-w')).toBeNull();
+    await expect(getComputedStyle(root.querySelector('.btl-pw-n')!).display).not.toBe('none');
+    await checkLabelsClear(root, 14);
     // Tap: a second tap on the same wedge clears it.
     const hit = canvasElement.querySelector('.btl-pw-hit[data-k="npg"]')!;
     await userEvent.pointer({ keys: '[TouchA]', target: hit });
@@ -253,5 +293,21 @@ export const Narrow: Story = {
     await waitFor(() =>
       expect(canvasElement.querySelector('.btl-pw')!.classList.contains('btl-pw-focus')).toBe(false)
     );
+  },
+};
+
+/**
+ * The live template's five families (Discipline has no wheel metric, so the
+ * Stats tab leaves it out) at phone width: every label in full, including
+ * "Interceptions", clear of its neighbours.
+ */
+export const PhoneFiveFamilies: Story = {
+  args: { groupOrder: GROUP_ORDER.slice(0, 5), labels: 'short', comparison: COMPARISON },
+  render: (args) => <Panel {...args} width={358} />,
+  play: async ({ canvasElement }) => {
+    const root = canvasElement.querySelector('.btl-pw')!;
+    await checkLabelsClear(root, 14);
+    const { widths } = measureLabels(root);
+    await expect(widths.map((w) => w.text)).toContain('Interceptions');
   },
 };
