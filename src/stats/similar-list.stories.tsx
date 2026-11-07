@@ -169,6 +169,18 @@ export const VerifyFocusVisibleAndPressedStyling: Story = {
   },
 };
 
+/** A row's age in the context line reads "age 24", not a bare number, so
+ * it never reads like a season. */
+export const VerifyAgeIsLabelled: Story = {
+  args: { items: QUICK_PICKS, onSelect: () => {} },
+  play: async ({ canvasElement }) => {
+    const teammateButton = [...canvasElement.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Paixão')
+    )!;
+    await expect(teammateButton.textContent).toContain('age 24');
+  },
+};
+
 /** Entity links are never underlined (BTL link style); they turn red on hover and focus. */
 export const VerifyEntityLinkStyle: Story = {
   args: { items: SIMILAR_PLAYERS },

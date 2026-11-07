@@ -7,6 +7,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.21.1]
+
+### Fixed: a bare age reads like a season
+
+- `SimilarList`'s context line now renders an age as "age 24", not a bare
+  number. Next to a player, a bare "24" reads like a season (24/25). Entity
+  search already uses this wording (`hitSecondaryLabel`).
+
 ## [0.21.0]
 
 ### Changed: the Seasons chart is a percentile trend (breaking)

@@ -81,7 +81,7 @@ function ContextLine({
       )
     );
   }
-  if (context.age != null) parts.push(context.age);
+  if (context.age != null) parts.push(`age ${context.age}`);
   if (context.text) parts.push(context.text);
   return (
     <span style={{ fontSize: 12, color: MUTED }}>
