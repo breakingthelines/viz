@@ -98,28 +98,42 @@ export interface PercentileWheelProps {
   /**
    * In-wedge percentile number size, in SVG user units at the wheel's full
    * (desktop/`web`) width. Default 11 (down from 13, ~15% smaller, PF-polish
-   * wheel numbers). Weight is always 700; this only scales the digits.
+   * wheel numbers). Desktop renders at 1:1 (the container is always wide
+   * enough to show the view box at its native size), so this is also the
+   * rendered pixel size there. Weight is always 700; this only scales the
+   * digits.
    *
    * The narrow-screen size (`labels="short"`, or `auto` at 760 px and below)
-   * follows the same ratio to this prop as the shipped default (22:13) but
-   * never drops under `NARROW_TIP_FLOOR`, so a caller cannot shrink the
-   * narrow number past legibility by passing a smaller `tipSize`.
+   * follows the same ratio to this prop as `NARROW_TIP_SIZE` keeps to this
+   * default, but never drops under `NARROW_TIP_FLOOR`, so a caller cannot
+   * shrink the narrow number past legibility by passing a smaller `tipSize`.
    */
   tipSize?: number;
 }
 
-/** The shipped default before PF-polish's 15% cut (kept for the narrow ratio below). */
 const DEFAULT_TIP_SIZE = 11;
-const SHIPPED_BASE_TIP_SIZE = 13;
-const SHIPPED_NARROW_TIP_SIZE = 22;
-/** Ratio the narrow (<=760 px viewport) tip size keeps to the base tip size. */
-const NARROW_TIP_RATIO = SHIPPED_NARROW_TIP_SIZE / SHIPPED_BASE_TIP_SIZE;
 /**
- * Narrow tip size never goes below this. 22 measures about 14 px at the
- * Stats tab's narrowest wheel (390 px phone width, a 316 px rendered wheel
- * on a 497 unit view box).
+ * Narrow (<=760 px, or `labels="short"`) tip size in SVG user units, for the
+ * default tip size above.
+ *
+ * 0.22.0's curved labels (#93) fit the view box to the label rings
+ * (`viewBoxFor`) instead of the old fixed 720-unit frame, shrinking it to
+ * about 497 units at the Stats tab's narrowest wheel (390 px phone width).
+ * The phone's rendered wheel width did not change (still about 316 px), so
+ * every user unit there now draws about 720/497, roughly 1.45x, bigger than
+ * before: the old narrow size of 22 drew at about 9.7 px pre-0.22.0 and
+ * jumped to about 14 px after, nearly 1.5x the curved label beside it
+ * ("those percentiles are too big").
+ *
+ * 15.5 draws at about 9.6 px on that same phone (15.5 x 316/497): a touch
+ * under the old 9.7 px, and still clearly above the curved label's own
+ * ~9.5 px there.
  */
-const NARROW_TIP_FLOOR = SHIPPED_NARROW_TIP_SIZE;
+const NARROW_TIP_SIZE = 15.5;
+/** Ratio the narrow (<=760 px viewport) tip size keeps to the default tip size. */
+const NARROW_TIP_RATIO = NARROW_TIP_SIZE / DEFAULT_TIP_SIZE;
+/** Narrow tip size never goes below this, so a small `tipSize` cannot shrink it past legibility. */
+const NARROW_TIP_FLOOR = NARROW_TIP_SIZE;
 
 /** The narrow-screen (`short`/`auto`<=760px) tip size for a given base `tipSize`. */
 function narrowTipSize(tipSize: number): number {
