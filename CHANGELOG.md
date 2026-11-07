@@ -7,6 +7,23 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.22.1]
+
+### Fixed: in-wedge percentile numbers too big on phones
+
+- 0.22.0's curved labels fit the wheel's view box to the label rings instead
+  of the old fixed 720-unit frame, shrinking it to about 497 units on a
+  phone. The phone's rendered wheel width did not change, so the narrow
+  tip's fixed 22 user units, unchanged since the 0.20.0 size cut, started
+  drawing about 1.45x bigger there (about 9.7 px before, about 14 px after,
+  nearly 1.5x the curved label beside it).
+- The narrow (`<=760px`, or `labels="short"`) in-wedge number is now 15.5
+  user units, recalibrated to the new view box: about 9.6 px on a 390 px
+  phone, a touch under the pre-0.22.0 size and still clearly above the
+  curved label's own ~9.5 px there. The desktop size (11, the `tipSize`
+  prop's default) is unchanged: desktop always renders the wheel at its
+  view box's native size, so it never saw this regression.
+
 ## [0.22.0]
 
 ### Changed: curved wheel labels with family arcs on `PercentileWheel`

@@ -556,17 +556,17 @@ describe('PercentileWheel server render', () => {
       expect(html).not.toContain('font-size="11"');
     });
 
-    it('keeps the narrow (<=760px) tip at its 22 px ratio for a tipSize at or above the shipped 13', () => {
-      // 20 * (22/13) = 33.8..., above the 22 px floor, so the ratio applies.
+    it('keeps the narrow (<=760px) tip at its 15.5 ratio for a tipSize at or above the default 11', () => {
+      // 20 * (15.5/11) = 28.181..., above the 15.5 floor, so the ratio applies.
       const html = render({ tipSize: 20 });
-      expect(tipSizes(html, 'n')).toEqual(Array(14).fill(33.84615384615385));
+      expect(tipSizes(html, 'n')).toEqual(Array(14).fill(28.181818181818183));
       expect(tipSizes(render({ tipSize: 20, labels: 'short' }), 'n')).toHaveLength(14);
     });
 
-    it('floors the narrow (<=760px) tip at 22px, so a small tipSize cannot shrink it past legibility', () => {
+    it('floors the narrow (<=760px) tip at 15.5, so a small tipSize cannot shrink it past legibility', () => {
       for (const tipSize of [11, 9, 4]) {
         expect(tipSizes(render({ tipSize }), 'n'), `tipSize ${tipSize}`).toEqual(
-          Array(14).fill(22)
+          Array(14).fill(15.5)
         );
       }
     });
