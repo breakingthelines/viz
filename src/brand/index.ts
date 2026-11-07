@@ -7,4 +7,9 @@ export type { WordmarkProps, ChartWatermarkProps } from './wordmark';
 export { ramp, ratingColour } from './colour';
 
 export { SocialFrame, useSocialFrameExport } from './social-frame';
-export type { SocialFrameProps, UseSocialFrameExportResult } from './social-frame';
+export type {
+  SocialFrameProps,
+  UseSocialFrameExportOptions,
+  UseSocialFrameExportResult,
+} from './social-frame';
+export type { ShareLink } from '#/utils/share-payload';

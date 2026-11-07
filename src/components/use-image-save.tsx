@@ -6,6 +6,7 @@ import {
   downloadDataUrl,
   type ExportOptions,
 } from '#/utils/export';
+import { imageSharePayload, type ShareLink } from '#/utils/share-payload';
 
 /** Options accepted by `save()`, layered over the plain capture options. */
 export interface ImageSaveOptions extends Pick<
@@ -30,6 +31,14 @@ export interface ImageSaveOptions extends Pick<
    * hands it once a preview is open.
    */
   extraControls?: ReactNode;
+  /**
+   * The link and title the overlay's Share sends with the image, so the
+   * recipient gets the page as well as the picture. Dropped, and the image
+   * shared alone, only when `navigator.canShare` refuses both together. What
+   * the chosen target does with them after the sheet opens (iOS apps may keep
+   * the link and drop the image) cannot be seen from here.
+   */
+  share?: ShareLink;
 }
 
 export interface UseImageSaveResult {
@@ -95,6 +104,7 @@ export function useImageSave(): UseImageSaveResult {
     dataUrl: string;
     fileName: string;
     extraControls?: ReactNode;
+    share?: ShareLink;
   } | null>(null);
 
   // Deliberately NOT calling `preloadImageExport()` here. It exists as an
@@ -122,6 +132,7 @@ export function useImageSave(): UseImageSaveResult {
         fitToContent,
         forcePreview,
         extraControls,
+        share,
       } = options;
 
       setSaving(true);
@@ -140,7 +151,7 @@ export function useImageSave(): UseImageSaveResult {
           ...(fitToContent !== undefined ? { fitToContent } : {}),
         });
         if (forcePreview || isTouchDevice()) {
-          setPreview({ dataUrl, fileName: `${fileName}.png`, extraControls });
+          setPreview({ dataUrl, fileName: `${fileName}.png`, extraControls, share });
         } else {
           downloadDataUrl(dataUrl, `${fileName}.png`);
         }
@@ -163,8 +174,13 @@ export function useImageSave(): UseImageSaveResult {
     // is what makes that possible.
     const blob = dataUrlToBlob(preview.dataUrl);
     const file = new File([blob], preview.fileName, { type: blob.type || 'image/png' });
-    if (!navigator.canShare?.({ files: [file] })) return;
-    navigator.share({ files: [file] }).catch((err) => {
+    const payload = imageSharePayload(
+      file,
+      preview.share,
+      navigator.canShare ? (data) => navigator.canShare(data) : undefined
+    );
+    if (!payload) return;
+    navigator.share(payload).catch((err) => {
       // User dismissed the native sheet — a no-op, not an error.
       if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('[viz] useImageSave share failed', err);
