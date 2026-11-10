@@ -149,18 +149,31 @@ const DASHED = 'rgba(255,255,255,0.3)';
 const MEDIAN = 'rgba(255,255,255,0.28)';
 const FAMILY_LINE = 'rgba(255,255,255,0.22)';
 
+/**
+ * Focus state (PF-polish, "selected slice isn't nice at all"): hover, tap
+ * and keyboard focus used to read as a size jump (no change to the wedge's
+ * own geometry, but the comparison outline's stroke-width:2 ramping toward
+ * white snapped from 22% opacity to fully visible on top of it) with a
+ * harsh dim everywhere else. The fix keeps every wedge's own `d` untouched
+ * (no scale, so no layout shift), eases dim/stroke/fill changes over 140ms
+ * (within the 120-160ms band), and gives the focused wedge its own thin
+ * soft edge distinct from the comparison outline, so the two never read as
+ * one thick white ring.
+ */
 const CSS = `
 @keyframes btl-pw-grow{from{transform:scale(0.35);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes btl-pw-tipin{from{opacity:0}to{opacity:1}}
 .btl-pw .btl-pw-slc{transform-box:view-box;transform-origin:${WHEEL_CX}px ${WHEEL_CY}px;animation:btl-pw-grow .7s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i)*40ms)}
-.btl-pw .btl-pw-slc.btl-pw-solo{transition:d .4s cubic-bezier(.2,.8,.2,1),fill .3s,opacity .18s}
+.btl-pw .btl-pw-slc.btl-pw-solo{stroke:rgba(255,255,255,0);stroke-width:1;stroke-linejoin:round;transition:d .4s cubic-bezier(.2,.8,.2,1),fill .3s,opacity .14s,stroke .14s}
+.btl-pw .btl-pw-slc.btl-pw-solo.btl-pw-on{stroke:rgba(255,255,255,0.4)}
 .btl-pw .btl-pw-tip{animation:btl-pw-tipin .4s ease-out backwards;animation-delay:calc(var(--i)*40ms + .5s)}
-.btl-pw .btl-pw-dm{transition:opacity .18s}
-.btl-pw .btl-pw-ovl{fill:none;stroke-width:2;stroke-linejoin:round;pointer-events:none;transition:d .45s cubic-bezier(.2,.8,.2,1),opacity .18s}
-.btl-pw.btl-pw-focus .btl-pw-ovl:not(.btl-pw-on){opacity:.22}
-.btl-pw.btl-pw-focus .btl-pw-dm:not(.btl-pw-on){opacity:.22}
-.btl-pw .btl-pw-lab{transition:fill .18s,opacity .18s}
-.btl-pw.btl-pw-focus .btl-pw-lab:not(.btl-pw-on){opacity:.45}
+.btl-pw .btl-pw-dm{transition:opacity .14s}
+.btl-pw .btl-pw-ovl{fill:none;stroke-width:1.5;stroke-opacity:.9;stroke-linejoin:round;pointer-events:none;transition:d .45s cubic-bezier(.2,.8,.2,1),opacity .14s,stroke-width .14s,stroke-opacity .14s}
+.btl-pw .btl-pw-ovl.btl-pw-on{stroke-width:1;stroke-opacity:.8}
+.btl-pw.btl-pw-focus .btl-pw-ovl:not(.btl-pw-on){opacity:.4}
+.btl-pw.btl-pw-focus .btl-pw-dm:not(.btl-pw-on){opacity:.4}
+.btl-pw .btl-pw-lab{transition:fill .14s,opacity .14s}
+.btl-pw.btl-pw-focus .btl-pw-lab:not(.btl-pw-on){opacity:.5}
 .btl-pw .btl-pw-lab.btl-pw-on{fill:#fff;font-weight:600}
 .btl-pw .btl-pw-hit{cursor:pointer}
 .btl-pw.btl-pw-auto .btl-pw-n{display:none}
@@ -170,10 +183,10 @@ const CSS = `
 }
 .btl-pw.btl-pw-static .btl-pw-slc,.btl-pw.btl-pw-static .btl-pw-tip{animation:none}
 .btl-pw:focus{outline:none}
-.btl-pw:focus-visible{outline:2px solid rgba(255,255,255,0.6);outline-offset:2px;border-radius:4px}
+.btl-pw:focus-visible{outline:2px solid rgba(255,255,255,0.55);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){
 .btl-pw .btl-pw-slc,.btl-pw .btl-pw-tip{animation:none!important}
-.btl-pw .btl-pw-slc.btl-pw-solo,.btl-pw .btl-pw-ovl{transition:none}
+.btl-pw .btl-pw-slc.btl-pw-solo,.btl-pw .btl-pw-ovl,.btl-pw .btl-pw-dm,.btl-pw .btl-pw-lab{transition:none}
 }
 `;
 
