@@ -7,6 +7,32 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.23.1]
+
+### Fixed: a cleaner focus state on `PercentileWheel`
+
+- Hover, tap and keyboard focus used to read as a hard size jump: nothing
+  on the focused wedge itself changed, but the comparison outline (always
+  `stroke-width:2`, ramping toward white) snapped from 22% opacity to
+  fully visible on top of it, while every other wedge dropped to 22%
+  opacity in one step. Against a full-strength subject wedge (the ramp
+  reaches BTL red at the 90th percentile) this read as a thick white ring
+  clashing with a bright red fill and a crude jump everywhere else.
+- Unfocused wedges, their labels and the comparison outline now dim to
+  40-50% instead of 22%, so the wheel still reads as one shape.
+- The focused wedge gets its own thin, soft edge
+  (`rgba(255,255,255,0.4)`, 1 unit) instead of borrowing the comparison
+  outline's weight. The comparison outline itself thins and softens
+  slightly when it sits on the focused wedge (`stroke-width` 1.5 to 1,
+  `stroke-opacity` .9 to .8), so the two stay legible without clashing.
+- All of the above transitions over 140ms (was 180ms), inside the
+  120-160ms band, and the wedge's own path is never touched by focus, so
+  there is no layout shift. `prefers-reduced-motion` now also turns off
+  the dim and label transitions, not just the grow-in and comparison
+  animations.
+- The keyboard focus ring (`:focus-visible`) is slightly softer
+  (`rgba(255,255,255,0.55)`, 3px offset, 6px radius) to match.
+
 ## [0.23.0]
 
 ### Added: a link and title on a shared image
