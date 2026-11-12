@@ -278,12 +278,17 @@ function teamAwareStory(block: Seeded): Story {
   };
 }
 
+function required(story: Story | undefined): Story {
+  if (!story) throw new Error('team-aware block missing from the seeded list');
+  return story;
+}
+
 const [heatMap, lineBreaking, progression, passNetwork, passSonar] = TEAM_AWARE.map(teamAwareStory);
-export const HeatMapReportsOncePerPick: Story = heatMap ?? {};
-export const LineBreakingReportsOncePerPick: Story = lineBreaking ?? {};
-export const ProgressionReportsOncePerPick: Story = progression ?? {};
-export const PassNetworkReportsOncePerPick: Story = passNetwork ?? {};
-export const PassSonarReportsOncePerPick: Story = passSonar ?? {};
+export const HeatMapReportsOncePerPick: Story = required(heatMap);
+export const LineBreakingReportsOncePerPick: Story = required(lineBreaking);
+export const ProgressionReportsOncePerPick: Story = required(progression);
+export const PassNetworkReportsOncePerPick: Story = required(passNetwork);
+export const PassSonarReportsOncePerPick: Story = required(passSonar);
 
 /**
  * PressMap has no player: its subject names the panel's team. PassNetwork's

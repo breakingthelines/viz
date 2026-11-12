@@ -83,8 +83,10 @@ const CSS = `
 .btl-mr-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (pointer:coarse){.btl-mr{--mr-thumb:24px;--mr-row:44px}}
 @media (prefers-reduced-motion:reduce){
-.btl-mr-input::-webkit-slider-thumb,.btl-mr-input::-moz-range-thumb{transition:none}
-.btl-mr-input:active::-webkit-slider-thumb,.btl-mr-input:active::-moz-range-thumb{transform:none}
+.btl-mr-input::-webkit-slider-thumb{transition:none}
+.btl-mr-input::-moz-range-thumb{transition:none}
+.btl-mr-input:active::-webkit-slider-thumb{transform:none}
+.btl-mr-input:active::-moz-range-thumb{transform:none}
 }
 `;
 
@@ -217,6 +219,8 @@ export function MinuteRange({
     const t = Math.min(1, Math.max(0, (e.clientX - rect.left - thumbPx / 2) / usable));
     const minute = min + t * (max - min);
     const thumb: Thumb = Math.abs(minute - from) <= Math.abs(minute - to) ? 'from' : 'to';
+    // Stop the compatibility mousedown from blurring the thumb focused below.
+    e.preventDefault();
     emit(move(thumb, minute), true);
     (thumb === 'from' ? fromRef : toRef).current?.focus();
   };

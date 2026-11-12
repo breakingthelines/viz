@@ -160,6 +160,25 @@ export const TrackClick: Story = {
   },
 };
 
+/**
+ * The reduced-motion media rule must hold real rules. A selector list mixing
+ * ::-webkit-slider-thumb and ::-moz-range-thumb is invalid in every browser
+ * and is dropped whole, leaving the rule empty.
+ */
+export const ReducedMotionRulesParse: Story = {
+  play: async ({ canvasElement }) => {
+    const css = canvasElement.querySelector('style')?.textContent ?? '';
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    const media = Array.from(sheet.cssRules).find(
+      (r): r is CSSMediaRule => r instanceof CSSMediaRule && /reduced-motion/.test(r.conditionText)
+    );
+    if (!media) throw new Error('no reduced-motion media rule');
+    // One rule per vendor pseudo-element survives in at least the running engine.
+    await expect(media.cssRules.length).toBeGreaterThan(0);
+  },
+};
+
 /** Disabled: both thumbs are disabled and the track ignores clicks. */
 export const Disabled: Story = {
   args: { disabled: true },

@@ -380,7 +380,7 @@ export function ShotMap({
             const r = radiusForXg(shot.xg);
             const isGoal = shot.outcome === 'goal';
             const isActive = shot.id === activeId;
-            const dimmed = activeId !== null && !isActive;
+            const dimmed = active !== null && !isActive;
             const clipId = `${clipPrefix}-shot-${shot.id}`;
 
             return (

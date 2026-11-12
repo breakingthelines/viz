@@ -40,7 +40,7 @@ export function usePersistedSelection<T extends object>(
   subjectOf?: (selection: T) => SelectionSubject
 ) {
   const [selection, setSelection] = useState<T>(() =>
-    initial === undefined ? fallback : withoutSubject(initial)
+    initial == null ? fallback : withoutSubject(initial)
   );
 
   // Set by `update`, cleared once the resulting commit has been reported.
