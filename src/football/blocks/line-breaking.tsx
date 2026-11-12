@@ -15,6 +15,7 @@ import {
   type SelectablePlayer,
 } from '#/football/lib/player-select';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A single completed pass, in StatsBomb event coordinates (120×80). */
@@ -93,10 +94,12 @@ export interface LineBreakingProps {
    */
   initialSelection?: LineBreakingSelection;
   /**
-   * Fires whenever the user changes the selection (view mode, player or side),
-   * with the full new selection object. When omitted, no-op (today's behaviour).
+   * Fires when the user changes the selection (view mode, player or side), once
+   * per change, with the full new selection plus `subject` (the passer, when one
+   * is picked, and the side on show). Never fires on mount or for
+   * `initialSelection`.
    */
-  onSelectionChange?: (selection: LineBreakingSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<LineBreakingSelection>) => void;
 }
 
 /** StatsBomb pitch is 120 long × 80 wide; the Pitch primitive is 100 × 100. */
@@ -155,12 +158,21 @@ export function LineBreaking({
 }: LineBreakingProps) {
   const uid = useId();
   const arrowId = `${uid}-arrow`;
-  // Consolidated selection (seeded by the host, emits every change): the view
+  // Consolidated selection (seeded by the host, reports user changes): the view
   // toggle, the drilled-in passer, and the active side.
   const [selection, setSelection] = usePersistedSelection<LineBreakingSelection>(
     initialSelection,
     { mode: 'all', activePlayer: null, selectedTeam: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const key = s.activePlayer;
+      const pass = key === null ? undefined : passes.find((p) => (p.playerId ?? p.player) === key);
+      return selectionSubject({
+        playerId: pass?.playerId,
+        playerName: pass?.player ?? key,
+        team: resolveActiveTeam(team, key, s.selectedTeam, () => pass?.team),
+      });
+    }
   );
   const { mode, activePlayer, selectedTeam: activeTeamSel } = selection;
   const setMode = (m: ViewMode) => setSelection((prev) => ({ ...prev, mode: m }));

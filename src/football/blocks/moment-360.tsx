@@ -8,6 +8,14 @@ import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import {
+  filterByMinute,
+  selectionSubject,
+  type MinuteWindow,
+  type SelectionChange,
+} from '#/football/lib/selection';
+import { useMinuteWindow } from '#/football/lib/use-minute-window';
+import { WindowEmpty } from '#/football/lib/window-empty';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side the moment's actor belongs to. `home` attacks left→right. */
@@ -130,10 +138,18 @@ export interface Moment360Props {
    */
   initialSelection?: Moment360Selection;
   /**
-   * Fires whenever the user picks a different moment, with the full new
-   * selection object. When omitted, no-op (today's behaviour).
+   * Fires when the user picks a different moment, once per change, with the
+   * full new selection plus `subject` (the moment's actor; `team` is `null`
+   * because this block has no team names, only `home`/`away`). Never fires on
+   * mount or for `initialSelection`.
    */
-  onSelectionChange?: (selection: Moment360Selection) => void;
+  onSelectionChange?: (selection: SelectionChange<Moment360Selection>) => void;
+  /**
+   * Only offer moments whose `event.minute` falls in this range (inclusive).
+   * When the selected moment is outside it, the first moment inside it is
+   * shown; when none is, the panel says so instead of disappearing.
+   */
+  window?: MinuteWindow;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -193,7 +209,13 @@ export function Moment360({
   builderControls,
   initialSelection,
   onSelectionChange,
+  window: windowProp,
 }: Moment360Props) {
+  const minuteWindow = useMinuteWindow(windowProp);
+  const inWindow = useMemo(
+    () => filterByMinute(moments, (m) => m.event.minute, minuteWindow),
+    [moments, minuteWindow]
+  );
   const maskId = useId();
   const desatId = useId();
   const glowId = useId();
@@ -202,12 +224,16 @@ export function Moment360({
   // Flips when the actor headshot 404s, so it falls back to the accent dot.
   const [actorPhotoFailed, setActorPhotoFailed] = useState(false);
 
-  // Consolidated selection (seeded by the host, emits every change): which
+  // Consolidated selection (seeded by the host, reports user changes): which
   // freeze-frame is shown. `null` = the first moment (the default).
   const [selection, setSelection] = usePersistedSelection<Moment360Selection>(
     initialSelection,
     { momentId: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const picked = inWindow.find((m) => m.id === s.momentId) ?? inWindow[0];
+      return selectionSubject({ playerName: picked?.event.player });
+    }
   );
   const { momentId } = selection;
 
@@ -215,8 +241,8 @@ export function Moment360({
   // renders this single frame. `moment` can be undefined when `moments` is empty
   // — guarded after the hooks so hook order stays stable.
   const moment = useMemo(
-    () => moments.find((m) => m.id === momentId) ?? moments[0],
-    [moments, momentId]
+    () => inWindow.find((m) => m.id === momentId) ?? inWindow[0],
+    [inWindow, momentId]
   );
 
   // Pull the selected frame's fields out (with safe fallbacks) so the hooks
@@ -264,8 +290,26 @@ export function Moment360({
 
   // Picker options + the selected frame's label (mirrors the goal-sequence
   // header dropdown). The picker only renders when there's more than one frame.
-  const momentOptions = moments.map((m) => ({ value: m.id, label: m.label }));
+  const momentOptions = inWindow.map((m) => ({ value: m.id, label: m.label }));
 
+  // A window that matches no moment keeps the frame. All hooks have run above.
+  if (!moment && minuteWindow && moments.length > 0) {
+    return (
+      <WindowEmpty
+        title={
+          <>
+            {crestUrl && <Crest url={crestUrl} className="shrink-0 rounded-none" />}
+            The Moment
+          </>
+        }
+        noun="moments"
+        window={minuteWindow}
+        className={className}
+        wordmark={wordmark}
+        builderControls={builderControls}
+      />
+    );
+  }
   // Nothing to render without a moment (empty list) — render nothing, like the
   // other selectable blocks guard their empty case. All hooks have run above.
   if (!moment || !event || !actor) return null;

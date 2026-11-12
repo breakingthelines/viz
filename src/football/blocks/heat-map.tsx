@@ -12,6 +12,7 @@ import {
   type SelectablePlayer,
 } from '#/football/lib/player-select';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /**
@@ -96,10 +97,11 @@ export interface HeatMapProps {
    */
   initialSelection?: HeatMapSelection;
   /**
-   * Fires whenever the user changes the selection, with the full new selection
-   * object. When omitted, no-op (today's behaviour).
+   * Fires when the user changes the selection (player or side), once per change,
+   * with the full new selection plus `subject` (the player, when one is picked,
+   * and the side on show). Never fires on mount or for `initialSelection`.
    */
-  onSelectionChange?: (selection: HeatMapSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<HeatMapSelection>) => void;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -177,12 +179,26 @@ export function HeatMap({
   initialSelection,
   onSelectionChange,
 }: HeatMapProps) {
-  // Consolidated selection (seeded by the host, emits every change): the
+  // Consolidated selection (seeded by the host, reports user changes): the
   // filtered player (`null` = whole team) and the active side.
   const [selection, setSelection] = usePersistedSelection<HeatMapSelection>(
     initialSelection,
     { activePlayer: null, selectedTeam: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const player =
+        s.activePlayer === null ? undefined : players?.find((p) => p.id === s.activePlayer);
+      return selectionSubject({
+        playerId: s.activePlayer,
+        playerName: player?.name,
+        team: resolveActiveTeam(
+          team,
+          s.activePlayer,
+          s.selectedTeam,
+          (id) => players?.find((p) => p.id === id)?.team
+        ),
+      });
+    }
   );
   const { activePlayer, selectedTeam: activeTeamSel } = selection;
   const setActivePlayer = (id: string | null) =>

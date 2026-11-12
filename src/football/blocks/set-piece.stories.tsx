@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { SetPiece } from './set-piece';
 import type { SetPiece as SetPieceData } from './set-piece';
 import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
@@ -141,7 +141,12 @@ export const EmitsSelectionChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Showing/ }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: /31' Free-kick/ }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({ activeId: 'free-kick-31' });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        activeId: 'free-kick-31',
+        subject: { playerId: null, playerName: 'Á. Di María', team: null },
+      })
+    );
   },
 };
 

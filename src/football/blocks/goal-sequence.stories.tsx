@@ -157,7 +157,12 @@ export const EmitsSelectionChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Goal/ }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: /Messi finish/ }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({ goalId: 'messi-23' });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        goalId: 'messi-23',
+        subject: { playerId: null, playerName: 'L. Messi', team: 'Argentina' },
+      })
+    );
   },
 };
 
@@ -180,5 +185,35 @@ export const NoImagery: Story = {
         ],
       },
     ],
+  },
+};
+
+/**
+ * Minute window. Only goals from 30' to 45' are offered, so the panel shows Di
+ * María's 36' goal and drops the picker (one goal left in the window).
+ */
+export const Windowed: Story = {
+  args: {
+    ...Default.args,
+    initialSelection: { goalId: 'messi-23' },
+    window: { from: 30, to: 45 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText('Á. Di María')).toBeInTheDocument());
+    await expect(canvas.queryByRole('button', { name: /Goal/ })).not.toBeInTheDocument();
+  },
+};
+
+/** A window with no goals keeps the panel and says so, instead of rendering nothing. */
+export const WindowedEmpty: Story = {
+  args: {
+    ...Default.args,
+    window: { from: 60, to: 90 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole('status')).toHaveTextContent("No goals between 60' and 90'");
+    await expect(canvas.getByText('Argentina')).toBeInTheDocument();
   },
 };

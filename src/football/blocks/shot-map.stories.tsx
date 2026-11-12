@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { ShotMap } from './shot-map';
 import type { Shot } from './shot-map';
 
@@ -494,6 +494,59 @@ export const EmitsSelectionChange: Story = {
     // France OPTION directly rather than the (now non-unique) listbox.
     await userEvent.click(canvas.getByRole('button', { name: /Showing/ }));
     await userEvent.click(await canvas.findByRole('option', { name: /France/ }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({ team: 'away', player: null });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        team: 'away',
+        player: null,
+        subject: { playerId: null, playerName: null, team: 'France' },
+      })
+    );
+    await expect(args.onSelectionChange).toHaveBeenCalledTimes(1);
+  },
+};
+
+/**
+ * Minute window. `window={{ from: 20, to: 45 }}` plots only the shots taken from
+ * 20' to 45' inclusive (Messi 23', Dembélé 28', Di María 36', Tchouaméni 41'),
+ * so a host scrubbing a range never pre-filters `shots` itself.
+ */
+export const Windowed: Story = {
+  args: {
+    ...Default.args,
+    window: { from: 20, to: 45 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const strip = canvas.getByRole('listbox', { name: 'Shots in minute order' });
+    const minutes = within(strip)
+      .getAllByRole('option')
+      .map((o) => Number(/(\d+)'/.exec(o.getAttribute('aria-label') ?? '')?.[1]));
+    await expect(minutes).toEqual([23, 28, 36, 41]);
+  },
+};
+
+/**
+ * Subject resolution. Picking a shooter while both sides are shown reports the
+ * shooter's own side as `subject.team`, and `subject.playerId` when the shots
+ * carry `playerId`.
+ */
+export const SubjectFollowsShooter: Story = {
+  args: {
+    ...Default.args,
+    shots: ARG_FRA_SHOTS.map((s) => ({ ...s, playerId: `id:${s.player}` })),
+    onSelectionChange: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: /^Player/ }));
+    await userEvent.click(await canvas.findByRole('option', { name: 'K. Mbappé' }));
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        team: 'both',
+        player: 'K. Mbappé',
+        subject: { playerId: 'id:K. Mbappé', playerName: 'K. Mbappé', team: 'France' },
+      })
+    );
+    await expect(args.onSelectionChange).toHaveBeenCalledTimes(1);
   },
 };

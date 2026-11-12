@@ -7,6 +7,8 @@ import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite } from '#/football/lib/finite';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+import { filterByMinute, type MinuteWindow } from '#/football/lib/selection';
+import { useMinuteWindow } from '#/football/lib/use-minute-window';
 
 /** A single attempt on goal, the atom of the cumulative-xG race. */
 export interface XgMomentumShot {
@@ -54,6 +56,12 @@ export interface XgMomentumProps {
    * to {@link PanelFooter}.
    */
   builderControls?: ReactNode;
+  /**
+   * Only count shots whose `minute` falls in this range (inclusive). The lines
+   * start from zero at `from`, the header totals cover the window, and the
+   * minute axis stays the full match with the rest of it shaded.
+   */
+  window?: MinuteWindow;
 }
 
 const HOME_RED = '#eb0000';
@@ -160,18 +168,23 @@ export function XgMomentum({
   className,
   wordmark,
   builderControls,
+  window: windowProp,
 }: XgMomentumProps) {
   const uid = useId();
+  const minuteWindow = useMinuteWindow(windowProp);
   const svgRef = useRef<SVGSVGElement | null>(null);
   // The minute the guide is snapped to. `null` = no scrub (resting state).
   const [scrubMinute, setScrubMinute] = useState<number | null>(null);
 
   const { home, away, yMax, xMax, ordered } = useMemo(() => {
-    const ordered = [...shots].sort((a, b) => a.minute - b.minute);
+    const all = [...shots].sort((a, b) => a.minute - b.minute);
     // The time axis extends to fit the latest shot — through extra time when the
     // match ran past 90'. Derived once here and threaded into every minute→x map.
-    const lastMinute = ordered.length > 0 ? finite(ordered[ordered.length - 1]?.minute ?? 0) : 0;
+    // Taken from every shot, not the window, so the axis holds still while a
+    // host moves the window.
+    const lastMinute = all.length > 0 ? finite(all[all.length - 1]?.minute ?? 0) : 0;
     const xMax = xDomainMax(lastMinute);
+    const ordered = filterByMinute(all, (s) => s.minute, minuteWindow);
 
     const build = (team: 'home' | 'away', color: string): TeamSeries => {
       let cumulative = 0;
@@ -202,7 +215,11 @@ export function XgMomentum({
     for (const s of [...home.steps, ...away.steps]) s.y = yFor(s.cumulative);
 
     return { home, away, yMax, xMax, ordered };
-  }, [shots, homeColor, awayColor]);
+  }, [shots, homeColor, awayColor, minuteWindow]);
+
+  // Window edges in viewBox units: the lines start at the window's first minute.
+  const windowStartX = minuteWindow ? minuteToX(minuteWindow.from, xMax) : PAD_L;
+  const windowEndX = minuteWindow ? minuteToX(minuteWindow.to, xMax) : PAD_L + PLOT_W;
 
   // Both series, back-to-front: away painted first so the home red reads forward.
   const seriesByDepth: TeamSeries[] = [away, home];
@@ -284,9 +301,9 @@ export function XgMomentum({
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           className="block w-full touch-none select-none"
           role="img"
-          aria-label={`Cumulative expected goals over time: ${homeTeam} ${home.total.toFixed(
-            2
-          )}, ${awayTeam} ${away.total.toFixed(2)}`}
+          aria-label={`Cumulative expected goals over time${
+            minuteWindow ? `, minutes ${minuteWindow.from} to ${minuteWindow.to}` : ''
+          }: ${homeTeam} ${home.total.toFixed(2)}, ${awayTeam} ${away.total.toFixed(2)}`}
           onPointerMove={(e) => handleMove(e.clientX)}
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
@@ -337,6 +354,32 @@ export function XgMomentum({
               </g>
             );
           })}
+
+          {/* Outside the window: shaded so the counted range reads at a glance. */}
+          {minuteWindow && (
+            <g data-slot="xg-momentum-window-shade" pointerEvents="none">
+              {windowStartX > PAD_L && (
+                <rect
+                  x={PAD_L}
+                  y={PAD_T}
+                  width={windowStartX - PAD_L}
+                  height={PLOT_H}
+                  fill="#000"
+                  fillOpacity={0.35}
+                />
+              )}
+              {windowEndX < PAD_L + PLOT_W && (
+                <rect
+                  x={windowEndX}
+                  y={PAD_T}
+                  width={PAD_L + PLOT_W - windowEndX}
+                  height={PLOT_H}
+                  fill="#000"
+                  fillOpacity={0.35}
+                />
+              )}
+            </g>
+          )}
 
           {/* Half-time marker — a quiet dashed divider at 45'. */}
           <line
@@ -390,6 +433,7 @@ export function XgMomentum({
               series={s}
               baselineY={baselineY}
               fillId={`${uid}-fill-${s.team}`}
+              startX={windowStartX}
             />
           ))}
 
@@ -503,15 +547,18 @@ function TeamPath({
   series,
   baselineY,
   fillId,
+  startX,
 }: {
   series: TeamSeries;
   baselineY: number;
   fillId: string;
+  /** Where the line leaves the baseline: the axis start, or the window's first minute. */
+  startX: number;
 }) {
   const last = series.steps.at(-1);
   if (!last) return null;
 
-  const start = PAD_L;
+  const start = startX;
   const line = buildStepPath(series.steps, start);
   // Area = the same step path, dropped to the baseline and closed.
   const area = `${line} L ${last.x.toFixed(2)} ${baselineY.toFixed(

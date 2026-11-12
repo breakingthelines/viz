@@ -578,21 +578,29 @@ export const EmitsSelectionChange: Story = {
 
     // Scope toggle emits the full selection with the new scope.
     await userEvent.click(canvas.getByRole('button', { name: 'Subs' }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({
-      selectedId: null,
-      scope: 'subs',
-      selectedTeam: null,
-    });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        selectedId: null,
+        scope: 'subs',
+        selectedTeam: null,
+        subject: { playerId: null, playerName: null, team: 'Argentina' },
+      })
+    );
 
     // Picking a player emits the full selection carrying that player's id.
     await userEvent.click(canvas.getByRole('button', { name: 'Starters' }));
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: 'Antoine Griezmann' }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({
-      selectedId: 'fr-griezmann',
-      scope: 'starters',
-      selectedTeam: null,
-    });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenLastCalledWith({
+        selectedId: 'fr-griezmann',
+        scope: 'starters',
+        selectedTeam: null,
+        subject: { playerId: 'fr-griezmann', playerName: 'Antoine Griezmann', team: 'France' },
+      })
+    );
+    // Subs, back to Starters, then the player: one report per change.
+    await expect(args.onSelectionChange).toHaveBeenCalledTimes(3);
   },
 };

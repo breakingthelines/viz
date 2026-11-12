@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { Moment360 } from './moment-360';
 import type { Moment, MomentPlayer, MomentPassingOption, MomentPoint } from './moment-360';
 import { observeCircleRadii } from '#/test/console-spy';
@@ -253,7 +253,12 @@ export const EmitsSelectionChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Moment/ }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: /Mbappé.*counter/ }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({ momentId: 'mbappe-counter-71' });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        momentId: 'mbappe-counter-71',
+        subject: { playerId: null, playerName: 'K. Mbappé', team: null },
+      })
+    );
   },
 };
 
@@ -300,5 +305,33 @@ export const EntranceLock: Story = {
   decorators: [withReducedMotion],
   play: async ({ canvasElement }) => {
     await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'circle', min: 6 });
+  },
+};
+
+/**
+ * Minute window. Only moments from 65' to 90' are offered, so the panel shows
+ * Mbappé's 71' counter and drops the picker.
+ */
+export const Windowed: Story = {
+  args: {
+    ...Default.args,
+    window: { from: 65, to: 90 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/K\. Mbappé · 71'/)).toBeInTheDocument();
+    await expect(canvas.queryByRole('button', { name: /Moment/ })).not.toBeInTheDocument();
+  },
+};
+
+/** A window with no moments keeps the panel and says so. */
+export const WindowedEmpty: Story = {
+  args: {
+    ...Default.args,
+    window: { from: 0, to: 30 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole('status')).toHaveTextContent("No moments between 0' and 30'");
   },
 };
