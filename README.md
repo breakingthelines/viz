@@ -150,6 +150,56 @@ import { Arrow } from '@breakingthelines/viz/football/primitives';
 />
 ```
 
+#### `<MinuteRange />`
+
+Two-thumb match-minute range, for picking the stretch of a match a block shows.
+Controlled. Two native range inputs ("From minute", "To minute"); arrows step
+one minute, Page Up/Down five, Home/End jump to the limit. Optional `marks`
+draw goals or cards on the track.
+
+```tsx
+import { MinuteRange } from '@breakingthelines/viz/football/primitives';
+
+<MinuteRange
+  min={0}
+  max={120}
+  value={range}               // { from, to }
+  onChange={setRange}         // every movement
+  onCommit={refetch}          // thumb released, key pressed, track clicked
+  minGap={1}
+  marks={[{ minute: 23, color: '#eb0000', label: "Messi 23'" }]}
+/>
+```
+
+### Blocks
+
+The interactive blocks (`@breakingthelines/viz/football/blocks`) are control
+surfaces as well as charts.
+
+**Selection.** Each selectable block takes `initialSelection` and
+`onSelectionChange`. `onSelectionChange` fires only when the reader changes
+the selection, once per change, after React commits it. It never fires on
+mount, for `initialSelection`, or when the host re-renders. Re-picking the
+current option reports nothing. Every payload keeps the block's own fields and
+adds `subject`, the same shape for every block:
+
+```ts
+subject: {
+  playerId: string | null;   // when the data carries ids
+  playerName: string | null; // null for a whole-team view
+  team: string | null;       // team display name on show; null when both sides are
+}
+```
+
+**Minute window.** Blocks whose items carry a match minute (`ShotMap`,
+`XgMomentum`, `GoalSequence`, `Moment360`) take `window={{ from, to }}` and
+filter to it themselves (inclusive). Pass a `MinuteRange` value straight in.
+
+```tsx
+<MinuteRange value={range} onChange={setRange} max={120} />
+<ShotMap {...match} window={range} onSelectionChange={(s) => report(s.subject)} />
+```
+
 ### Compositions
 
 #### `<ShotMap />`

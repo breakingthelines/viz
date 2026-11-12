@@ -15,6 +15,7 @@ import {
   type SquadScope,
 } from '#/football/lib/player-select';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /**
@@ -121,10 +122,12 @@ export interface PassSonarProps {
    */
   initialSelection?: PassSonarSelection;
   /**
-   * Fires whenever the user changes the selection (player, scope or side), with
-   * the full new selection object. When omitted, no-op (today's behaviour).
+   * Fires when the user changes the selection (player, scope or side), once per
+   * change, with the full new selection plus `subject` (the player, when one is
+   * picked, and the side on show). Never fires on mount or for
+   * `initialSelection`.
    */
-  onSelectionChange?: (selection: PassSonarSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<PassSonarSelection>) => void;
 }
 
 const TEAM_COLOR = '#eb0000';
@@ -275,12 +278,25 @@ export function PassSonar({
   const clipPrefix = useId();
   // Hover-driven take-over focus (transient).
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Consolidated selector state (seeded by the host, emits every change): the
+  // Consolidated selector state (seeded by the host, reports user changes): the
   // chosen player (null = whole team), the squad scope, and the active side.
   const [selection, setSelection] = usePersistedSelection<PassSonarSelection>(
     initialSelection,
     { selectedId: null, scope: 'starters', selectedTeam: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const player = s.selectedId === null ? undefined : players.find((p) => p.id === s.selectedId);
+      return selectionSubject({
+        playerId: s.selectedId,
+        playerName: player?.name,
+        team: resolveActiveTeam(
+          team,
+          s.selectedId,
+          s.selectedTeam,
+          (id) => players.find((p) => p.id === id)?.team
+        ),
+      });
+    }
   );
   const { selectedId, scope, selectedTeam: activeTeamSel } = selection;
   const setSelectedId = (id: string | null) =>

@@ -6,3 +6,6 @@ export type { PlayerMarkerProps } from './player-marker';
 
 export { Arrow } from './arrow';
 export type { ArrowProps } from './arrow';
+
+export { MinuteRange } from './minute-range';
+export type { MinuteRangeProps, MinuteRangeMark } from './minute-range';

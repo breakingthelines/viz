@@ -309,10 +309,14 @@ export const EmitsSelectionChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Player/i }));
     const listbox = await canvas.findByRole('listbox');
     await userEvent.click(within(listbox).getByRole('option', { name: 'Mbappé' }));
-    await expect(args.onSelectionChange).toHaveBeenCalledWith({
-      activePlayer: 'fra-mbappe',
-      selectedTeam: null,
-    });
+    await waitFor(() =>
+      expect(args.onSelectionChange).toHaveBeenCalledWith({
+        activePlayer: 'fra-mbappe',
+        selectedTeam: null,
+        subject: { playerId: 'fra-mbappe', playerName: 'Mbappé', team: 'France' },
+      })
+    );
+    await expect(args.onSelectionChange).toHaveBeenCalledTimes(1);
   },
 };
 

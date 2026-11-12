@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, within } from 'storybook/test';
 import { XgMomentum, type XgMomentumShot } from './xg-momentum';
 import { expectSvgContentVisibleOnFirstFrame, withReducedMotion } from '#/test/entrance-lock';
 
@@ -130,5 +131,33 @@ export const EntranceLock: Story = {
   play: async ({ canvasElement }) => {
     // Two teams → ≥2 cumulative-curve fill/line paths must be visible at rest.
     await expectSvgContentVisibleOnFirstFrame(canvasElement, { selector: 'path', min: 2 });
+  },
+};
+
+/**
+ * Minute window. `window={{ from: 0, to: 45 }}` counts only first-half shots:
+ * the lines and the header totals cover 0' to 45', the axis still runs the
+ * full match, and the rest of it is shaded.
+ */
+export const FirstHalfWindow: Story = {
+  args: {
+    ...Final2022.args,
+    window: { from: 0, to: 45 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const half = (team: 'home' | 'away') =>
+      finalShots
+        .filter((s) => s.team === team && s.minute <= 45)
+        .reduce((sum, s) => sum + s.xg, 0)
+        .toFixed(2);
+    const chart = canvas.getByRole('img', { name: /minutes 0 to 45/ });
+    await expect(chart.getAttribute('aria-label')).toContain(`Argentina ${half('home')}`);
+    await expect(chart.getAttribute('aria-label')).toContain(`France ${half('away')}`);
+    // The second half and extra time are shaded; nothing before 0'.
+    const shade = canvasElement.querySelector('[data-slot="xg-momentum-window-shade"]');
+    await expect(shade?.querySelectorAll('rect').length).toBe(1);
+    // The axis is unchanged: the 90' tick is still drawn.
+    await expect(canvas.getByText("90'")).toBeInTheDocument();
   },
 };

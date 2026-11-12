@@ -1,43 +1,74 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  EMPTY_SUBJECT,
+  sameSelection,
+  withoutSubject,
+  type SelectionChange,
+  type SelectionSubject,
+} from '#/football/lib/selection';
 
 /**
- * Selection state seeded from an optional initial value, emitting every change.
+ * Selection state seeded from an optional initial value, reporting user changes.
  *
- * Every selectable StatsBomb block consolidates its user-selectable state into a
- * single `<Block>Selection` object and drives it through this hook so the HOST
- * (the editor) can both SEED an author's chosen selection and be NOTIFIED of
- * every change — without the block reaching for `useEffect` to sync state out.
+ * Every selectable football block keeps its user-selectable state in a single
+ * `<Block>Selection` object and drives it through this hook, so a host can seed
+ * a saved selection and be told when the reader changes it.
  *
  *   • `initial` seeds the state on mount. When `undefined`, the block opens on
- *     its `fallback` (the default, unseeded experience — byte-for-byte today's
- *     behaviour).
- *   • `onChange` fires with the FULL new selection on every update, computed
- *     inside the state updater so a functional update emits the resolved value
- *     (never a stale snapshot) and the emit happens exactly once per change.
+ *     its `fallback`. It is read once; later changes to the prop do not re-seed.
+ *   • `onChange` fires only for changes made through the returned `update`,
+ *     which blocks call from their control handlers. Mounting, seeding from
+ *     `initial`, a new `onChange` identity and data changes never fire it.
+ *   • It fires once per committed change, after React commits it, with the
+ *     selection the block now renders. Several `update` calls in one handler
+ *     (a player pick that also clears the side) report one final selection,
+ *     never an intermediate one, and an update that leaves the selection
+ *     structurally unchanged (re-picking the current option) reports nothing.
+ *   • The payload is the selection plus `subject`, resolved by `subjectOf`
+ *     from the block's current data (see {@link SelectionSubject}).
  *
- * The returned `update` accepts either the next selection or a `prev => next`
- * updater, mirroring `useState`'s setter, so callers can route a dropdown /
- * toggle handler through `update({ ...selection, field: value })`.
- *
- * Note: `initial` is read once (lazy initial state); later changes to the prop
- * do not re-seed — the block owns its selection after mount, exactly as the
- * prior `useState(default)` blocks did.
+ * Emitting from a commit effect, not from inside the state updater, keeps the
+ * host's handler out of React's render phase: an updater can run during render
+ * (and twice under StrictMode), which reported every change twice and let a
+ * host's own `setState` trip React's "Cannot update a component while
+ * rendering a different component" warning.
  */
-export function usePersistedSelection<T>(
+export function usePersistedSelection<T extends object>(
   initial: T | undefined,
   fallback: T,
-  onChange?: (s: T) => void
+  onChange?: (selection: SelectionChange<T>) => void,
+  subjectOf?: (selection: T) => SelectionSubject
 ) {
-  const [selection, setSelection] = useState<T>(() => initial ?? fallback);
-  const update = useCallback(
-    (next: T | ((prev: T) => T)) => {
-      setSelection((prev) => {
-        const n = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
-        onChange?.(n);
-        return n;
-      });
-    },
-    [onChange]
+  const [selection, setSelection] = useState<T>(() =>
+    initial == null ? fallback : withoutSubject(initial)
   );
+
+  // Set by `update`, cleared once the resulting commit has been reported.
+  const userChanged = useRef(false);
+  // The selection the host last saw (the seed counts as seen).
+  const reported = useRef<T>(selection);
+  const onChangeRef = useRef(onChange);
+  const subjectOfRef = useRef(subjectOf);
+
+  // Declared before the reporting effect so it runs first in the same commit.
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    subjectOfRef.current = subjectOf;
+  });
+
+  useEffect(() => {
+    if (!userChanged.current) return;
+    userChanged.current = false;
+    if (sameSelection(reported.current, selection)) return;
+    reported.current = selection;
+    const subject = subjectOfRef.current?.(selection) ?? EMPTY_SUBJECT;
+    onChangeRef.current?.({ ...selection, subject: { ...subject } });
+  }, [selection]);
+
+  const update = useCallback((next: T | ((prev: T) => T)) => {
+    userChanged.current = true;
+    setSelection(next);
+  }, []);
+
   return [selection, update] as const;
 }

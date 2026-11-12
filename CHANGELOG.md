@@ -7,6 +7,49 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.24.0]
+
+### Added: blocks are control surfaces
+
+- **`MinuteRange`** (`@breakingthelines/viz/football/primitives`): a
+  controlled two-thumb minute range with `value`, `onChange`, `onCommit`,
+  `min`/`max` (0-90 or 0-120), `step`, `pageStep`, `minGap` and optional
+  `marks` (goals, cards). Built on two native range inputs labelled "From
+  minute" and "To minute". Arrows step one minute, Page Up/Down five,
+  Home/End jump to the limit, and clicking the track moves the nearer thumb.
+  Visible focus ring, 2px/4px radii, 24px thumbs on a 44px row under
+  `pointer: coarse`, and no motion beyond a 140ms ease-out thumb press,
+  which `prefers-reduced-motion` turns off.
+- **`subject` on every selection report.** Every selectable block's
+  `onSelectionChange` payload keeps its own fields and adds
+  `subject: { playerId, playerName, team }`, resolved by the block to the
+  player and team it shows. `team` is a display name ("France"), not
+  `'home'`/`'away'`, and `null` while ShotMap shows both sides.
+  `SelectionSubject`, `SelectionChange<T>` and `MinuteWindow` are exported
+  from `@breakingthelines/viz/football/blocks`.
+- **`window={{ from, to }}`** on the blocks whose items carry a minute:
+  `ShotMap`, `XgMomentum`, `GoalSequence` and `Moment360`. The block filters
+  itself (inclusive at both ends). `XgMomentum` keeps the full-match axis and
+  shades outside the window; `GoalSequence` and `Moment360` show the first
+  item in the window and keep their frame with a "No goals between 60' and
+  90'" line when nothing is in it. `ShotMap` shots take an optional
+  `playerId`, reported as `subject.playerId`.
+
+### Fixed: `onSelectionChange` reported changes twice, and during render
+
+- It never fired on mount or for `initialSelection`; that is now covered by
+  a test across all ten selectable blocks, under StrictMode.
+- It did fire from inside React's state updater. Picking a team's "Whole
+  team" row or a player in the team-aware selector (HeatMap, LineBreaking,
+  Progression, PassNetwork, PassSonar) reported twice, first with an
+  intermediate selection that never rendered (the new side still paired with
+  the old player). Re-picking the current option reported again. StrictMode
+  doubled every report. A host that set its own state in the handler got
+  React's "Cannot update a component while rendering a different component"
+  warning.
+- Reports now go out after commit: once per change, with the selection the
+  block renders, and nothing for a no-op.
+
 ## [0.23.1]
 
 ### Fixed: a cleaner focus state on `PercentileWheel`

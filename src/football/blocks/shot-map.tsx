@@ -8,6 +8,13 @@ import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { finite, finitePositive } from '#/football/lib/finite';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { useMinuteWindow } from '#/football/lib/use-minute-window';
+import {
+  filterByMinute,
+  selectionSubject,
+  type MinuteWindow,
+  type SelectionChange,
+} from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which side a shot belongs to. `home` attacks left→right, `away` right→left. */
@@ -48,6 +55,11 @@ export interface Shot {
   outcome: ShotOutcome;
   /** Shooter display name. */
   player: string;
+  /**
+   * Stable shooter id. Optional: the player filter still matches on
+   * {@link Shot.player}; when present, it is reported as `subject.playerId`.
+   */
+  playerId?: string;
   /** Shooter headshot URL. When set, the marker shows the photo (monogram fallback). */
   imageUrl?: string;
   /** Match minute. */
@@ -122,12 +134,18 @@ export interface ShotMapProps {
    */
   initialSelection?: ShotMapSelection;
   /**
-   * Fires whenever the user changes the selection (team filter or player), with
-   * the full new selection object. When omitted, no-op (today's behaviour). This
-   * is additive to — and fires alongside — the legacy
+   * Fires when the user changes the selection (team filter or player), once per
+   * change, with the full new selection plus `subject` (the shooter and the
+   * team on show; `team` is `null` while both sides are shown). Never fires on
+   * mount or for `initialSelection`. Fires alongside the legacy
    * {@link ShotMapProps.onFilterChange}.
    */
-  onSelectionChange?: (selection: ShotMapSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<ShotMapSelection>) => void;
+  /**
+   * Only plot shots whose `minute` falls in this range (inclusive). The player
+   * list keeps every shooter so a selection survives moving the window.
+   */
+  window?: MinuteWindow;
 }
 
 const HOME_COLOR = '#eb0000';
@@ -189,11 +207,13 @@ export function ShotMap({
   builderControls,
   initialSelection,
   onSelectionChange,
+  window: windowProp,
 }: ShotMapProps) {
   const clipPrefix = useId();
+  const minuteWindow = useMinuteWindow(windowProp);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Consolidated selection (seeded by the host, emits every change): the team
+  // Consolidated selection (seeded by the host, reports user changes): the team
   // filter + the drilled-in shooter. The team part stays controllable via the
   // legacy `filter`/`onFilterChange` pair — when `filter` is supplied it wins
   // for the team, but the selection (and its `onSelectionChange`) still reflects
@@ -201,7 +221,18 @@ export function ShotMap({
   const [selection, setSelection] = usePersistedSelection<ShotMapSelection>(
     initialSelection,
     { team: 'both', player: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const team = filterProp ?? s.team;
+      const shot = s.player === null ? undefined : shots.find((x) => x.player === s.player);
+      // A drilled-in shooter fixes the side even while both teams are shown.
+      const side = shot?.team ?? (team === 'both' ? null : team);
+      return selectionSubject({
+        playerId: shot?.playerId,
+        playerName: s.player,
+        team: side === null ? null : side === 'home' ? homeTeam : awayTeam,
+      });
+    }
   );
   const filter = filterProp ?? selection.team;
   const playerFilter = selection.player;
@@ -236,9 +267,10 @@ export function ShotMap({
   const colorFor = (team: ShotTeam) => (team === 'home' ? homeColor : awayColor);
 
   const shown = useMemo(() => {
-    const byTeam = filter === 'both' ? shots : shots.filter((s) => s.team === filter);
+    const inWindow = filterByMinute(shots, (s) => s.minute, minuteWindow);
+    const byTeam = filter === 'both' ? inWindow : inWindow.filter((s) => s.team === filter);
     return playerFilter ? byTeam.filter((s) => s.player === playerFilter) : byTeam;
-  }, [shots, filter, playerFilter]);
+  }, [shots, filter, playerFilter, minuteWindow]);
 
   // Player combobox groups, respecting the current team filter (a clear split
   // between the two sides; searchable).
@@ -348,7 +380,7 @@ export function ShotMap({
             const r = radiusForXg(shot.xg);
             const isGoal = shot.outcome === 'goal';
             const isActive = shot.id === activeId;
-            const dimmed = activeId !== null && !isActive;
+            const dimmed = active !== null && !isActive;
             const clipId = `${clipPrefix}-shot-${shot.id}`;
 
             return (

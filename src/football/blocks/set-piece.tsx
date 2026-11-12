@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** Which kind of dead-ball the freeze-frame is taken from. */
@@ -106,11 +107,13 @@ export interface SetPieceProps {
    */
   initialSelection?: SetPieceSelection;
   /**
-   * Fires whenever the user picks a different set piece, with the full new
-   * selection object. When omitted, no-op (today's behaviour). This is additive
-   * to — and fires alongside — the legacy {@link SetPieceProps.onSelect}.
+   * Fires when the user changes the selection (the set piece shown), once per
+   * change, with the full new selection plus `subject` (the taker, when named;
+   * `team` is `null` because set pieces carry no team names). Never fires on
+   * mount or for `initialSelection`. Fires alongside the legacy
+   * {@link SetPieceProps.onSelect}.
    */
-  onSelectionChange?: (selection: SetPieceSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<SetPieceSelection>) => void;
 }
 
 const ATTACKING_COLOR = '#eb0000';
@@ -163,14 +166,19 @@ export function SetPiece({
 }: SetPieceProps) {
   const first = setPieces[0];
 
-  // Consolidated selection (seeded by the host, emits every change): which set
+  // Consolidated selection (seeded by the host, reports user changes): which set
   // piece is shown. Still controllable via the legacy `activeId`/`onSelect`
   // pair — when `activeId` is supplied it wins, but the selection (and its
   // `onSelectionChange`) still reflects the user's pick. Defaults to the first.
   const [selection, setSelection] = usePersistedSelection<SetPieceSelection>(
     initialSelection,
     { activeId: first?.id },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const id = activeIdProp ?? s.activeId;
+      const piece = setPieces.find((sp) => sp.id === id) ?? first;
+      return selectionSubject({ playerName: piece?.players.find((p) => p.isTaker)?.name });
+    }
   );
   const activeId = activeIdProp ?? selection.activeId;
   const setActiveId = (next: string) => {

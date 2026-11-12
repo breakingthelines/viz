@@ -14,3 +14,13 @@ export * from './press-map';
 export * from './set-piece';
 export * from './progression';
 export * from './goal-sequence';
+
+// The shared selection and minute-window contract every block reports through.
+export {
+  EMPTY_SUBJECT,
+  selectionSubject,
+  inMinuteWindow,
+  filterByMinute,
+  normalizeWindow,
+} from '../lib/selection';
+export type { SelectionSubject, SelectionChange, MinuteWindow } from '../lib/selection';

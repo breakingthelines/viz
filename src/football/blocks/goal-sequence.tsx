@@ -9,6 +9,14 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { SvgHeadshot } from '#/football/lib/headshot';
 import { finite } from '#/football/lib/finite';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import {
+  filterByMinute,
+  selectionSubject,
+  type MinuteWindow,
+  type SelectionChange,
+} from '#/football/lib/selection';
+import { useMinuteWindow } from '#/football/lib/use-minute-window';
+import { WindowEmpty } from '#/football/lib/window-empty';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** How a single touch in the move connects to the next. */
@@ -87,10 +95,17 @@ export interface GoalSequenceProps {
    */
   initialSelection?: GoalSequenceSelection;
   /**
-   * Fires whenever the user picks a different goal, with the full new selection
-   * object. When omitted, no-op (today's behaviour).
+   * Fires when the user picks a different goal, once per change, with the full
+   * new selection plus `subject` (the scorer and this panel's `team`). Never
+   * fires on mount or for `initialSelection`.
    */
-  onSelectionChange?: (selection: GoalSequenceSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<GoalSequenceSelection>) => void;
+  /**
+   * Only offer goals whose `minute` falls in this range (inclusive). When the
+   * selected goal is outside it, the first goal inside it is shown; when none
+   * is, the panel says so instead of disappearing.
+   */
+  window?: MinuteWindow;
 }
 
 const ACCENT = '#eb0000';
@@ -129,30 +144,60 @@ export function GoalSequence({
   builderControls,
   initialSelection,
   onSelectionChange,
+  window: windowProp,
 }: GoalSequenceProps) {
+  const minuteWindow = useMinuteWindow(windowProp);
+  const inWindow = useMemo(
+    () => filterByMinute(goals, (g) => g.minute, minuteWindow),
+    [goals, minuteWindow]
+  );
   // Bumping `runId` remounts the animated layer, so it replays from the start
   // declaratively (no effects, no imperative animation controls). This is
   // transient playback state — not part of the persisted selection.
   const [runId, setRunId] = useState(0);
-  // Consolidated selection (seeded by the host, emits every change): which goal
+  // Consolidated selection (seeded by the host, reports user changes): which goal
   // is traced. `null` = the first goal (the default).
   const [selection, setSelection] = usePersistedSelection<GoalSequenceSelection>(
     initialSelection,
     { goalId: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const picked = inWindow.find((g) => g.id === s.goalId) ?? inWindow[0];
+      return selectionSubject({ playerName: picked?.scorer, team });
+    }
   );
   const { goalId } = selection;
 
-  const goal = useMemo(() => goals.find((g) => g.id === goalId) ?? goals[0], [goals, goalId]);
+  const goal = useMemo(
+    () => inWindow.find((g) => g.id === goalId) ?? inWindow[0],
+    [inWindow, goalId]
+  );
 
   // Resolve each step to pitch coords once; the shot ends at the goal mouth.
   const points = useMemo(() => (goal ? goal.steps.map((s) => toPitch(s.x, s.y)) : []), [goal]);
 
+  if (!goal && minuteWindow && goals.length > 0) {
+    return (
+      <WindowEmpty
+        title={
+          <>
+            {crestUrl && <Crest url={crestUrl} className="shrink-0 rounded-none" />}
+            {team}
+          </>
+        }
+        noun="goals"
+        window={minuteWindow}
+        className={className}
+        wordmark={wordmark}
+        builderControls={builderControls}
+      />
+    );
+  }
   if (!goal || goal.steps.length === 0) return null;
 
   const steps = goal.steps;
   const finishIndex = steps.length - 1;
-  const goalOptions = goals.map((g) => ({
+  const goalOptions = inWindow.map((g) => ({
     value: g.id,
     label: `${g.label} · ${g.minute}'`,
   }));

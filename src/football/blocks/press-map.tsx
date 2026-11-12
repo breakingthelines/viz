@@ -6,6 +6,7 @@ import { PanelFooter } from '#/football/lib/panel-footer';
 import { Crest } from '#/football/lib/crest';
 import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A defensive ball-hunting action, in StatsBomb pitch coordinates (120 × 80). */
@@ -72,10 +73,11 @@ export interface PressMapProps {
    */
   initialSelection?: PressMapSelection;
   /**
-   * Fires whenever the user changes the plotted metric, with the full new
-   * selection object. When omitted, no-op (today's behaviour).
+   * Fires when the user changes the selection (the plotted metric), once per
+   * change, with the full new selection plus `subject` (`team`; no player). Never
+   * fires on mount or for `initialSelection`.
    */
-  onSelectionChange?: (selection: PressMapSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<PressMapSelection>) => void;
 }
 
 /** StatsBomb pitch dimensions. */
@@ -182,12 +184,13 @@ export function PressMap({
   initialSelection,
   onSelectionChange,
 }: PressMapProps) {
-  // Consolidated selection (seeded by the host, emits every change): the plotted
+  // Consolidated selection (seeded by the host, reports user changes): the plotted
   // metric. The thirds breakdown + PPDA readout are derived, not selected.
   const [selection, setSelection] = usePersistedSelection<PressMapSelection>(
     initialSelection,
     { metric: 'all' },
-    onSelectionChange
+    onSelectionChange,
+    () => selectionSubject({ team })
   );
   const { metric } = selection;
   const setMetric = (m: PressMetric) => setSelection({ metric: m });

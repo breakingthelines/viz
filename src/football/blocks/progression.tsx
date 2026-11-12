@@ -14,6 +14,7 @@ import {
   type SelectablePlayer,
 } from '#/football/lib/player-select';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
+import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
 
 /** A progressive action: a carry or a pass that advances the ball. */
@@ -118,10 +119,12 @@ export interface ProgressionProps {
    */
   initialSelection?: ProgressionSelection;
   /**
-   * Fires whenever the user changes the selection (type filter, player or side),
-   * with the full new selection object. When omitted, no-op (today's behaviour).
+   * Fires when the user changes the selection (type filter, player or side), once
+   * per change, with the full new selection plus `subject` (the player, when one
+   * is picked, and the side on show). Never fires on mount or for
+   * `initialSelection`.
    */
-  onSelectionChange?: (selection: ProgressionSelection) => void;
+  onSelectionChange?: (selection: SelectionChange<ProgressionSelection>) => void;
 }
 
 const DEFAULT_COLOR = '#eb0000';
@@ -342,12 +345,22 @@ export function Progression({
 }: ProgressionProps) {
   const idPrefix = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Consolidated selection (seeded by the host, emits every change): the type
+  // Consolidated selection (seeded by the host, reports user changes): the type
   // filter, the drilled-in player, and the active side.
   const [selection, setSelection] = usePersistedSelection<ProgressionSelection>(
     initialSelection,
     { filter: { kind: 'all' }, activePlayer: null, selectedTeam: null },
-    onSelectionChange
+    onSelectionChange,
+    (s) => {
+      const key = s.activePlayer;
+      const action =
+        key === null ? undefined : actions.find((a) => (a.playerId ?? a.player) === key);
+      return selectionSubject({
+        playerId: action?.playerId,
+        playerName: action?.player ?? key,
+        team: resolveActiveTeam(team, key, s.selectedTeam, () => action?.team),
+      });
+    }
   );
   const { filter, activePlayer, selectedTeam: activeTeamSel } = selection;
   const setFilter = (f: ProgressionFilter) => setSelection((prev) => ({ ...prev, filter: f }));
