@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   EXAMPLE_ARG_TYPES,
   EXAMPLE_ARGS,
+  crestPosterChecks,
+  editorialFallbackChecks,
   lockedChecks,
   marksChecks,
   pendingChecks,
@@ -11,9 +13,9 @@ import {
 } from './story-kit';
 
 /**
- * Player › Season totals in the three author looks, for a Pro reader, a reader below
- * the plan and before the values land. EXAMPLE FIGURES ONLY: plausible, not
- * real data.
+ * Player › Season totals in the three author looks, the poster with no usable
+ * headshot, for a Pro reader, a reader below the plan and before the values
+ * land. EXAMPLE FIGURES ONLY: plausible, not real data.
  */
 
 function PlayerSeasonTotalsExample(args: ExampleArgs) {
@@ -39,6 +41,35 @@ export const Poster680: Story = { args: { look: 'poster', media: 'headshot' }, p
 export const Poster390: Story = {
   args: { look: 'poster', media: 'headshot', width: 390 },
   play: proChecks(F),
+};
+/** No usable headshot: the crest leads in the cut-out position. */
+export const PosterCrest680: Story = {
+  args: { look: 'poster', media: 'crest' },
+  play: async (ctx) => {
+    await proChecks(F)(ctx);
+    await crestPosterChecks(ctx);
+  },
+};
+export const PosterCrest390: Story = {
+  args: { look: 'poster', media: 'crest', width: 390 },
+  play: crestPosterChecks,
+};
+export const PosterCrestChat: Story = {
+  args: { look: 'poster', media: 'crest', density: 'chat', width: 420 },
+  play: crestPosterChecks,
+};
+/** No headshot and no crest: the editorial look, not empty wedges. */
+export const PosterNoImage: Story = {
+  args: { look: 'poster', media: 'none' },
+  play: async (ctx) => {
+    await proChecks(F)(ctx);
+    await editorialFallbackChecks(ctx);
+  },
+};
+/** A headshot and crest that fail to load: editorial too. */
+export const PosterBrokenImages: Story = {
+  args: { look: 'poster', media: 'broken' },
+  play: editorialFallbackChecks,
 };
 export const Annotated680: Story = {
   args: { look: 'annotated' },

@@ -19,7 +19,8 @@ export interface ExampleArgs {
   reader: Reader;
   width: number;
   density: GameBlockDensity;
-  media: 'none' | 'headshot' | 'crest';
+  /** `broken`: a headshot and crest that never load. */
+  media: 'none' | 'headshot' | 'crest' | 'broken';
   title?: string;
   subheading?: string;
   view?: string;
@@ -73,8 +74,18 @@ export function PlayerExample({ id, ...args }: ExampleArgs & { id: PlayerExample
     },
     subject: {
       ...c.subject,
-      imageUrl: args.media === 'headshot' ? syntheticHeadshot() : undefined,
-      crestUrl: args.media === 'headshot' || args.media === 'crest' ? EXAMPLE_CREST : undefined,
+      imageUrl:
+        args.media === 'headshot'
+          ? syntheticHeadshot()
+          : args.media === 'broken'
+            ? BROKEN_IMAGE
+            : undefined,
+      crestUrl:
+        args.media === 'headshot' || args.media === 'crest'
+          ? EXAMPLE_CREST
+          : args.media === 'broken'
+            ? BROKEN_IMAGE
+            : undefined,
     },
   };
   const view = <GameBlockView config={config} density={args.density} />;
@@ -99,7 +110,7 @@ export const EXAMPLE_ARG_TYPES = {
   look: { control: 'inline-radio', options: ['editorial', 'poster', 'annotated'] },
   reader: { control: 'inline-radio', options: ['pro', 'free', 'pending'] },
   density: { control: 'inline-radio', options: ['article', 'chat', 'tile'] },
-  media: { control: 'inline-radio', options: ['none', 'headshot', 'crest'] },
+  media: { control: 'inline-radio', options: ['none', 'headshot', 'crest', 'broken'] },
   width: { control: { type: 'range', min: 320, max: 760, step: 10 } },
 } as const;
 
@@ -136,6 +147,31 @@ export function lockedChecks(id: PlayerExampleId, paidFigure?: string): Play {
 export const pendingChecks: Play = async ({ canvasElement }) => {
   await expect(canvasElement.querySelector('[data-block-locked-note]')).toBeNull();
   await expect(canvasElement.querySelector('[data-cell-state="locked"]')).toBeNull();
+};
+
+/** An image URL that never loads. */
+const BROKEN_IMAGE = 'data:image/png;base64,AAAA';
+
+/** A poster with no usable headshot leads with the crest in the cut-out position. */
+export const crestPosterChecks: Play = async ({ canvasElement }) => {
+  await waitFor(
+    () => expect(canvasElement.querySelector('[data-poster-media="crest"]')).not.toBeNull(),
+    { timeout: 4000 }
+  );
+  await expect(canvasElement.querySelector('[data-game-block-look="poster"]')).not.toBeNull();
+};
+
+/** A poster with no usable headshot or crest draws as editorial, never empty wedges. */
+export const editorialFallbackChecks: Play = async ({ canvasElement }) => {
+  await waitFor(
+    () =>
+      expect(
+        canvasElement.querySelector('[data-game-block-look-fallback="poster"]')
+      ).not.toBeNull(),
+    { timeout: 4000 }
+  );
+  await expect(canvasElement.querySelector('[data-game-block-look="editorial"]')).not.toBeNull();
+  await expect(canvasElement.querySelector('[data-poster-media]')).toBeNull();
 };
 
 /** The annotated look's crayon layer lands once fonts settle. */

@@ -7,6 +7,7 @@ import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';
 import { GameBlockView } from '../view';
 import { groupLabel, lowerFirst, ordinal, pickHighlight } from './percentile-wheel';
+import { askedLook } from '../fixtures/look';
 
 function config(patch: Partial<GameBlockConfig> = {}): GameBlockConfig {
   const res = toGameBlockConfig(WHEEL_EXAMPLE);
@@ -74,7 +75,7 @@ describe('Percentile wheel block', () => {
   it('draws in every look with the BTL colophon and no API-Football mark', () => {
     for (const look of ['editorial', 'poster', 'annotated'] as GameBlockLook[]) {
       const html = render(config({ look }), PRO);
-      expect(html).toContain(`data-game-block-look="${look}"`);
+      expect(askedLook(html)).toBe(look);
       expect(html).toContain('aria-label="Breaking The Lines"');
       expect(html).not.toContain('API-Football');
       expect(html).toContain('2.62');

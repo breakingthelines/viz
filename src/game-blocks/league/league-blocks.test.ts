@@ -4,6 +4,7 @@ import type { GameBlockLook, GameBlockTypeId } from '../types';
 import { fixtureMiddle, groupByDay } from '../parts/league-fixtures';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
 import type { LeaguePlayerRankingsDataJson } from './types';
+import { askedLook } from '../fixtures/look';
 
 const LEAGUE_TYPES: GameBlockTypeId[] = [
   'league-table',
@@ -24,7 +25,7 @@ describe('league blocks', () => {
     for (const id of LEAGUE_TYPES) {
       for (const look of ['editorial', 'poster', 'annotated'] as GameBlockLook[]) {
         const html = render(config(id, { look }));
-        expect(html, id).toContain(`data-game-block-look="${look}"`);
+        expect(askedLook(html), id).toBe(look);
         expect(html, id).toContain('aria-label="Breaking The Lines"');
         expect(copyProblems(html), `${id} ${look}`).toEqual([]);
         expect(html, id).not.toContain('data-block-locked-note');

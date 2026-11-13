@@ -5,6 +5,20 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.3]
+
+### Fixed: poster with no usable headshot
+
+- **Poster look** drew bare colour wedges and the hero number when the
+  headshot was missing or could not be cut out and no crest was drawn. It now
+  falls back in order: the halftone cut-out of the headshot, then the crest,
+  large and flat in the cut-out position, then the editorial look when there is
+  no crest or it does not load.
+- **`data-game-block-look`** names the look drawn. A poster drawn as editorial
+  also carries `data-game-block-look-fallback="poster"`.
+- Season totals stories for a poster with only a crest, with no image and with
+  images that fail to load.
+
 ## [0.25.2]
 
 ### Fixed: fan grades with few votes

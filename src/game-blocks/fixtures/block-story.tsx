@@ -151,10 +151,21 @@ export function unavailableStory(id: GameBlockTypeId, text: string) {
 
 type Ctx = { canvasElement: HTMLElement; args: BlockStoryArgs };
 
-/** Every look: the BTL colophon, no API-Football mark, the chosen look drawn. */
+/**
+ * Every look: the BTL colophon, no API-Football mark, the chosen look drawn.
+ * A poster with no image draws as editorial and names the poster it fell
+ * back from.
+ */
 export async function commonChecks({ canvasElement, args }: Ctx) {
   const root = canvasElement.querySelector('[data-game-block-look]');
-  await expect(root?.getAttribute('data-game-block-look')).toBe(args.look);
+  const fallback = root?.getAttribute('data-game-block-look-fallback');
+  if (fallback) {
+    await expect(fallback).toBe(args.look);
+    await expect(root?.getAttribute('data-game-block-look')).toBe('editorial');
+    await expect(args.media).toBe('none');
+  } else {
+    await expect(root?.getAttribute('data-game-block-look')).toBe(args.look);
+  }
   await expect(canvasElement.querySelector('[aria-label="Breaking The Lines"]')).not.toBeNull();
   await expect(canvasElement.textContent).not.toContain('API-Football');
 }

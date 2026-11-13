@@ -7,6 +7,7 @@ import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
 import type { GameBlockConfig, GameBlockDensity, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider, type GameBlockValuesMap } from '../values';
 import { GameBlockView } from '../view';
+import { crestPosterChecks, editorialFallbackChecks } from './story-kit';
 
 /**
  * Player › Percentile wheel in the three author looks. EXAMPLE FIGURES ONLY:
@@ -137,15 +138,12 @@ export const PosterFree680: Story = {
 };
 export const PosterCrestFallback: Story = {
   args: { look: 'poster', media: 'crest' },
-  play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-poster-media="crest"]')).not.toBeNull();
-  },
+  play: crestPosterChecks,
 };
+/** No headshot or crest: the editorial look, not an empty poster. */
 export const PosterNumberOnly: Story = {
   args: { look: 'poster', media: 'none' },
-  play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-poster-media]')).toBeNull();
-  },
+  play: editorialFallbackChecks,
 };
 
 const annotatedChecks: Story['play'] = async (ctx) => {

@@ -15,6 +15,7 @@ import { PLAYER_BLOCKS } from './index';
 import { teamRankLabel } from './season-totals';
 import { changeLabel } from './season-trend';
 import { shortDate, surname, thousands } from './shared';
+import { askedLook } from '../fixtures/look';
 
 type Reader = 'pro' | 'free' | 'pending';
 
@@ -61,7 +62,7 @@ describe('every player block', () => {
     for (const id of IDS) {
       for (const look of LOOKS) {
         const html = render(id, 'pro', { look });
-        expect(html, `${id} ${look}`).toContain(`data-game-block-look="${look}"`);
+        expect(askedLook(html), `${id} ${look}`).toBe(look);
         expect(html, id).toContain('aria-label="Breaking The Lines"');
         expect(html, id).not.toContain('API-Football');
         expect(html, id).not.toContain('Update to see this block');
