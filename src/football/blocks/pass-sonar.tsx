@@ -17,6 +17,7 @@ import {
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+import { countLabel } from '#/lib/count';
 
 /**
  * The Pass Sonar's full user-selectable state, driven by its selector:
@@ -524,7 +525,7 @@ export function PassSonar({
                     fill="transparent"
                     role="button"
                     tabIndex={0}
-                    aria-label={`${player.name}, ${totalPasses(player)} passes`}
+                    aria-label={`${player.name}, ${countLabel(totalPasses(player), 'pass', 'passes')}`}
                     className="cursor-pointer focus:outline-none"
                     onPointerEnter={() => setActiveId(player.id)}
                     onPointerLeave={() => setActiveId(null)}

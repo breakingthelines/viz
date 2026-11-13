@@ -4,6 +4,7 @@ import { matchFrame } from '../parts/match-common';
 import { PlayerOfTheMatchScale } from '../parts/match-player-of-the-match';
 import { oneDecimal, refName } from '../parts/team-league-match-common';
 import type { MatchPlayerOfTheMatchDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /**
  * Match › Player of the match: the readers' best graded player (game-service
@@ -22,7 +23,7 @@ export function MatchPlayerOfTheMatchBlock(
           figure: oneDecimal(winner.grade),
           label: refName(winner.player),
           baseline: [
-            winner.votes ? `${winner.votes} votes` : null,
+            winner.votes ? countLabel(winner.votes, 'vote') : null,
             runnerUp && typeof runnerUp.grade === 'number'
               ? `Runner-up ${refName(runnerUp.player, true) || refName(runnerUp.player)} ${oneDecimal(runnerUp.grade)}`
               : null,

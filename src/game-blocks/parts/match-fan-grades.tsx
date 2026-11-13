@@ -8,6 +8,11 @@ import {
 } from './team-league-match-common';
 import { BlockGrid, ScaleCell, SectionLabel } from './team-league-match-ui';
 
+/** Whether any reader graded one of these players. */
+export function hasGrade(players: GameBlockPlayerGradeJson[]): boolean {
+  return players.some((p) => typeof p.grade === 'number');
+}
+
 /**
  * The best graded player across both sides, the lowest grade on BTL's 1 to 6
  * scale; the earlier listed one on a tie.
@@ -177,7 +182,11 @@ export function GradePitch({
   );
 }
 
-/** Both sides, each under its name and average: side by side when wide, stacked on a phone. */
+/**
+ * Both sides, each under its name and average: side by side when wide, stacked
+ * on a phone. A side with no graded player is left out, so no header stands
+ * over an empty row.
+ */
 export function FanGradeSides({
   sides,
   view,
@@ -193,6 +202,8 @@ export function FanGradeSides({
   top?: GameBlockPlayerGradeJson;
 }) {
   const { narrow } = useBlockLayout();
+  const shown = sides.filter((s) => hasGrade(s.players));
+  if (shown.length === 0) return null;
   return (
     <div
       style={{
@@ -201,7 +212,7 @@ export function FanGradeSides({
         columnGap: 24,
       }}
     >
-      {sides.map((s, i) => (
+      {shown.map((s, i) => (
         <section key={s.name || i} aria-label={s.name}>
           <SectionLabel first={i === 0 || (!narrow && view === 'pitch')}>
             {[

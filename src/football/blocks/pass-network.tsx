@@ -18,6 +18,7 @@ import {
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+import { countLabel } from '#/lib/count';
 
 /** Default BTL home-team accent. */
 const DEFAULT_TEAM_COLOR = '#eb0000';
@@ -624,7 +625,7 @@ export function PassNetwork({
               <span className="truncate">{activeTeam}</span>
             </span>
             <span className="tabular-nums text-white/90">
-              {nodes.length} players · {edges.length} links
+              {countLabel(nodes.length, 'player')} · {countLabel(edges.length, 'link')}
             </span>
           </>
         )}

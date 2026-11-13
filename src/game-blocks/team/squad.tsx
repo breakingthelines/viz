@@ -4,6 +4,7 @@ import { scopeLine } from '../parts/team-league-match-common';
 import { SquadList } from '../parts/team-squad';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { TeamSquadDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /** Team › Squad: the squad by position. A list, so no hero. */
 export function TeamSquadBlock(props: GameBlockComponentProps<TeamSquadDataJson>) {
@@ -13,7 +14,7 @@ export function TeamSquadBlock(props: GameBlockComponentProps<TeamSquadDataJson>
   return (
     <BlockFrame
       {...frameBase(props, {
-        context: scopeLine(config, count ? `${count} players` : undefined),
+        context: scopeLine(config, count ? countLabel(count, 'player') : undefined),
         noun: 'squad',
       })}
       aside={groups.length > 0 ? <SquadList groups={groups} /> : null}

@@ -2,6 +2,7 @@ import type { GameBlockComponentProps } from '../block-props';
 import { BlockFrame, BlockRows, type BlockHero } from '../skin/index';
 import type { GameBlockCareerRowJson, PlayerCareerDataJson } from './data';
 import { baseFrame, TwoPart } from './shared';
+import { countLabel } from '#/lib/count';
 
 /**
  * Player › Career. One row per spell, newest first, then the career total.
@@ -34,8 +35,8 @@ export function PlayerCareerBlock(props: GameBlockComponentProps<PlayerCareerDat
         figure: String(total.appearances ?? 0),
         label: 'career appearances',
         baseline: [
-          `${total.goals ?? 0} goals`,
-          `${total.assists ?? 0} assists`,
+          countLabel(total.goals ?? 0, 'goal'),
+          countLabel(total.assists ?? 0, 'assist'),
           clubs > 1 ? `${clubs} teams` : null,
         ].filter(Boolean),
       }
