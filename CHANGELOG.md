@@ -7,6 +7,52 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.25.0]
+
+### Added: game blocks, the skin and the percentile wheel
+
+- **`@breakingthelines/viz/game-blocks`**, a new subpath for the round 4
+  game blocks. Hosts lazy-load it.
+- **The block skin** (`src/game-blocks/skin/`), the only place a block makes
+  a visual decision. `BlockFrame` draws a block in the author's look:
+  `editorial` (the default: Le Monde run-in name, the figure on the words'
+  baseline, no rule or box), `poster` (flat colour wedges, the hero number in
+  Helvetica Neue condensed across the diagonal, a halftone cut-out of the
+  headshot computed in the browser, falling back to the crest or the number
+  alone) and `annotated` (plain Inter data with at most two seeded crayon
+  marks anchored to the highlighted stat). Every look ends in the BTL mark
+  and wordmark bottom left; a provider mark appears only where a licence
+  requires one (Hudl StatsBomb). Save image is a hover or focus action that
+  captures the block on the skin surface, logo included. Primitives:
+  `BlockFigure`, `BlockBaseline`, `BlockRows`, `BlockScale`, `GatedValue`,
+  `LockedRule`. Tokens live in `BlockSkinTokens` and the `--btl-block-*`
+  custom properties; `GameBlockSkinProvider` overrides them.
+- **`GameBlockValuesProvider`**, `GameBlockScope`, `useGatedCell` and
+  `useBlockLocked`: gated cells resolve per viewer. Every snapshot on a page
+  is read in one batched `fetchValues` call after hydration; server rendering
+  shows pending rules and no locked note; an anonymous reader sees locked
+  cells at once with no call.
+- **`GAME_BLOCK_REGISTRY`** for all 35 block types (id, proto enum, data key,
+  label, submenu, keywords, subject kinds, editor node), `GameBlockView`
+  (renders any stored block, "Update to see this block" for an unknown type
+  or a newer data version), `toGameBlockConfig` (protos `GameBlock` JSON to
+  the stored `GameBlockConfig`, gated values never copied) and
+  `gatedValuesFromJson`.
+- **Player › Percentile wheel**, the reference block: the highlighted
+  metric's per 90 figure as the hero, or its public percentile when the
+  figure is locked; the median and a terse comparison group ("vs 41 Premier
+  League wingers") as short labels; views `wheel`, `wheel_rows` and `rows`.
+- `BtlWordmark` and `ProviderMark` are exported from the panel footer module
+  for reuse.
+
+### Changed
+
+- `@breakingthelines/protos` 0.209.0 is a devDependency, for the type pin
+  test and the `toGameBlockConfig` round trip. CI installs it from GitHub
+  Packages.
+- `@breakingthelines/design-system` >=0.107.0 is an optional peer, for game
+  blocks that embed design-system parts.
+
 ## [0.24.0]
 
 ### Added: blocks are control surfaces
