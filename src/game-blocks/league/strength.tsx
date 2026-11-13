@@ -3,6 +3,7 @@ import { BlockFrame } from '../skin/index';
 import { StrengthRows } from '../parts/league-strength';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { LeagueStrengthDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /**
  * League › League strength: the ladder of leagues by index. Wholly gated: a
@@ -12,7 +13,7 @@ export function LeagueStrengthBlock(props: GameBlockComponentProps<LeagueStrengt
   const { config } = props;
   const data = config.data ?? {};
   const rows = data.rows ?? [];
-  const count = data.count ? `${rows.length} of ${data.count} leagues` : '';
+  const count = data.count ? `${rows.length} of ${countLabel(data.count, 'league')}` : '';
   const context = [config.scope.seasonLabel, count].filter(Boolean).join(', ');
   return (
     <BlockFrame

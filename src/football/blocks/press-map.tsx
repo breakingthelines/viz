@@ -8,6 +8,7 @@ import { BLOCK_FONT_STACK } from '#/football/lib/font';
 import { usePersistedSelection } from '#/football/lib/use-persisted-selection';
 import { selectionSubject, type SelectionChange } from '#/football/lib/selection';
 import { RevealOnScroll } from '#/football/lib/reveal-on-scroll';
+import { countLabel } from '#/lib/count';
 
 /** A defensive ball-hunting action, in StatsBomb pitch coordinates (120 × 80). */
 export interface PressEvent {
@@ -306,7 +307,7 @@ export function PressMap({
             <button
               key={key}
               type="button"
-              aria-label={`${THIRD_LABEL[key]}: ${thirds[key]} actions, ${Math.round(share * 100)}%`}
+              aria-label={`${THIRD_LABEL[key]}: ${countLabel(thirds[key], 'action')}, ${Math.round(share * 100)}%`}
               onMouseEnter={() => setHoverThird(key)}
               onMouseLeave={() => setHoverThird(null)}
               onFocus={() => setHoverThird(key)}

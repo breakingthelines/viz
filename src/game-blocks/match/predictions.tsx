@@ -4,6 +4,7 @@ import { matchFrame } from '../parts/match-common';
 import { PredictionRows, type PredictionShare } from '../parts/match-predictions';
 import { isPlayed, matchScore, refName } from '../parts/team-league-match-common';
 import type { MatchPredictionsDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /**
  * Match › Predictions: what BTL readers picked. The most backed outcome is the
@@ -32,7 +33,7 @@ export function MatchPredictionsBlock(props: GameBlockComponentProps<MatchPredic
           data.mostPickedScore
             ? `Most picked ${data.mostPickedScore}${typeof data.mostPickedShare === 'number' ? `, ${Math.round(data.mostPickedShare)}%` : ''}`
             : null,
-          data.readerCount ? `${data.readerCount.toLocaleString('en-GB')} readers` : null,
+          data.readerCount ? countLabel(data.readerCount, 'reader') : null,
           score ? `Result ${score}` : null,
         ].filter(Boolean),
       }

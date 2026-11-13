@@ -3,6 +3,7 @@ import { BlockFrame, type BlockHero } from '../skin/index';
 import { TenureRows } from '../parts/team-manager-tenures';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { ManagerRecordDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /**
  * Team › Manager record: a coach's spells, newest first. The hero is his
@@ -19,7 +20,7 @@ export function ManagerRecordBlock(props: GameBlockComponentProps<ManagerRecordD
       ? {
           figure: `${Math.round(rate)}%`,
           label: 'career win rate',
-          baseline: games > 0 ? [`${games} games`] : undefined,
+          baseline: games > 0 ? [countLabel(games, 'game')] : undefined,
         }
       : undefined;
   const coach = data.coach;

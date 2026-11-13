@@ -5,6 +5,20 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2]
+
+### Fixed: fan grades with few votes
+
+- **`MatchFanGradesBlock`** drew a side header (team, formation) with nothing
+  under it when no reader had graded any of that side's players. A side with
+  no graded player is now left out, and `FanGradeSides` skips such a side too.
+- **Counts read singular for one**: "1 vote", not "1 votes". A new
+  `countLabel` helper words every labelled count in the blocks: fan grades and
+  player of the match votes, predictions readers, league strength leagues,
+  career goals and assists, season totals apps and minutes, squad players,
+  manager record games, and the pass network, pass sonar and press map
+  labels.
+
 ## [0.25.1]
 
 ### Fixed: fan grades read on BTL's 1 to 6 scale, lower better

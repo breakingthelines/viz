@@ -3,7 +3,8 @@ import { BlockFrame, BlockRows, BlockScale, GatedValue, type BlockHero } from '.
 import { useGatedCell } from '../values';
 import type { GameBlockSeasonStatJson, PlayerSeasonTotalsDataJson } from './data';
 import { groupLabel, lowerFirst, ordinal } from './percentile-wheel';
-import { baseFrame, surname, thousands } from './shared';
+import { baseFrame, surname } from './shared';
+import { countLabel } from '#/lib/count';
 
 /**
  * Player › Season totals. Totals, appearances, minutes and the team rank are
@@ -92,8 +93,8 @@ export function PlayerSeasonTotalsBlock(
   }
 
   const apps = [
-    data.appearances ? `${data.appearances} apps` : null,
-    data.minutes ? `${thousands(data.minutes)} mins` : null,
+    data.appearances ? countLabel(data.appearances, 'app') : null,
+    data.minutes ? countLabel(data.minutes, 'min') : null,
   ].filter(Boolean);
 
   const columns = ['', 'Total', ...(hasPer90 ? ['Per 90'] : []), ...(hasPct ? ['Pct'] : [])];

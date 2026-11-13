@@ -1,15 +1,16 @@
 import type { GameBlockComponentProps } from '../block-props';
 import { BlockFrame, type BlockHero } from '../skin/index';
 import { matchFrame } from '../parts/match-common';
-import { FanGradeSides, topGraded } from '../parts/match-fan-grades';
+import { FanGradeSides, hasGrade, topGraded } from '../parts/match-fan-grades';
 import { oneDecimal, refName } from '../parts/team-league-match-common';
 import type { MatchFanGradesDataJson } from './types';
+import { countLabel } from '#/lib/count';
 
 /**
  * Match › Fan grades: BTL reader grades for both line-ups, in formation
  * (`pitch`, the default) or as ranked lists (`list`). Grades are BTL's 1 to 6,
  * lower better: the best (lowest) grade is the hero; each team's average is
- * its baseline.
+ * its baseline. A side no reader graded is left out, header and all.
  */
 export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGradesDataJson>) {
   const data = props.config.data ?? {};
@@ -22,7 +23,7 @@ export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGrade
       ? {
           figure: oneDecimal(top.grade),
           label: `best grade, ${refName(top.player, true) || refName(top.player)}`,
-          baseline: top.votes ? [`${top.votes} votes`] : undefined,
+          baseline: top.votes ? [countLabel(top.votes, 'vote')] : undefined,
         }
       : undefined;
   const sides = [
@@ -38,7 +39,7 @@ export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGrade
       average: data.awayAverage,
       formation: data.awayFormation,
     },
-  ].filter((s) => s.players.length > 0);
+  ].filter((s) => hasGrade(s.players));
   return (
     <BlockFrame
       {...matchFrame(props, data.match, 'fan-grades')}

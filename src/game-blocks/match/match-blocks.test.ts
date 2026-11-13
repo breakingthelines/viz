@@ -11,7 +11,9 @@ import {
   kickoffParts,
   matchTitle,
 } from '../parts/team-league-match-common';
+import type { GameBlockPlayerGradeJson } from '../parts/team-league-match-common';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
+import type { MatchFanGradesDataJson, MatchPlayerOfTheMatchDataJson } from './types';
 
 const MATCH_TYPES: GameBlockTypeId[] = [
   'match-stats',
@@ -112,6 +114,41 @@ describe('match blocks', () => {
     expect(topGraded([p('A', 2.4), p('B', 1.6), p('C'), p('D', 4.8)])?.player?.name).toBe('B');
     expect(topGraded([p('A', 2), p('B', 2)])?.player?.name).toBe('A');
     expect(topGraded([p('A')])).toBeUndefined();
+  });
+
+  it('fan grades, one vote: "1 vote", and a side nobody graded has no header', () => {
+    for (const view of ['pitch', 'list']) {
+      const c = config('match-fan-grades', { options: { view } });
+      const data = c.data as MatchFanGradesDataJson;
+      const ungraded = (p: GameBlockPlayerGradeJson) => ({ ...p, grade: undefined, votes: 0 });
+      const t = text(
+        render({
+          ...c,
+          data: {
+            ...data,
+            home: (data.home ?? []).map(ungraded),
+            away: (data.away ?? []).map((p, i) =>
+              i === 0 ? { ...p, grade: 3, votes: 1 } : ungraded(p)
+            ),
+            homeAverage: undefined,
+            awayAverage: 3,
+          },
+        })
+      );
+      expect(t, view).toContain('1 vote');
+      expect(t, view).not.toContain('1 votes');
+      expect(t, view).not.toContain('Arsenal, 4-3-3');
+      expect(t, view).toContain('average 3.0');
+      expect(t, view).not.toContain('Arsenal, average');
+    }
+  });
+
+  it('player of the match, one vote: "1 vote"', () => {
+    const c = config('match-player-of-the-match');
+    const data = c.data as MatchPlayerOfTheMatchDataJson;
+    const t = text(render({ ...c, data: { ...data, winner: { ...data.winner, votes: 1 } } }));
+    expect(t).toContain('1 vote');
+    expect(t).not.toContain('1 votes');
   });
 
   it('player of the match: his grade, name and the runner-up as the comparator', () => {
