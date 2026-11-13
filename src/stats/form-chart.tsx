@@ -43,12 +43,40 @@ export interface FormChartMatch {
   title: string;
   /** Present when the match itself resolves to a BTL match/report page. */
   href?: string;
+  /**
+   * The club the player played this match for. When the visible window
+   * spans more than one, a divider and each club's short name mark where it
+   * changes, and the chart opens on the latest club (see
+   * {@link FormChartProps.latestClubMinimum}). Optional: without it the
+   * chart draws no club context.
+   */
+  team?: FormChartTeam;
+}
+
+/** The player's own side in a match. */
+export interface FormChartTeam {
+  /** Stable key for the club. Falls back to `label` when absent. */
+  id?: string;
+  /** Full name ("Aston Villa F.C."), used in each bar's accessible name and as the tooltip over the club's name. */
+  label: string;
+  /** Short form shown over the club's run of bars ("Villa"). Falls back to `label`. */
+  shortLabel?: string;
+}
+
+/** A run of consecutive visible matches played for one club. */
+export interface FormClubSegment {
+  /** Index of the run's first match within the window. */
+  start: number;
+  /** Matches in the run. */
+  length: number;
+  team: FormChartTeam;
 }
 
 export interface FormChartProps {
   /**
-   * Every rated match currently loaded, oldest to newest. The strip always
-   * opens on the most recent {@link window} of these; "Earlier matches"
+   * Every rated match currently loaded, oldest to newest. The strip opens
+   * on the most recent {@link window} of these (or on the latest club alone,
+   * see {@link latestClubMinimum}); "Earlier matches"
    * steps back by {@link step} within this array, and once the view would
    * run past its start, a further click calls {@link onOlder} instead (the
    * caller then prepends more matches, across seasons — spec §4.2).
@@ -66,6 +94,14 @@ export interface FormChartProps {
   hasOlder?: boolean;
   /** Requests earlier matches (the host prepends them and keeps the same visual position — spec: "pages back through every rated match", across seasons). */
   onOlder?: () => void;
+  /**
+   * The chart opens on the player's latest club alone, when the newest
+   * {@link window} of matches crosses a change of club and the latest club
+   * has at least this many matches. "Earlier matches" then widens to the full
+   * window, divider included. Below this many, it opens on the full window.
+   * Only applies when matches carry {@link FormChartMatch.team}. Default 5.
+   */
+  latestClubMinimum?: number;
   /** Wraps the chart in its own card chrome (border, background, margin, padding). Defaults to `false` so a host panel that already supplies card chrome does not get a card inside a card. */
   framed?: boolean;
 }
@@ -89,6 +125,7 @@ const DEFAULT_STEP = 5;
 const DEFAULT_Y_DOMAIN: [number, number] = [5, 10];
 /** The rating where the mock's brighter gridline sits (mock: `v === 7 ? 0.12 : 0.05`) — not `yDomain[0] + 1`, which only happens to equal 7 for the default `[5, 10]` domain. */
 const DEFAULT_EMPHASIS_RATING = 7;
+const DEFAULT_LATEST_CLUB_MINIMUM = 5;
 
 const MUTED = '#a29e9e';
 const WHITE = '#ffffff';
@@ -156,6 +193,50 @@ export function formatWindowRange(matches: FormChartMatch[]): string {
   return `${first} to ${last}`;
 }
 
+function teamKey(team: FormChartTeam): string {
+  return team.id || team.label;
+}
+
+/**
+ * The runs of consecutive matches played for one club, in window order. A
+ * match with no team joins the run before it (or, at the very start, the
+ * first run after it), so a single gap in the data never reads as a
+ * transfer. Empty when no match carries a team.
+ */
+export function formClubSegments(matches: readonly FormChartMatch[]): FormClubSegment[] {
+  const firstKnown = matches.find((m) => m.team)?.team;
+  if (!firstKnown) return [];
+  const out: FormClubSegment[] = [];
+  matches.forEach((m, i) => {
+    const last = out[out.length - 1];
+    const team = m.team ?? last?.team ?? firstKnown;
+    if (last && teamKey(last.team) === teamKey(team)) {
+      last.length += 1;
+      return;
+    }
+    out.push({ start: i, length: 1, team });
+  });
+  return out;
+}
+
+/**
+ * How many of the newest matches the chart opens on when it opens on the
+ * latest club alone, or `undefined` to open on the full window. That is the
+ * latest club's run, when the newest full window crosses a change of club
+ * and the run has at least `minimum` matches.
+ */
+export function latestClubOpening(
+  matches: readonly FormChartMatch[],
+  windowSize: number,
+  minimum: number
+): number | undefined {
+  const newest = matches.slice(-windowSize);
+  const segments = formClubSegments(newest);
+  if (segments.length < 2) return undefined;
+  const run = segments[segments.length - 1]?.length ?? 0;
+  return run >= minimum ? run : undefined;
+}
+
 const RESULT_LABEL: Record<FormChartMatch['result'], string> = { W: 'Won', D: 'Drew', L: 'Lost' };
 const VENUE_LABEL: Record<FormChartMatch['venue'], string> = { H: 'home', A: 'away' };
 
@@ -171,6 +252,7 @@ export function formBarAccessibleName(match: FormChartMatch): string {
     match.date,
     `${RESULT_LABEL[match.result]} ${match.score} vs ${match.opponent.label}`,
     VENUE_LABEL[match.venue],
+    ...(match.team ? [`for ${match.team.label}`] : []),
     `rating ${match.rating.toFixed(1)}`,
   ];
   if (match.goals > 0) parts.push(`${match.goals} goal${match.goals === 1 ? '' : 's'}`);
@@ -197,6 +279,7 @@ export function FormChart({
   emphasisRating = DEFAULT_EMPHASIS_RATING,
   hasOlder = false,
   onOlder,
+  latestClubMinimum = DEFAULT_LATEST_CLUB_MINIMUM,
   framed = false,
 }: FormChartProps) {
   // Tracked as "how far back from the newest match" rather than an absolute
@@ -205,6 +288,11 @@ export function FormChart({
   // array; here the array itself can grow, so the offset from the end is
   // the stable quantity).
   const [offsetFromEnd, setOffsetFromEnd] = useState(0);
+
+  // At the newest end, whether the strip shows the latest club alone (when
+  // `latestClubOpening` allows it) or the full window. Opens true; "Earlier
+  // matches" from the latest club widens to the full window first.
+  const [latestClubOnly, setLatestClubOnly] = useState(true);
 
   // Set while a click on "Earlier matches" at the oldest loaded match is
   // waiting for the host to prepend more (`onOlder`). Guards against a
@@ -241,6 +329,7 @@ export function FormChart({
       // length) opens on the newest window rather than keeping a stale
       // offset from whoever was shown before.
       setOffsetFromEnd(0);
+      setLatestClubOnly(true);
       setPendingOlder(false);
       return;
     }
@@ -254,15 +343,22 @@ export function FormChart({
     setOffsetFromEnd((prev) => Math.min(prev, Math.max(0, matches.length - windowSize)));
   }, [newestId, matches.length, windowSize, step, pendingOlder, hasOlder]);
 
+  const opening = latestClubOpening(matches, windowSize, latestClubMinimum);
+  const showLatestClub = opening !== undefined && offsetFromEnd <= 0 && latestClubOnly;
+
   const end = clampWindowEnd(matches.length, matches.length - offsetFromEnd, windowSize);
-  const start = Math.max(0, end - windowSize);
+  const start = showLatestClub ? matches.length - opening : Math.max(0, end - windowSize);
   const visible = matches.slice(start, end);
 
   const atOldestLoaded = start <= 0;
   const earlierDisabled = atOldestLoaded && (pendingOlder || !hasOlder);
-  const laterDisabled = offsetFromEnd <= 0;
+  const laterDisabled = offsetFromEnd <= 0 && (showLatestClub || opening === undefined);
 
   const goEarlier = () => {
+    if (showLatestClub) {
+      setLatestClubOnly(false);
+      return;
+    }
     if (atOldestLoaded) {
       if (pendingOlder) return;
       setPendingOlder(true);
@@ -272,6 +368,10 @@ export function FormChart({
     setOffsetFromEnd((prev) => Math.min(matches.length - windowSize, prev + step));
   };
   const goLater = () => {
+    if (offsetFromEnd <= 0) {
+      setLatestClubOnly(true);
+      return;
+    }
     setOffsetFromEnd((prev) => Math.max(0, prev - step));
   };
 
@@ -279,6 +379,8 @@ export function FormChart({
   const range = formatWindowRange(visible);
   const barWidth = formChartBarWidth(windowSize);
   const baselineY = VB_H - PAD_B;
+  const segments = formClubSegments(visible);
+  const clubs = segments.length > 1 ? segments : [];
 
   return (
     <figure
@@ -316,6 +418,7 @@ export function FormChart({
       </div>
 
       <div className="flex flex-col gap-1.5">
+        {clubs.length > 0 && <FormClubs segments={clubs} windowSize={windowSize} />}
         <svg
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           // Presentational to assistive tech: each match's link and full
@@ -335,6 +438,19 @@ export function FormChart({
               y2={ratingToY(v, yDomain)}
               stroke="white"
               strokeOpacity={v === emphasisRating ? 0.12 : 0.05}
+            />
+          ))}
+          {clubs.slice(1).map((seg) => (
+            <line
+              key={`club-${seg.start}`}
+              data-slot="form-club-divider"
+              x1={PAD_L + seg.start * barWidth}
+              x2={PAD_L + seg.start * barWidth}
+              y1={0}
+              y2={VB_H}
+              stroke="white"
+              strokeOpacity={0.24}
+              vectorEffect="non-scaling-stroke"
             />
           ))}
           {visible.map((m, i) => (
@@ -422,9 +538,15 @@ function FormBar({
   const inset = Math.min(7, width / 4);
   const marker = goalAssistMarker(match.goals, match.assists);
   const href = match.href ?? match.opponent.href;
+  // The title and the shapes only: the rating and G/A numerals are drawn
+  // outside this group, so the link's text (what a long press or a text
+  // read of the link shows) is the title alone, not the title with the
+  // rating run on after it ("rating 6.76.7").
   const bar = (
     <g data-slot="form-bar">
       <title>{match.title}</title>
+      {/* The whole column, numeral included, is the pointer target. */}
+      <rect x={x} y={0} width={width} height={baselineY} fill="transparent" />
       <rect
         x={x + inset}
         y={top}
@@ -433,6 +555,10 @@ function FormBar({
         rx={2}
         fill={colour}
       />
+    </g>
+  );
+  const numerals = (
+    <g aria-hidden="true" pointerEvents="none">
       <text x={cx} y={top - 8} textAnchor="middle" fontSize={13} fontWeight={700} fill={WHITE}>
         {match.rating.toFixed(1)}
       </text>
@@ -450,13 +576,55 @@ function FormBar({
       )}
     </g>
   );
-  if (!href) return bar;
-  // A pointer target only: the label under the bar is the same link for the
-  // keyboard and assistive tech (see `FormLabel`).
   return (
-    <a href={href} tabIndex={-1} aria-hidden="true">
-      {bar}
-    </a>
+    <>
+      {href ? (
+        // A pointer target only: the label under the bar is the same link
+        // for the keyboard and assistive tech (see `FormLabel`).
+        <a href={href} tabIndex={-1} aria-hidden="true">
+          {bar}
+        </a>
+      ) : (
+        bar
+      )}
+      {numerals}
+    </>
+  );
+}
+
+/**
+ * The club over each run of bars, when the window spans more than one: its
+ * short name, small and muted, with a thin rule where the club changes, on
+ * the same columns as the bars and labels.
+ */
+function FormClubs({ segments, windowSize }: { segments: FormClubSegment[]; windowSize: number }) {
+  const inset = `${(PAD_L / VB_W) * 100}%`;
+  return (
+    <ol
+      data-slot="form-chart-clubs"
+      aria-hidden="true"
+      className="m-0 grid list-none p-0"
+      style={{
+        gridTemplateColumns: `repeat(${windowSize}, minmax(0, 1fr))`,
+        paddingLeft: inset,
+        paddingRight: inset,
+      }}
+    >
+      {segments.map((seg, i) => (
+        <li
+          key={seg.start}
+          data-slot="form-club"
+          title={seg.team.label}
+          className={cn(
+            'min-w-0 truncate px-1 text-[11px] leading-4',
+            i > 0 && 'border-l border-white/25'
+          )}
+          style={{ gridColumn: `${seg.start + 1} / span ${seg.length}`, color: MUTED }}
+        >
+          {seg.team.shortLabel || seg.team.label}
+        </li>
+      ))}
+    </ol>
   );
 }
 

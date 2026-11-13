@@ -30,7 +30,12 @@ export { SimilarList } from './similar-list';
 export type { SimilarListProps, SimilarListItem } from './similar-list';
 
 export { FormChart, formOpponentCode } from './form-chart';
-export type { FormChartMatch, FormChartOpponent, FormChartProps } from './form-chart';
+export type {
+  FormChartMatch,
+  FormChartOpponent,
+  FormChartProps,
+  FormChartTeam,
+} from './form-chart';
 
 export {
   SeasonTrend,
