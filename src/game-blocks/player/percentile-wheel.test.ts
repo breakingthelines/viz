@@ -83,7 +83,7 @@ describe('Percentile wheel block', () => {
 
   it('asks for an update for a newer data version or an unknown type', () => {
     expect(render(config({ dataVersion: 2 }))).toContain('Update to see this block');
-    expect(render(config({ blockType: 'team-squad' as GameBlockConfig['blockType'] }))).toContain(
+    expect(render(config({ blockType: 'not-a-block' as GameBlockConfig['blockType'] }))).toContain(
       'Update to see this block'
     );
   });

@@ -1,0 +1,135 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_TRANSFERS",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "contextLine": "Arsenal, Summer 2025",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamTransfers": {
+    "windowLabel": "Summer 2025",
+    "ins": [
+      {
+        "date": "2025-07-26",
+        "player": {
+          "id": "player-example-112",
+          "name": "Viktor Gyökeres",
+          "shortName": "Gyökeres"
+        },
+        "from": {
+          "id": "team-example-20",
+          "name": "Sporting CP",
+          "shortName": "Sporting"
+        },
+        "to": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "type": "Transfer",
+        "fee": "£63.5m"
+      },
+      {
+        "date": "2025-07-06",
+        "player": {
+          "id": "player-example-110",
+          "name": "Martín Zubimendi",
+          "shortName": "Zubimendi"
+        },
+        "from": {
+          "id": "team-example-21",
+          "name": "Real Sociedad",
+          "shortName": "Real Sociedad"
+        },
+        "to": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "type": "Transfer",
+        "fee": "£60m"
+      },
+      {
+        "date": "2025-07-01",
+        "player": {
+          "id": "player-example-102",
+          "name": "Kepa Arrizabalaga",
+          "shortName": "Kepa"
+        },
+        "from": {
+          "id": "team-example-4",
+          "name": "Chelsea",
+          "shortName": "Chelsea"
+        },
+        "to": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "type": "Transfer",
+        "fee": "£5m"
+      }
+    ],
+    "outs": [
+      {
+        "date": "2025-08-29",
+        "player": {
+          "id": "player-example-115",
+          "name": "Jakub Kiwior",
+          "shortName": "Kiwior"
+        },
+        "from": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "to": {
+          "id": "team-example-22",
+          "name": "FC Porto",
+          "shortName": "Porto"
+        },
+        "type": "Loan"
+      },
+      {
+        "date": "2025-07-01",
+        "player": {
+          "id": "player-example-116",
+          "name": "Thomas Partey",
+          "shortName": "Partey"
+        },
+        "from": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "to": {
+          "id": "team-example-23",
+          "name": "Villarreal",
+          "shortName": "Villarreal"
+        },
+        "type": "Free"
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_MATCH_STATS",
+    "subject": {
+      "id": "game-example-9",
+      "type": "SUBJECT_TYPE_GAME",
+      "label": "Arsenal v Liverpool"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "game-example-9",
+    "type": "SUBJECT_TYPE_GAME",
+    "name": "Arsenal v Liverpool"
+  },
+  "contextLine": "Arsenal 2-1 Liverpool, Premier League, 25 Oct 2026",
+  "defaultTitle": "Arsenal v Liverpool",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "matchStats": {
+    "match": {
+      "gameId": "game-example-9",
+      "home": {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "score": 2
+      },
+      "away": {
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "score": 1
+      },
+      "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+      "competition": {
+        "id": "39",
+        "name": "Premier League",
+        "shortName": "PL"
+      },
+      "roundLabel": "Matchday 9",
+      "kickoff": "2026-10-25T16:30:00Z",
+      "url": "/game/football/match/game-example-9",
+      "venue": "Emirates Stadium"
+    },
+    "stats": [
+      {
+        "key": "xg",
+        "label": "Expected goals",
+        "home": {
+          "value": 2.31,
+          "display": "2.31"
+        },
+        "away": {
+          "value": 0.84,
+          "display": "0.84"
+        }
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "home": {
+          "value": 18,
+          "display": "18"
+        },
+        "away": {
+          "value": 7,
+          "display": "7"
+        }
+      },
+      {
+        "key": "shots_on_target",
+        "label": "Shots on target",
+        "home": {
+          "value": 7,
+          "display": "7"
+        },
+        "away": {
+          "value": 3,
+          "display": "3"
+        }
+      },
+      {
+        "key": "possession",
+        "label": "Possession",
+        "home": {
+          "value": 58,
+          "display": "58%"
+        },
+        "away": {
+          "value": 42,
+          "display": "42%"
+        }
+      },
+      {
+        "key": "corners",
+        "label": "Corners",
+        "home": {
+          "value": 8,
+          "display": "8"
+        },
+        "away": {
+          "value": 3,
+          "display": "3"
+        }
+      },
+      {
+        "key": "passes",
+        "label": "Passes",
+        "home": {
+          "value": 541,
+          "display": "541"
+        },
+        "away": {
+          "value": 402,
+          "display": "402"
+        }
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal v Liverpool",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

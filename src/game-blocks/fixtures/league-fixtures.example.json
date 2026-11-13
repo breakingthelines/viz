@@ -1,0 +1,168 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_FIXTURES",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26, Matchday 13",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "leagueFixtures": {
+    "label": "Matchday 13",
+    "games": [
+      {
+        "gameId": "game-example-31",
+        "home": {
+          "team": {
+            "id": "team-example-1",
+            "name": "Arsenal",
+            "shortName": "Arsenal"
+          }
+        },
+        "away": {
+          "team": {
+            "id": "team-example-10",
+            "name": "Brentford",
+            "shortName": "Brentford"
+          }
+        },
+        "status": "GAME_BLOCK_MATCH_STATUS_SCHEDULED",
+        "competition": {
+          "id": "39",
+          "name": "Premier League",
+          "shortName": "PL"
+        },
+        "roundLabel": "Matchday 13",
+        "kickoff": "2026-11-21T15:00:00Z",
+        "url": "/game/football/match/game-example-31"
+      },
+      {
+        "gameId": "game-example-32",
+        "home": {
+          "team": {
+            "id": "team-example-2",
+            "name": "Manchester City",
+            "shortName": "Man City"
+          }
+        },
+        "away": {
+          "team": {
+            "id": "team-example-12",
+            "name": "Everton",
+            "shortName": "Everton"
+          }
+        },
+        "status": "GAME_BLOCK_MATCH_STATUS_SCHEDULED",
+        "competition": {
+          "id": "39",
+          "name": "Premier League",
+          "shortName": "PL"
+        },
+        "roundLabel": "Matchday 13",
+        "kickoff": "2026-11-21T15:00:00Z",
+        "url": "/game/football/match/game-example-32"
+      },
+      {
+        "gameId": "game-example-33",
+        "home": {
+          "team": {
+            "id": "team-example-6",
+            "name": "Aston Villa",
+            "shortName": "Villa"
+          }
+        },
+        "away": {
+          "team": {
+            "id": "team-example-11",
+            "name": "Fulham",
+            "shortName": "Fulham"
+          }
+        },
+        "status": "GAME_BLOCK_MATCH_STATUS_SCHEDULED",
+        "competition": {
+          "id": "39",
+          "name": "Premier League",
+          "shortName": "PL"
+        },
+        "roundLabel": "Matchday 13",
+        "kickoff": "2026-11-21T17:30:00Z",
+        "url": "/game/football/match/game-example-33"
+      },
+      {
+        "gameId": "game-example-34",
+        "home": {
+          "team": {
+            "id": "team-example-3",
+            "name": "Liverpool",
+            "shortName": "Liverpool"
+          }
+        },
+        "away": {
+          "team": {
+            "id": "team-example-4",
+            "name": "Chelsea",
+            "shortName": "Chelsea"
+          }
+        },
+        "status": "GAME_BLOCK_MATCH_STATUS_SCHEDULED",
+        "competition": {
+          "id": "39",
+          "name": "Premier League",
+          "shortName": "PL"
+        },
+        "roundLabel": "Matchday 13",
+        "kickoff": "2026-11-22T16:30:00Z",
+        "url": "/game/football/match/game-example-34"
+      },
+      {
+        "gameId": "game-example-35",
+        "home": {
+          "team": {
+            "id": "team-example-7",
+            "name": "Tottenham Hotspur",
+            "shortName": "Spurs"
+          }
+        },
+        "away": {
+          "team": {
+            "id": "team-example-9",
+            "name": "Manchester United",
+            "shortName": "Man Utd"
+          }
+        },
+        "status": "GAME_BLOCK_MATCH_STATUS_POSTPONED",
+        "competition": {
+          "id": "39",
+          "name": "Premier League",
+          "shortName": "PL"
+        },
+        "roundLabel": "Matchday 13",
+        "kickoff": "2026-11-23T14:00:00Z",
+        "url": "/game/football/match/game-example-35"
+      }
+    ]
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

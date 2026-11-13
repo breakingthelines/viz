@@ -1,0 +1,99 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_HONOURS",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "contextLine": "Arsenal",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamHonours": {
+    "honours": [
+      {
+        "competition": {
+          "id": "45",
+          "name": "FA Cup"
+        },
+        "seasonLabel": "2019/20",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "45",
+          "name": "FA Cup"
+        },
+        "seasonLabel": "2016/17",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "45",
+          "name": "FA Cup"
+        },
+        "seasonLabel": "2014/15",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "45",
+          "name": "FA Cup"
+        },
+        "seasonLabel": "2013/14",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "39",
+          "name": "Premier League"
+        },
+        "seasonLabel": "2003/04",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "39",
+          "name": "Premier League"
+        },
+        "seasonLabel": "2001/02",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "39",
+          "name": "Premier League"
+        },
+        "seasonLabel": "1997/98",
+        "place": "Winner"
+      },
+      {
+        "competition": {
+          "id": "2",
+          "name": "Champions League"
+        },
+        "seasonLabel": "2005/06",
+        "place": "Runner-up"
+      }
+    ],
+    "winnerCount": 7
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

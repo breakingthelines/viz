@@ -1,0 +1,459 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_MATCH_FAN_GRADES",
+    "subject": {
+      "id": "game-example-9",
+      "type": "SUBJECT_TYPE_GAME",
+      "label": "Arsenal v Liverpool"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "view": "pitch"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "game-example-9",
+    "type": "SUBJECT_TYPE_GAME",
+    "name": "Arsenal v Liverpool"
+  },
+  "contextLine": "Arsenal 2-1 Liverpool",
+  "defaultTitle": "Arsenal v Liverpool",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "matchFanGrades": {
+    "match": {
+      "gameId": "game-example-9",
+      "home": {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "score": 2
+      },
+      "away": {
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "score": 1
+      },
+      "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+      "competition": {
+        "id": "39",
+        "name": "Premier League",
+        "shortName": "PL"
+      },
+      "roundLabel": "Matchday 9",
+      "kickoff": "2026-10-25T16:30:00Z",
+      "url": "/game/football/match/game-example-9",
+      "venue": "Emirates Stadium"
+    },
+    "home": [
+      {
+        "player": {
+          "id": "player-example-101",
+          "name": "David Raya",
+          "shortName": "Raya"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.1,
+        "votes": 812,
+        "position": "G",
+        "shirtNumber": 1,
+        "grid": "1:1"
+      },
+      {
+        "player": {
+          "id": "player-example-107",
+          "name": "Ben White",
+          "shortName": "White"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 6.8,
+        "votes": 790,
+        "position": "D",
+        "shirtNumber": 4,
+        "grid": "2:4"
+      },
+      {
+        "player": {
+          "id": "player-example-103",
+          "name": "William Saliba",
+          "shortName": "Saliba"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.6,
+        "votes": 840,
+        "position": "D",
+        "shirtNumber": 2,
+        "grid": "2:3"
+      },
+      {
+        "player": {
+          "id": "player-example-104",
+          "name": "Gabriel Magalhães",
+          "shortName": "Gabriel"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.4,
+        "votes": 826,
+        "position": "D",
+        "shirtNumber": 6,
+        "grid": "2:2"
+      },
+      {
+        "player": {
+          "id": "player-example-106",
+          "name": "Riccardo Calafiori",
+          "shortName": "Calafiori"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 6.9,
+        "votes": 780,
+        "position": "D",
+        "shirtNumber": 33,
+        "grid": "2:1"
+      },
+      {
+        "player": {
+          "id": "player-example-110",
+          "name": "Martín Zubimendi",
+          "shortName": "Zubimendi"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.2,
+        "votes": 801,
+        "position": "M",
+        "shirtNumber": 36,
+        "grid": "3:2"
+      },
+      {
+        "player": {
+          "id": "player-example-109",
+          "name": "Declan Rice",
+          "shortName": "Rice"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.8,
+        "votes": 850,
+        "position": "M",
+        "shirtNumber": 41,
+        "grid": "3:3"
+      },
+      {
+        "player": {
+          "id": "player-example-108",
+          "name": "Martin Ødegaard",
+          "shortName": "Ødegaard"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 7.5,
+        "votes": 833,
+        "position": "M",
+        "shirtNumber": 8,
+        "grid": "3:1"
+      },
+      {
+        "player": {
+          "id": "player-example-1",
+          "name": "Bukayo Saka",
+          "shortName": "Saka"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 8.6,
+        "votes": 912,
+        "position": "F",
+        "shirtNumber": 7,
+        "grid": "4:3"
+      },
+      {
+        "player": {
+          "id": "player-example-112",
+          "name": "Viktor Gyökeres",
+          "shortName": "Gyökeres"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 6.7,
+        "votes": 804,
+        "position": "F",
+        "shirtNumber": 14,
+        "grid": "4:2"
+      },
+      {
+        "player": {
+          "id": "player-example-114",
+          "name": "Leandro Trossard",
+          "shortName": "Trossard"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 6.5,
+        "votes": 770,
+        "position": "F",
+        "shirtNumber": 19,
+        "grid": "4:1"
+      },
+      {
+        "player": {
+          "id": "player-example-113",
+          "name": "Gabriel Martinelli",
+          "shortName": "Martinelli"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "grade": 6.9,
+        "votes": 520,
+        "position": "F",
+        "shirtNumber": 11
+      }
+    ],
+    "away": [
+      {
+        "player": {
+          "id": "player-example-301",
+          "name": "Alisson Becker",
+          "shortName": "Alisson"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.9,
+        "votes": 640,
+        "position": "G",
+        "shirtNumber": 1,
+        "grid": "1:1"
+      },
+      {
+        "player": {
+          "id": "player-example-302",
+          "name": "Jeremie Frimpong",
+          "shortName": "Frimpong"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.1,
+        "votes": 610,
+        "position": "D",
+        "shirtNumber": 30,
+        "grid": "2:4"
+      },
+      {
+        "player": {
+          "id": "player-example-303",
+          "name": "Ibrahima Konaté",
+          "shortName": "Konaté"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.0,
+        "votes": 602,
+        "position": "D",
+        "shirtNumber": 5,
+        "grid": "2:3"
+      },
+      {
+        "player": {
+          "id": "player-example-205",
+          "name": "Virgil van Dijk",
+          "shortName": "Van Dijk"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.4,
+        "votes": 630,
+        "position": "D",
+        "shirtNumber": 4,
+        "grid": "2:2"
+      },
+      {
+        "player": {
+          "id": "player-example-304",
+          "name": "Milos Kerkez",
+          "shortName": "Kerkez"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 5.8,
+        "votes": 598,
+        "position": "D",
+        "shirtNumber": 6,
+        "grid": "2:1"
+      },
+      {
+        "player": {
+          "id": "player-example-305",
+          "name": "Ryan Gravenberch",
+          "shortName": "Gravenberch"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.2,
+        "votes": 605,
+        "position": "M",
+        "shirtNumber": 38,
+        "grid": "3:2"
+      },
+      {
+        "player": {
+          "id": "player-example-306",
+          "name": "Alexis Mac Allister",
+          "shortName": "Mac Allister"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.3,
+        "votes": 611,
+        "position": "M",
+        "shirtNumber": 10,
+        "grid": "3:1"
+      },
+      {
+        "player": {
+          "id": "player-example-202",
+          "name": "Mohamed Salah",
+          "shortName": "Salah"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 7.0,
+        "votes": 688,
+        "position": "F",
+        "shirtNumber": 11,
+        "grid": "4:3"
+      },
+      {
+        "player": {
+          "id": "player-example-307",
+          "name": "Florian Wirtz",
+          "shortName": "Wirtz"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.5,
+        "votes": 640,
+        "position": "M",
+        "shirtNumber": 7,
+        "grid": "4:2"
+      },
+      {
+        "player": {
+          "id": "player-example-308",
+          "name": "Cody Gakpo",
+          "shortName": "Gakpo"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 5.9,
+        "votes": 600,
+        "position": "F",
+        "shirtNumber": 18,
+        "grid": "4:1"
+      },
+      {
+        "player": {
+          "id": "player-example-309",
+          "name": "Alexander Isak",
+          "shortName": "Isak"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "grade": 6.0,
+        "votes": 590,
+        "position": "F",
+        "shirtNumber": 9,
+        "grid": "5:1"
+      }
+    ],
+    "homeAverage": 7.2,
+    "awayAverage": 6.3,
+    "homeFormation": "4-3-3",
+    "awayFormation": "4-2-3-1"
+  },
+  "text": {
+    "caption": "Arsenal v Liverpool",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

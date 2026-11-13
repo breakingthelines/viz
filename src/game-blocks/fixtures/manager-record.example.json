@@ -1,0 +1,109 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_MANAGER_RECORD",
+    "subject": {
+      "id": "coach-example-2",
+      "type": "SUBJECT_TYPE_COACH",
+      "label": "Unai Emery"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "coach-example-2",
+    "type": "SUBJECT_TYPE_COACH",
+    "name": "Unai Emery",
+    "subtitle": "Aston Villa"
+  },
+  "contextLine": "Unai Emery, Aston Villa",
+  "defaultTitle": "Unai Emery",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "managerRecord": {
+    "coach": {
+      "id": "coach-example-2",
+      "name": "Unai Emery",
+      "shortName": "Emery"
+    },
+    "tenures": [
+      {
+        "team": {
+          "id": "team-example-6",
+          "name": "Aston Villa",
+          "shortName": "Villa"
+        },
+        "from": "2022-11",
+        "played": 180,
+        "won": 95,
+        "drawn": 38,
+        "lost": 47,
+        "winRate": 52.8
+      },
+      {
+        "team": {
+          "id": "team-example-24",
+          "name": "Villarreal",
+          "shortName": "Villarreal"
+        },
+        "from": "2020-07",
+        "played": 143,
+        "won": 62,
+        "drawn": 40,
+        "lost": 41,
+        "winRate": 43.4,
+        "to": "2022-10"
+      },
+      {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "from": "2018-05",
+        "played": 78,
+        "won": 43,
+        "drawn": 16,
+        "lost": 19,
+        "winRate": 55.1,
+        "to": "2019-11"
+      },
+      {
+        "team": {
+          "id": "team-example-43",
+          "name": "Paris Saint-Germain",
+          "shortName": "PSG"
+        },
+        "from": "2016-07",
+        "played": 114,
+        "won": 87,
+        "drawn": 13,
+        "lost": 14,
+        "winRate": 76.3,
+        "to": "2018-05"
+      },
+      {
+        "team": {
+          "id": "team-example-25",
+          "name": "Sevilla",
+          "shortName": "Sevilla"
+        },
+        "from": "2013-01",
+        "played": 199,
+        "won": 104,
+        "drawn": 41,
+        "lost": 54,
+        "winRate": 52.3,
+        "to": "2016-06"
+      }
+    ],
+    "careerWinRate": 54.2
+  },
+  "text": {
+    "caption": "Unai Emery",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

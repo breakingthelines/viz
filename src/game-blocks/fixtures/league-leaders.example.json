@@ -1,0 +1,142 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_LEADERS",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "limit": 6
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "leagueLeaders": {
+    "category": "goals",
+    "categoryLabel": "Goals",
+    "rows": [
+      {
+        "rank": 1,
+        "player": {
+          "id": "player-example-201",
+          "name": "Erling Haaland",
+          "shortName": "Haaland"
+        },
+        "team": {
+          "id": "team-example-2",
+          "name": "Manchester City",
+          "shortName": "Man City"
+        },
+        "value": {
+          "value": 14,
+          "display": "14"
+        }
+      },
+      {
+        "rank": 2,
+        "player": {
+          "id": "player-example-1",
+          "name": "Bukayo Saka",
+          "shortName": "Saka"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "value": {
+          "value": 9,
+          "display": "9"
+        }
+      },
+      {
+        "rank": 3,
+        "player": {
+          "id": "player-example-202",
+          "name": "Mohamed Salah",
+          "shortName": "Salah"
+        },
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "value": {
+          "value": 8,
+          "display": "8"
+        }
+      },
+      {
+        "rank": 4,
+        "player": {
+          "id": "player-example-112",
+          "name": "Viktor Gyökeres",
+          "shortName": "Gyökeres"
+        },
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "value": {
+          "value": 7,
+          "display": "7"
+        }
+      },
+      {
+        "rank": 5,
+        "player": {
+          "id": "player-example-203",
+          "name": "Cole Palmer",
+          "shortName": "Palmer"
+        },
+        "team": {
+          "id": "team-example-4",
+          "name": "Chelsea",
+          "shortName": "Chelsea"
+        },
+        "value": {
+          "value": 7,
+          "display": "7"
+        }
+      },
+      {
+        "rank": 6,
+        "player": {
+          "id": "player-example-204",
+          "name": "Ollie Watkins",
+          "shortName": "Watkins"
+        },
+        "team": {
+          "id": "team-example-6",
+          "name": "Aston Villa",
+          "shortName": "Villa"
+        },
+        "value": {
+          "value": 6,
+          "display": "6"
+        }
+      }
+    ]
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}
