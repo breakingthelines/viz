@@ -6,8 +6,9 @@ import { oneDecimal, refName } from '../parts/team-league-match-common';
 import type { MatchPlayerOfTheMatchDataJson } from './types';
 
 /**
- * Match › Player of the match: the readers' top graded player, his grade as
- * the hero and the runner-up as the comparator.
+ * Match › Player of the match: the readers' best graded player (game-service
+ * picks him on BTL's 1 to 6 scale, lower better), his grade as the hero and the
+ * runner-up as the comparator.
  */
 export function MatchPlayerOfTheMatchBlock(
   props: GameBlockComponentProps<MatchPlayerOfTheMatchDataJson>

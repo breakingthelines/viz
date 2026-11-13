@@ -1,9 +1,16 @@
 import { BlockScale, TABULAR, useBlockSkin } from '../skin/index';
-import { oneDecimal, refName, type GameBlockPlayerGradeJson } from './team-league-match-common';
+import {
+  gradeScaleLabel,
+  gradeToScale,
+  oneDecimal,
+  refName,
+  type GameBlockPlayerGradeJson,
+} from './team-league-match-common';
 
 /**
- * The winner's grade on the 0 to 100 scale (grade times ten) as the red fill,
- * the runner-up's as the outlined ring, each named under the scale.
+ * The winner's grade on BTL's 1 to 6 scale, lower better, drawn with 1 at the
+ * full end: his as the red fill, the runner-up's as the outlined ring, each
+ * named under the scale with the real grade.
  */
 export function PlayerOfTheMatchScale({
   winner,
@@ -13,17 +20,20 @@ export function PlayerOfTheMatchScale({
   runnerUp?: GameBlockPlayerGradeJson;
 }) {
   const skin = useBlockSkin();
-  const w = winner.grade ?? 0;
+  const w = winner.grade;
   const r = runnerUp?.grade;
   const name = (p: GameBlockPlayerGradeJson | undefined) =>
     refName(p?.player, true) || refName(p?.player);
   return (
     <div style={{ ...TABULAR, fontFamily: skin.fontSans }}>
-      <BlockScale
-        value={w * 10}
-        comparator={typeof r === 'number' ? r * 10 : undefined}
-        size="hero"
-      />
+      {typeof w === 'number' ? (
+        <BlockScale
+          value={gradeToScale(w)}
+          comparator={typeof r === 'number' ? gradeToScale(r) : undefined}
+          size="hero"
+          label={gradeScaleLabel(w)}
+        />
+      ) : null}
       <div
         style={{
           display: 'flex',

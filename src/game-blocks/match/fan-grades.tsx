@@ -7,8 +7,9 @@ import type { MatchFanGradesDataJson } from './types';
 
 /**
  * Match › Fan grades: BTL reader grades for both line-ups, in formation
- * (`pitch`, the default) or as ranked lists (`list`). The top grade is the
- * hero; each team's average is its baseline.
+ * (`pitch`, the default) or as ranked lists (`list`). Grades are BTL's 1 to 6,
+ * lower better: the best (lowest) grade is the hero; each team's average is
+ * its baseline.
  */
 export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGradesDataJson>) {
   const data = props.config.data ?? {};
@@ -20,7 +21,7 @@ export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGrade
     top && typeof top.grade === 'number'
       ? {
           figure: oneDecimal(top.grade),
-          label: `top grade, ${refName(top.player, true) || refName(top.player)}`,
+          label: `best grade, ${refName(top.player, true) || refName(top.player)}`,
           baseline: top.votes ? [`${top.votes} votes`] : undefined,
         }
       : undefined;

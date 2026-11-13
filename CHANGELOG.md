@@ -5,7 +5,33 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.25.1]
+
+### Fixed: fan grades read on BTL's 1 to 6 scale, lower better
+
+- **`MatchFanGradesBlock` and `MatchPlayerOfTheMatchBlock`** drew grades as
+  0 to 10, higher better (the scale filled to grade times ten, the hero was the
+  highest grade). BTL fan grades run 1 (best) to 6 (worst), and game-service
+  passes them through as cast. The scale now fills to 100 at 1 and empties at
+  6, the best (lowest) grade is the hero with the red rule, lists sort best
+  first, and the team average tick sits on the same scale. Figures show the real
+  grade; the scale's accessible label reads "Grade 1.3 of 6, 1 is best" instead
+  of "87 out of 100".
+- **`BlockScale`** takes an optional `label` for its accessible name when the
+  drawn value is not itself out of 100.
+- Example fixtures for both blocks now use grades on the 1 to 6 scale.
+
+### Added: team, league and match parts exported
+
+- `@breakingthelines/viz/game-blocks` now exports the team, league and match
+  parts under `parts/` (for example `StandingsTable`, `FixtureList`,
+  `TeamFormRows`, `TransferRows`, `MatchStatRows`, `TimelineRows`,
+  `FanGradeSides`, `PlayerOfTheMatchScale`), the shared `BlockGrid`,
+  `SectionLabel`, `ScaleCell`, `SplitBar`, `ResultStrip` and `RefName`, and the
+  grade helpers `gradeToScale`, `gradeScaleLabel`, `GRADE_BEST` and
+  `GRADE_WORST`.
+
+## [0.25.0]
 
 ### Added: player game blocks
 
@@ -53,8 +79,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - **Example fixtures** for each type (`fixtures/{team,league,match}-*` and
   `manager-record.example.json`, `fixtures/team-league-match.ts`). Example
   figures only.
-
-## [0.25.0]
 
 ### Added: game blocks, the skin and the percentile wheel
 
