@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -16,7 +17,13 @@ import { Crayon, GrainDefs, arc, head, ring, seedOf, type Pt } from './crayon';
 import { playerHalftoneUrl, playerHeadshotUrl, resolveMediaSrc, useMediaBase } from './assets';
 import { pickPosterArt, useHalftone, useImageLoads, type PosterArt } from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
-import { LayoutContext, useBlockLayout, useBlockSkin, type BlockLayout } from './provider';
+import {
+  DrawnLookContext,
+  LayoutContext,
+  useBlockLayout,
+  useBlockSkin,
+  type BlockLayout,
+} from './provider';
 import { DEFAULT_BLOCK_SKIN, skinCssVars, type BlockSkinTokens } from './tokens';
 
 /** Container width below which a block stacks into one column. */
@@ -125,6 +132,10 @@ export function BlockFrame(props: BlockFrameProps) {
   const art = usePosterArt(asked === 'poster' ? props.media : undefined, narrow, density, skin);
   const look: GameBlockLook = asked === 'poster' && art.status === 'none' ? 'editorial' : asked;
   const layout = useMemo<BlockLayout>(() => ({ look, density, narrow }), [look, density, narrow]);
+  const onLookDrawn = useContext(DrawnLookContext);
+  useEffect(() => {
+    onLookDrawn?.(look);
+  }, [onLookDrawn, look]);
   const uid = cssId(useId());
   const ids = { crayon: `btl-crayon-${uid}`, paper: `btl-paper-${uid}` };
 

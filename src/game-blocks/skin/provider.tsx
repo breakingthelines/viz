@@ -25,6 +25,15 @@ export function useBlockSkin(): BlockSkinTokens {
   return useContext(SkinContext);
 }
 
+/**
+ * Told the look a block draws, which differs from the one asked for when a
+ * poster has no usable image and draws as editorial. Set by `GameBlockView`'s
+ * `onLookDrawn`.
+ */
+export const DrawnLookContext = createContext<((look: GameBlockLook) => void) | undefined>(
+  undefined
+);
+
 export interface BlockLayout {
   look: GameBlockLook;
   density: GameBlockDensity;

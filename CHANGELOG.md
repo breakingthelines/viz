@@ -5,6 +5,26 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.1]
+
+### Added: the drawn look, for hosts
+
+- **`GameBlockView` `onLookDrawn`** is called with the look the block draws,
+  on mount and when it changes. A poster with no usable headshot or crest
+  draws as editorial, so an editor can say the chosen look fell back without
+  reading `data-game-block-look`.
+
+### Added: a comparison of season totals
+
+- **Player › Comparison** of two players the cards cannot rank together
+  (different leagues or position groups) arrives as season totals and per 90,
+  all competitions of the same season, with no percentiles: families
+  `season_totals` and `per_90`, schema 2. It draws as two plain tables with
+  minutes on top, and the hero is the highlighted total beside the second
+  player's.
+- **`SUPPORTED_DATA_VERSION`** is 2. Builds before this one show "Update to
+  see this block" for a totals comparison.
+
 ## [0.26.0]
 
 ### Fixed: poster with no photo for most players

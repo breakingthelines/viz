@@ -5,7 +5,7 @@ import { WHEEL_EXAMPLE } from '../fixtures/index';
 import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
 import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';
-import { GameBlockView } from '../view';
+import { GameBlockView, SUPPORTED_DATA_VERSION } from '../view';
 import { groupLabel, lowerFirst, ordinal, pickHighlight } from './percentile-wheel';
 import { askedLook } from '../fixtures/look';
 
@@ -83,7 +83,9 @@ describe('Percentile wheel block', () => {
   });
 
   it('asks for an update for a newer data version or an unknown type', () => {
-    expect(render(config({ dataVersion: 2 }))).toContain('Update to see this block');
+    expect(render(config({ dataVersion: SUPPORTED_DATA_VERSION + 1 }))).toContain(
+      'Update to see this block'
+    );
     expect(render(config({ blockType: 'not-a-block' as GameBlockConfig['blockType'] }))).toContain(
       'Update to see this block'
     );

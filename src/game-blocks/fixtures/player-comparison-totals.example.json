@@ -1,0 +1,394 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response for a comparison the cards cannot rank (schema 2: totals and per 90, no percentiles).",
+  "snapshotId": "00000000-0000-4000-8000-000000000113",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_COMPARISON",
+    "subject": {
+      "id": "player-example-11",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Kylian Mbappé"
+    },
+    "seasonId": "2026",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "comparison": {
+      "id": "player-example-12",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Lionel Messi"
+    },
+    "highlight": "goals"
+  },
+  "schemaVersion": 2,
+  "subject": {
+    "id": "player-example-11",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Kylian Mbappé",
+    "subtitle": "Real Madrid",
+    "url": "/game/football/player/player-example-11/kylian-mbappe"
+  },
+  "seasonLabel": "2026/27 and 2026",
+  "competitionLabel": "All competitions",
+  "contextLine": "Kylian Mbappé and Lionel Messi, 2026/27 and 2026",
+  "defaultTitle": "Kylian Mbappé v Lionel Messi",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "comparison": {
+    "id": "player-example-12",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Lionel Messi",
+    "subtitle": "Inter Miami",
+    "url": "/game/football/player/player-example-12/lionel-messi"
+  },
+  "text": {
+    "caption": "Kylian Mbappé, Lionel Messi, 2026/27 and 2026",
+    "columns": ["Stat", "Kylian Mbappé", "Lionel Messi"],
+    "rows": [
+      {
+        "cells": ["Minutes", "1310", "2210"]
+      },
+      {
+        "cells": ["Goals", "14", "19"]
+      },
+      {
+        "cells": ["Assists", "4", "12"]
+      },
+      {
+        "cells": ["Shots", "61", "72"]
+      },
+      {
+        "cells": ["Key passes", "22", "58"]
+      },
+      {
+        "cells": ["Successful dribbles", "19", "24"]
+      },
+      {
+        "cells": ["Tackles", "7", "9"]
+      }
+    ]
+  },
+  "highlights": [
+    {
+      "key": "goals",
+      "label": "Goals",
+      "hint": "14"
+    },
+    {
+      "key": "assists",
+      "label": "Assists",
+      "hint": "4"
+    },
+    {
+      "key": "shots",
+      "label": "Shots",
+      "hint": "61"
+    },
+    {
+      "key": "key_passes",
+      "label": "Key passes",
+      "hint": "22"
+    },
+    {
+      "key": "dribbles",
+      "label": "Successful dribbles",
+      "hint": "19"
+    },
+    {
+      "key": "tackles",
+      "label": "Tackles",
+      "hint": "7"
+    }
+  ],
+  "views": [
+    {
+      "key": "scales",
+      "label": "Scales"
+    },
+    {
+      "key": "rows",
+      "label": "Rows"
+    }
+  ],
+  "playerComparison": {
+    "metrics": [
+      {
+        "key": "goals",
+        "label": "Goals",
+        "shortLabel": "Goals",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "goals.total.subject",
+        "comparisonValueCell": "goals.total.comparison"
+      },
+      {
+        "key": "assists",
+        "label": "Assists",
+        "shortLabel": "Assists",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "assists.total.subject",
+        "comparisonValueCell": "assists.total.comparison"
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "shortLabel": "Shots",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "shots.total.subject",
+        "comparisonValueCell": "shots.total.comparison"
+      },
+      {
+        "key": "key_passes",
+        "label": "Key passes",
+        "shortLabel": "Key passes",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "key_passes.total.subject",
+        "comparisonValueCell": "key_passes.total.comparison"
+      },
+      {
+        "key": "dribbles",
+        "label": "Successful dribbles",
+        "shortLabel": "Successful dribbles",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "dribbles.total.subject",
+        "comparisonValueCell": "dribbles.total.comparison"
+      },
+      {
+        "key": "tackles",
+        "label": "Tackles",
+        "shortLabel": "Tackles",
+        "family": "season_totals",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "tackles.total.subject",
+        "comparisonValueCell": "tackles.total.comparison"
+      },
+      {
+        "key": "goals_per90",
+        "label": "Goals",
+        "shortLabel": "Goals",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "goals.per90.subject",
+        "comparisonValueCell": "goals.per90.comparison"
+      },
+      {
+        "key": "assists_per90",
+        "label": "Assists",
+        "shortLabel": "Assists",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "assists.per90.subject",
+        "comparisonValueCell": "assists.per90.comparison"
+      },
+      {
+        "key": "shots_per90",
+        "label": "Shots",
+        "shortLabel": "Shots",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "shots.per90.subject",
+        "comparisonValueCell": "shots.per90.comparison"
+      },
+      {
+        "key": "key_passes_per90",
+        "label": "Key passes",
+        "shortLabel": "Key passes",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "key_passes.per90.subject",
+        "comparisonValueCell": "key_passes.per90.comparison"
+      },
+      {
+        "key": "dribbles_per90",
+        "label": "Successful dribbles",
+        "shortLabel": "Successful dribbles",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "dribbles.per90.subject",
+        "comparisonValueCell": "dribbles.per90.comparison"
+      },
+      {
+        "key": "tackles_per90",
+        "label": "Tackles",
+        "shortLabel": "Tackles",
+        "family": "per_90",
+        "subjectState": "METRIC_STATE_VALUE",
+        "comparisonState": "METRIC_STATE_VALUE",
+        "subjectValueCell": "tackles.per90.subject",
+        "comparisonValueCell": "tackles.per90.comparison"
+      }
+    ],
+    "families": [
+      {
+        "key": "season_totals",
+        "label": "Season totals"
+      },
+      {
+        "key": "per_90",
+        "label": "Per 90"
+      }
+    ],
+    "subjectMinutes": 1310,
+    "comparisonMinutes": 2210
+  },
+  "gatedCells": [
+    "goals.total.subject",
+    "goals.total.comparison",
+    "goals.per90.subject",
+    "goals.per90.comparison",
+    "assists.total.subject",
+    "assists.total.comparison",
+    "assists.per90.subject",
+    "assists.per90.comparison",
+    "shots.total.subject",
+    "shots.total.comparison",
+    "shots.per90.subject",
+    "shots.per90.comparison",
+    "key_passes.total.subject",
+    "key_passes.total.comparison",
+    "key_passes.per90.subject",
+    "key_passes.per90.comparison",
+    "dribbles.total.subject",
+    "dribbles.total.comparison",
+    "dribbles.per90.subject",
+    "dribbles.per90.comparison",
+    "tackles.total.subject",
+    "tackles.total.comparison",
+    "tackles.per90.subject",
+    "tackles.per90.comparison"
+  ],
+  "gated": {
+    "goals.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 14,
+      "display": "14"
+    },
+    "goals.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 19,
+      "display": "19"
+    },
+    "goals.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.96,
+      "display": "0.96"
+    },
+    "goals.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.77,
+      "display": "0.77"
+    },
+    "assists.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 4,
+      "display": "4"
+    },
+    "assists.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 12,
+      "display": "12"
+    },
+    "assists.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.27,
+      "display": "0.27"
+    },
+    "assists.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.49,
+      "display": "0.49"
+    },
+    "shots.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 61,
+      "display": "61"
+    },
+    "shots.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 72,
+      "display": "72"
+    },
+    "shots.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 4.19,
+      "display": "4.19"
+    },
+    "shots.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.93,
+      "display": "2.93"
+    },
+    "key_passes.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 22,
+      "display": "22"
+    },
+    "key_passes.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 58,
+      "display": "58"
+    },
+    "key_passes.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.51,
+      "display": "1.51"
+    },
+    "key_passes.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.36,
+      "display": "2.36"
+    },
+    "dribbles.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 19,
+      "display": "19"
+    },
+    "dribbles.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 24,
+      "display": "24"
+    },
+    "dribbles.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.31,
+      "display": "1.31"
+    },
+    "dribbles.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.98,
+      "display": "0.98"
+    },
+    "tackles.total.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 7,
+      "display": "7"
+    },
+    "tackles.total.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 9,
+      "display": "9"
+    },
+    "tackles.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.48,
+      "display": "0.48"
+    },
+    "tackles.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.37,
+      "display": "0.37"
+    }
+  }
+}

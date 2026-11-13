@@ -1,5 +1,6 @@
 import type { GameBlockComponentProps } from '../block-props';
 import { PlayerScaleKey, PlayerScaleRows, type PlayerScaleRow } from '../parts/player-scale-rows';
+import { BlockGrid, SectionLabel } from '../parts/team-league-match-ui';
 import { BlockFrame, GatedValue, type BlockHero } from '../skin/index';
 import type { GameBlockComparisonMetricJson, PlayerComparisonDataJson } from './data';
 import { groupLabel, lowerFirst, ordinal } from './percentile-wheel';
@@ -13,7 +14,24 @@ import { baseFrame, pctOf, surname } from './shared';
  * beside it.
  *
  * Views: `scales` (default) and `rows` (figures only).
+ *
+ * Two players the cards cannot rank together (different leagues or position
+ * groups) come as season totals and per 90 with no percentiles (schema 2,
+ * families `season_totals` and `per_90`). They draw as two plain tables, and
+ * the hero is the highlighted total.
  */
+
+/** Families of a totals comparison. */
+const SEASON_TOTALS = 'season_totals';
+const PER_90 = 'per_90';
+
+/** True for a totals comparison: season totals and per 90, no percentiles. */
+export function isTotalsComparison(metrics: GameBlockComparisonMetricJson[]): boolean {
+  return (
+    metrics.some((m) => m.family === SEASON_TOTALS) &&
+    metrics.every((m) => m.subjectPercentile == null && m.comparisonPercentile == null)
+  );
+}
 
 function subjectPct(m: GameBlockComparisonMetricJson): number | null {
   return m.subjectState === 'METRIC_STATE_VALUE' ? pctOf(m.subjectPercentile) : null;
@@ -57,6 +75,9 @@ export function PlayerComparisonBlock(props: GameBlockComponentProps<PlayerCompa
   const aName = surname(a.name);
   const bName = surname(b?.name) || 'Comparison';
   const view = config.options.view || 'scales';
+  if (isTotalsComparison(metrics)) {
+    return <TotalsComparison {...props} aName={aName} bName={bName} />;
+  }
   const top = pickComparisonHighlight(metrics, config.options.highlight);
 
   let hero: BlockHero | undefined;
@@ -108,14 +129,7 @@ export function PlayerComparisonBlock(props: GameBlockComponentProps<PlayerCompa
         crestSrc: a.crestUrl,
         pairSrc: b?.imageUrl,
       })}
-      context={
-        [
-          a.subtitle && b?.subtitle ? `${a.subtitle} and ${b.subtitle}` : a.subtitle,
-          config.scope.seasonLabel,
-        ]
-          .filter(Boolean)
-          .join(', ') || config.context
-      }
+      context={pairContext(props)}
       hero={hero}
       annotate={top?.key ? { target: `[data-k="${top.key}"] [data-anchor="figure"]` } : undefined}
       aside={
@@ -143,6 +157,114 @@ export function PlayerComparisonBlock(props: GameBlockComponentProps<PlayerCompa
           />
         </div>
       ) : null}
+    </BlockFrame>
+  );
+}
+
+function pairContext(props: GameBlockComponentProps<PlayerComparisonDataJson>): string {
+  const { config } = props;
+  const a = config.subject;
+  const b = config.comparison;
+  return (
+    [
+      a.subtitle && b?.subtitle ? `${a.subtitle} and ${b.subtitle}` : a.subtitle,
+      config.scope.seasonLabel,
+    ]
+      .filter(Boolean)
+      .join(', ') || config.context
+  );
+}
+
+function cellOrDash(cell: string | undefined) {
+  return cell ? <GatedValue cell={cell} /> : '–';
+}
+
+/** Season totals and per 90 side by side: two plain tables, no scales. */
+function TotalsComparison(
+  props: GameBlockComponentProps<PlayerComparisonDataJson> & { aName: string; bName: string }
+) {
+  const { config, aName, bName } = props;
+  const data = config.data ?? {};
+  const metrics = data.metrics ?? [];
+  const a = config.subject;
+  const b = config.comparison;
+  const totals = metrics.filter((m) => m.family === SEASON_TOTALS);
+  const per90 = metrics.filter((m) => m.family === PER_90);
+  const top =
+    totals.find((m) => m.key === config.options.highlight) ??
+    (totals.length ? totals[0] : undefined);
+  const hero: BlockHero | undefined = top?.subjectValueCell
+    ? {
+        figure: <GatedValue cell={top.subjectValueCell} />,
+        label: lowerFirst(top.label ?? ''),
+        baseline: [
+          <>
+            {bName} {cellOrDash(top.comparisonValueCell)}
+          </>,
+        ],
+      }
+    : undefined;
+  const columns = [{ label: '' }, { label: aName, strong: true }, { label: bName }];
+  const minutes = (n: number | undefined) => (n ? n.toLocaleString('en-GB') : '–');
+  const familyLabel = (key: string, fallback: string) =>
+    data.families?.find((f) => f.key === key)?.label || fallback;
+  return (
+    <BlockFrame
+      {...baseFrame(props, 'comparison', {
+        kind: 'pair',
+        src: a.imageUrl,
+        crestSrc: a.crestUrl,
+        pairSrc: b?.imageUrl,
+      })}
+      context={pairContext(props)}
+      hero={hero}
+      aside={
+        config.scope.competitionLabel ? (
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--btl-block-ink-3)' }}>
+            {config.scope.competitionLabel}
+          </p>
+        ) : null
+      }
+    >
+      <div data-comparison-totals="">
+        <SectionLabel first>{familyLabel(SEASON_TOTALS, 'Season totals')}</SectionLabel>
+        <BlockGrid
+          label={familyLabel(SEASON_TOTALS, 'Season totals')}
+          columns={columns}
+          rows={[
+            {
+              key: 'minutes',
+              muted: true,
+              cells: ['Minutes', minutes(data.subjectMinutes), minutes(data.comparisonMinutes)],
+            },
+            ...totals.map((m) => ({
+              key: m.key ?? '',
+              cells: [
+                m.label ?? '',
+                cellOrDash(m.subjectValueCell),
+                cellOrDash(m.comparisonValueCell),
+              ],
+            })),
+          ]}
+        />
+        {per90.length > 0 ? (
+          <>
+            <SectionLabel>{familyLabel(PER_90, 'Per 90')}</SectionLabel>
+            <BlockGrid
+              label={familyLabel(PER_90, 'Per 90')}
+              columns={columns}
+              rows={per90.map((m) => ({
+                key: m.key ?? '',
+                cells: [
+                  m.label ?? '',
+                  cellOrDash(m.subjectValueCell),
+                  cellOrDash(m.comparisonValueCell),
+                ],
+              }))}
+            />
+          </>
+        ) : null}
+      </div>
     </BlockFrame>
   );
 }

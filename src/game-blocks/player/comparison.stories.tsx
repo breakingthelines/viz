@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
+import totalsJson from '../fixtures/player-comparison-totals.example.json';
+import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
+import type { GameBlockJson } from '../types';
+import { GameBlockValuesProvider } from '../values';
+import { GameBlockView } from '../view';
 import {
   EXAMPLE_ARG_TYPES,
   EXAMPLE_ARGS,
   lockedChecks,
   marksChecks,
   pendingChecks,
+  Page,
   PlayerExample,
   proChecks,
   type ExampleArgs,
@@ -60,3 +67,35 @@ export const Pending: Story = { args: { reader: 'pending' }, play: pendingChecks
 export const Subheading: Story = { args: { subheading: 'An optional author line' } };
 export const Chat: Story = { args: { density: 'chat', width: 420 } };
 export const RowsView: Story = { args: { view: 'rows' }, play: proChecks('2.62') };
+
+/** Two players the cards cannot rank together: season totals and per 90, no scales. */
+function TotalsExample({ width, look }: { width: number; look: ExampleArgs['look'] }) {
+  const json = totalsJson as unknown as GameBlockJson;
+  const res = toGameBlockConfig(json);
+  if (!res.ok) throw new Error(res.reason);
+  return (
+    <Page width={width}>
+      <GameBlockValuesProvider
+        initial={{ [res.config.snapshotId]: gatedValuesFromJson(json.gated) }}
+      >
+        <GameBlockView config={{ ...res.config, look }} />
+      </GameBlockValuesProvider>
+    </Page>
+  );
+}
+
+const totalsChecks: Story['play'] = async ({ canvasElement }) => {
+  await expect(canvasElement.querySelector('[data-comparison-totals]')).not.toBeNull();
+  await expect(canvasElement.querySelector('[data-scale-comparator]')).toBeNull();
+  await expect(canvasElement.textContent).toContain('Messi 19');
+};
+
+export const Totals680: Story = {
+  render: (args) => <TotalsExample width={args.width} look={args.look} />,
+  play: totalsChecks,
+};
+export const Totals390: Story = {
+  args: { width: 390 },
+  render: (args) => <TotalsExample width={args.width} look={args.look} />,
+  play: totalsChecks,
+};
