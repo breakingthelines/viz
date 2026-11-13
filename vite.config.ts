@@ -93,15 +93,9 @@ function cdnFixture(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), cdnFixture()],
   resolve: {
-    alias: [
-      { find: '@', replacement: path.resolve(__dirname, './src') },
-      // protos ships TypeScript sources without extensions in its subpaths
-      // (dev and test only: the type pin and the to-config round trip).
-      {
-        find: /^@breakingthelines\/protos\/(.*)$/,
-        replacement: path.resolve(__dirname, './node_modules/@breakingthelines/protos/$1.ts'),
-      },
-    ],
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
   test: {
     projects: [

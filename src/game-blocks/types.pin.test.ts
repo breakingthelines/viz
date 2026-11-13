@@ -10,7 +10,7 @@ import type {
   GameBlockUnavailable,
   GatedCell,
   PlayerPercentileWheelData,
-} from '@breakingthelines/protos/btl/game/v1/types/game_block_pb';
+} from '../generated/game/v1/types/game_block_pb';
 import { describe, expectTypeOf, it } from 'vitest';
 import type {
   GameBlockFamilyJson,

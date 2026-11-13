@@ -47,9 +47,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- `@breakingthelines/protos` 0.209.0 is a devDependency, for the type pin
-  test and the `toGameBlockConfig` round trip. CI installs it from GitHub
-  Packages.
+- The protos 0.209.0 generated code for `game_block.proto` and its imports
+  (`profile`, `context`, `common`) is synced into `src/generated`, for the
+  type pin test and the `toGameBlockConfig` round trip. Tests only; nothing
+  in the published entries imports it.
 - `@breakingthelines/design-system` >=0.107.0 is an optional peer, for game
   blocks that embed design-system parts.
 

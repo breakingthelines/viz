@@ -1,5 +1,5 @@
 import { fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
-import { GameBlockSchema } from '@breakingthelines/protos/btl/game/v1/types/game_block_pb';
+import { GameBlockSchema } from '../generated/game/v1/types/game_block_pb';
 import { describe, expect, it } from 'vitest';
 import { WHEEL_EXAMPLE } from './fixtures';
 import { GAME_BLOCK_REGISTRY } from './registry';

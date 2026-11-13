@@ -36,8 +36,7 @@
       "#/utils/*": ["./src/utils/*"],
       "#/styles/*": ["./src/styles/*"],
       "#/test/*": ["./src/test/*"],
-      "#.storybook/*": ["./.storybook/*"],
-      "@breakingthelines/protos/*": ["./node_modules/@breakingthelines/protos/*.ts"]
+      "#.storybook/*": ["./.storybook/*"]
     }
   },
   "include": ["src", ".storybook"]

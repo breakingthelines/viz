@@ -9,9 +9,6 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: read
 
     steps:
       - name: Checkout
@@ -24,9 +21,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          # @breakingthelines/protos (devDependency) is on GitHub Packages.
-          GITHUB_TOKEN: ${{ secrets.GH_PKG_TOKEN || github.token }}
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
