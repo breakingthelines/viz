@@ -35,8 +35,13 @@ export function MatchPlayerOfTheMatchBlock(
     <BlockFrame
       {...base}
       media={
-        winner?.player?.imageUrl
-          ? { kind: 'person', src: winner.player.imageUrl, crestSrc: winner.team?.imageUrl }
+        winner?.player?.imageUrl || winner?.player?.id
+          ? {
+              kind: 'person',
+              src: winner.player.imageUrl,
+              crestSrc: winner.team?.imageUrl,
+              personId: winner.player.id,
+            }
           : base.media
       }
       hero={hero}
