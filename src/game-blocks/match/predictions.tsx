@@ -32,7 +32,7 @@ export function MatchPredictionsBlock(props: GameBlockComponentProps<MatchPredic
           data.mostPickedScore
             ? `Most picked ${data.mostPickedScore}${typeof data.mostPickedShare === 'number' ? `, ${Math.round(data.mostPickedShare)}%` : ''}`
             : null,
-          data.readerCount ? `${data.readerCount} readers` : null,
+          data.readerCount ? `${data.readerCount.toLocaleString('en-GB')} readers` : null,
           score ? `Result ${score}` : null,
         ].filter(Boolean),
       }

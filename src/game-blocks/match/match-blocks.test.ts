@@ -103,7 +103,7 @@ describe('match blocks', () => {
     const t = text(render(config('match-predictions')));
     expect(t).toContain('58% backed Arsenal');
     expect(t).toContain('Most picked 2-1, 17%');
-    expect(t).toContain('3410 readers');
+    expect(t).toContain('3,410 readers');
     expect(t).toContain('Result 2-1');
     expect(t).toContain('Draw');
   });

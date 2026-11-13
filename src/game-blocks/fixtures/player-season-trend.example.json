@@ -1,0 +1,296 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000104",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_SEASON_TREND",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "highlight": "key"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2021/22 to 2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal, Premier League 2021/22 to 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Each season against Premier League wingers with 900 or more minutes.",
+  "lockedNote": "Per 90 figures",
+  "text": {
+    "caption": "Bukayo Saka, percentiles by season",
+    "columns": ["Metric", "2021/22", "2022/23", "2023/24", "2024/25", "2025/26"],
+    "rows": [
+      {
+        "cells": ["Key passes", "71", "80", "86", "", "94"]
+      },
+      {
+        "cells": ["Non-penalty goals", "62", "74", "83", "79", "88"]
+      },
+      {
+        "cells": ["Successful dribbles", "85", "82", "76", "80", "79"]
+      }
+    ]
+  },
+  "highlights": [
+    {
+      "key": "key",
+      "label": "Key passes"
+    },
+    {
+      "key": "npg",
+      "label": "Non-penalty goals"
+    },
+    {
+      "key": "drs",
+      "label": "Successful dribbles"
+    }
+  ],
+  "views": [
+    {
+      "key": "chart",
+      "label": "Chart"
+    },
+    {
+      "key": "rows",
+      "label": "Rows"
+    }
+  ],
+  "playerSeasonTrend": {
+    "seasons": [
+      {
+        "seasonId": "2021",
+        "label": "2021/22",
+        "groupPhrase": "Premier League wingers with 900 or more minutes"
+      },
+      {
+        "seasonId": "2022",
+        "label": "2022/23",
+        "groupPhrase": "Premier League wingers with 900 or more minutes"
+      },
+      {
+        "seasonId": "2023",
+        "label": "2023/24",
+        "groupPhrase": "Premier League wingers with 900 or more minutes"
+      },
+      {
+        "seasonId": "2024",
+        "label": "2024/25",
+        "groupPhrase": "Premier League wingers with 900 or more minutes"
+      },
+      {
+        "seasonId": "2025",
+        "label": "2025/26",
+        "groupPhrase": "Premier League wingers with 900 or more minutes"
+      }
+    ],
+    "metrics": [
+      {
+        "key": "key",
+        "label": "Key passes",
+        "points": [
+          {
+            "seasonId": "2021",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 71,
+            "valueCell": "key.2021.per90"
+          },
+          {
+            "seasonId": "2022",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 80,
+            "valueCell": "key.2022.per90"
+          },
+          {
+            "seasonId": "2023",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 86,
+            "valueCell": "key.2023.per90"
+          },
+          {
+            "seasonId": "2024",
+            "state": "METRIC_STATE_NO_DATA"
+          },
+          {
+            "seasonId": "2025",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 94,
+            "valueCell": "key.2025.per90"
+          }
+        ]
+      },
+      {
+        "key": "npg",
+        "label": "Non-penalty goals",
+        "points": [
+          {
+            "seasonId": "2021",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 62,
+            "valueCell": "npg.2021.per90"
+          },
+          {
+            "seasonId": "2022",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 74,
+            "valueCell": "npg.2022.per90"
+          },
+          {
+            "seasonId": "2023",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 83,
+            "valueCell": "npg.2023.per90"
+          },
+          {
+            "seasonId": "2024",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 79,
+            "valueCell": "npg.2024.per90"
+          },
+          {
+            "seasonId": "2025",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 88,
+            "valueCell": "npg.2025.per90"
+          }
+        ]
+      },
+      {
+        "key": "drs",
+        "label": "Successful dribbles",
+        "points": [
+          {
+            "seasonId": "2021",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 85,
+            "valueCell": "drs.2021.per90"
+          },
+          {
+            "seasonId": "2022",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 82,
+            "valueCell": "drs.2022.per90"
+          },
+          {
+            "seasonId": "2023",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 76,
+            "valueCell": "drs.2023.per90"
+          },
+          {
+            "seasonId": "2024",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 80,
+            "valueCell": "drs.2024.per90"
+          },
+          {
+            "seasonId": "2025",
+            "state": "METRIC_STATE_VALUE",
+            "percentile": 79,
+            "valueCell": "drs.2025.per90"
+          }
+        ]
+      }
+    ]
+  },
+  "gatedCells": [
+    "key.2021.per90",
+    "key.2022.per90",
+    "key.2023.per90",
+    "key.2025.per90",
+    "npg.2021.per90",
+    "npg.2022.per90",
+    "npg.2023.per90",
+    "npg.2024.per90",
+    "npg.2025.per90",
+    "drs.2021.per90",
+    "drs.2022.per90",
+    "drs.2023.per90",
+    "drs.2024.per90",
+    "drs.2025.per90"
+  ],
+  "gated": {
+    "key.2021.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.8,
+      "display": "1.80"
+    },
+    "key.2022.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.1,
+      "display": "2.10"
+    },
+    "key.2023.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.4,
+      "display": "2.40"
+    },
+    "key.2025.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.62,
+      "display": "2.62"
+    },
+    "npg.2021.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.22,
+      "display": "0.22"
+    },
+    "npg.2022.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.27,
+      "display": "0.27"
+    },
+    "npg.2023.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.33,
+      "display": "0.33"
+    },
+    "npg.2024.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.31,
+      "display": "0.31"
+    },
+    "npg.2025.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.38,
+      "display": "0.38"
+    },
+    "drs.2021.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.1,
+      "display": "2.10"
+    },
+    "drs.2022.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.98,
+      "display": "1.98"
+    },
+    "drs.2023.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.66,
+      "display": "1.66"
+    },
+    "drs.2024.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.8,
+      "display": "1.80"
+    },
+    "drs.2025.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.72,
+      "display": "1.72"
+    }
+  }
+}

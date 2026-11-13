@@ -12,7 +12,7 @@ export function PredictionRows({ shares }: { shares: PredictionShare[] }) {
   return (
     <BlockGrid
       label="Reader predictions"
-      columns={[{ label: '' }, { label: '', strong: true }, { label: '', width: '40%' }]}
+      columns={[{ label: '' }, { label: '', strong: true }, { label: '', width: '160px' }]}
       rows={shares.map((s) => ({
         key: s.key,
         cells: [

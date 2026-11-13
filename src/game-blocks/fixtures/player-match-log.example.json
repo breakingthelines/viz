@@ -1,0 +1,209 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_MATCH_LOG",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "limit": 8
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Season average rating 7.12.",
+  "text": {
+    "caption": "Bukayo Saka, last 8 Premier League games",
+    "columns": ["Date", "Opponent", "Result", "Min", "G", "A", "Rating"],
+    "rows": [
+      {
+        "cells": ["2026-11-09", "Chelsea", "2-1", "90", "1", "0", "7.9"]
+      },
+      {
+        "cells": ["2026-11-02", "Brentford", "1-1", "90", "0", "1", "7.1"]
+      },
+      {
+        "cells": ["2026-10-26", "Everton", "3-0", "78", "1", "1", "8.4"]
+      },
+      {
+        "cells": ["2026-10-19", "Newcastle", "0-1", "90", "0", "0", "6.4"]
+      },
+      {
+        "cells": ["2026-10-12", "Fulham", "2-0", "85", "0", "1", "7.5"]
+      },
+      {
+        "cells": ["2026-10-05", "Aston Villa", "2-1", "90", "1", "0", "7.8"]
+      },
+      {
+        "cells": ["2026-09-28", "Wolves", "4-1", "70", "2", "0", "8.9"]
+      },
+      {
+        "cells": ["2026-09-21", "Liverpool", "2-2", "90", "0", "1", "7.2"]
+      }
+    ]
+  },
+  "playerMatchLog": {
+    "matches": [
+      {
+        "gameId": "game-example-100",
+        "date": "2026-11-09",
+        "opponent": {
+          "id": "team-example-20",
+          "name": "Chelsea",
+          "shortName": "CHE",
+          "url": "/game/football/team/team-example-20/chelsea"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "2-1",
+        "minutes": 90,
+        "goals": 1,
+        "rating": 7.9,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-100"
+      },
+      {
+        "gameId": "game-example-101",
+        "date": "2026-11-02",
+        "opponent": {
+          "id": "team-example-21",
+          "name": "Brentford",
+          "shortName": "BRE",
+          "url": "/game/football/team/team-example-21/brentford"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_DRAW",
+        "score": "1-1",
+        "minutes": 90,
+        "assists": 1,
+        "rating": 7.1,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-101"
+      },
+      {
+        "gameId": "game-example-102",
+        "date": "2026-10-26",
+        "opponent": {
+          "id": "team-example-22",
+          "name": "Everton",
+          "shortName": "EVE",
+          "url": "/game/football/team/team-example-22/everton"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "3-0",
+        "minutes": 78,
+        "goals": 1,
+        "assists": 1,
+        "rating": 8.4,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-102"
+      },
+      {
+        "gameId": "game-example-103",
+        "date": "2026-10-19",
+        "opponent": {
+          "id": "team-example-23",
+          "name": "Newcastle",
+          "shortName": "NEW",
+          "url": "/game/football/team/team-example-23/newcastle"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_LOSS",
+        "score": "0-1",
+        "minutes": 90,
+        "rating": 6.4,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-103"
+      },
+      {
+        "gameId": "game-example-104",
+        "date": "2026-10-12",
+        "opponent": {
+          "id": "team-example-24",
+          "name": "Fulham",
+          "shortName": "FUL",
+          "url": "/game/football/team/team-example-24/fulham"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "2-0",
+        "minutes": 85,
+        "assists": 1,
+        "rating": 7.5,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-104"
+      },
+      {
+        "gameId": "game-example-105",
+        "date": "2026-10-05",
+        "opponent": {
+          "id": "team-example-25",
+          "name": "Aston Villa",
+          "shortName": "AVL",
+          "url": "/game/football/team/team-example-25/aston-villa"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "2-1",
+        "minutes": 90,
+        "goals": 1,
+        "rating": 7.8,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-105"
+      },
+      {
+        "gameId": "game-example-106",
+        "date": "2026-09-28",
+        "opponent": {
+          "id": "team-example-26",
+          "name": "Wolves",
+          "shortName": "WOL",
+          "url": "/game/football/team/team-example-26/wolves"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "4-1",
+        "minutes": 70,
+        "goals": 2,
+        "rating": 8.9,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-106"
+      },
+      {
+        "gameId": "game-example-107",
+        "date": "2026-09-21",
+        "opponent": {
+          "id": "team-example-27",
+          "name": "Liverpool",
+          "shortName": "LIV",
+          "url": "/game/football/team/team-example-27/liverpool"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_DRAW",
+        "score": "2-2",
+        "minutes": 90,
+        "assists": 1,
+        "rating": 7.2,
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-107"
+      }
+    ],
+    "seasonAverageRating": 7.12
+  }
+}

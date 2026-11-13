@@ -1,0 +1,64 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_ABSENCES",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "contextLine": "Bukayo Saka, Arsenal",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "text": {
+    "caption": "Bukayo Saka, absences",
+    "columns": ["Reason", "From", "To", "Games"],
+    "rows": [
+      {
+        "cells": ["Ankle", "2026-10-20", "", "2"]
+      },
+      {
+        "cells": ["Hamstring", "2024-12-21", "2025-04-01", "22"]
+      },
+      {
+        "cells": ["Knock", "2023-11-25", "2023-12-02", "1"]
+      }
+    ]
+  },
+  "playerAbsences": {
+    "absences": [
+      {
+        "from": "2026-10-20",
+        "reason": "Ankle",
+        "gamesMissed": 2,
+        "expectedReturn": "Late November",
+        "status": "Out"
+      },
+      {
+        "from": "2024-12-21",
+        "to": "2025-04-01",
+        "reason": "Hamstring",
+        "gamesMissed": 22,
+        "status": "Out"
+      },
+      {
+        "from": "2023-11-25",
+        "to": "2023-12-02",
+        "reason": "Knock",
+        "gamesMissed": 1,
+        "status": "Doubtful"
+      }
+    ]
+  }
+}

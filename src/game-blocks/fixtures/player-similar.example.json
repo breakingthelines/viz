@@ -1,0 +1,152 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000105",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_SIMILAR",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "limit": 5
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Same season, Premier League wingers.",
+  "lockedNote": "Similar players",
+  "text": {
+    "caption": "Players most like Bukayo Saka",
+    "columns": [],
+    "rows": []
+  },
+  "playerSimilar": {
+    "count": 5,
+    "scopePhrase": "Same season, Premier League wingers",
+    "rows": [
+      {
+        "nameCell": "row0.name",
+        "teamCell": "row0.team",
+        "similarityCell": "row0.similarity"
+      },
+      {
+        "nameCell": "row1.name",
+        "teamCell": "row1.team",
+        "similarityCell": "row1.similarity"
+      },
+      {
+        "nameCell": "row2.name",
+        "teamCell": "row2.team",
+        "similarityCell": "row2.similarity"
+      },
+      {
+        "nameCell": "row3.name",
+        "teamCell": "row3.team",
+        "similarityCell": "row3.similarity"
+      },
+      {
+        "nameCell": "row4.name",
+        "teamCell": "row4.team",
+        "similarityCell": "row4.similarity"
+      }
+    ]
+  },
+  "gatedCells": [
+    "row0.name",
+    "row0.team",
+    "row0.similarity",
+    "row1.name",
+    "row1.team",
+    "row1.similarity",
+    "row2.name",
+    "row2.team",
+    "row2.similarity",
+    "row3.name",
+    "row3.team",
+    "row3.similarity",
+    "row4.name",
+    "row4.team",
+    "row4.similarity"
+  ],
+  "gated": {
+    "row0.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Michael Olise"
+    },
+    "row0.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Bayern Munich"
+    },
+    "row0.similarity": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.91,
+      "display": "0.91"
+    },
+    "row1.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Mohamed Salah"
+    },
+    "row1.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Liverpool"
+    },
+    "row1.similarity": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.88,
+      "display": "0.88"
+    },
+    "row2.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Jarrod Bowen"
+    },
+    "row2.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "West Ham"
+    },
+    "row2.similarity": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.86,
+      "display": "0.86"
+    },
+    "row3.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Leandro Trossard"
+    },
+    "row3.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Arsenal"
+    },
+    "row3.similarity": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.83,
+      "display": "0.83"
+    },
+    "row4.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Anthony Elanga"
+    },
+    "row4.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Newcastle"
+    },
+    "row4.similarity": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.81,
+      "display": "0.81"
+    }
+  }
+}

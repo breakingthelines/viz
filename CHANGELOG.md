@@ -7,6 +7,53 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added: player game blocks
+
+- **Every Player › block except the wheel** under `src/game-blocks/player/`,
+  registered in `PLAYER_BLOCKS`: Season totals, Form, Comparison, Career,
+  Match log, Archetypes, Season trend, Similar players, Transfers, Honours,
+  Absences and Details. Each draws in the three looks through `BlockFrame`,
+  titled by the subject, with short labels only and no default prose. Paid
+  figures are `GatedValue` cells, drawn as the viewer's cells say; nothing
+  hardcodes which cells lock.
+- **Player parts** under `src/game-blocks/parts/`, for blocks and the player
+  page: `PlayerScaleRows` and `PlayerScaleKey` (0 to 100 scales with a
+  comparator ring), `PlayerFormBars` (match ratings against the season
+  average) and `PlayerTrendChart` (percentiles by season).
+- **Player data JSON types** (`player/data.ts`), pinned to protos 0.209.0 by
+  `player/data.pin.test.ts`.
+- **Example fixtures** for each player type (`fixtures/player-*.example.json`,
+  `fixtures/player.ts`). Example figures only.
+
+### Added: team, manager, league and match game blocks
+
+- **Team ›** Season totals, Form, Goal timing, Squad, Out and doubtful,
+  Transfers, Honours and Manager record (`TEAM_BLOCKS`); **League ›** Table,
+  Team stats, Leaders, Player rankings, Fixtures, Bracket and League strength
+  (`LEAGUE_BLOCKS`); **Match ›** Match stats, Result, Timeline, Fan grades,
+  Player of the match, Predictions and Missing players (`MATCH_BLOCKS`). Each
+  draws in the three looks through `BlockFrame`, titled by the subject
+  ("Arsenal", "Premier League", "Arsenal v Liverpool"), short labels only.
+  One visual language: the subject as the red fill or rule, the comparator as
+  the outlined ring or bar, the median as a tick. Player rankings and League
+  strength read every paid value from the row's cell keys, so a free reader
+  sees exactly the cells the snapshot locks.
+- **Parts** under `src/game-blocks/parts/` (`team-*`, `league-*`, `match-*`),
+  redrawn on the skin from the platform entity page visuals: `BlockGrid` (one
+  grid per table, subject row, no zebra rows), `TeamSeasonStatRows`,
+  `TeamFormRows`, `ResultStrip`, `GoalTimingChart`, `SquadList`,
+  `AbsenceRows`, `TransferWindow`, `HonourRows`, `TenureRows`,
+  `StandingsTable`, `TeamStatsTable`, `LeaderRows`, `RankingRows`,
+  `FixtureList`, `KnockoutBracket` (stacked at phone width, never a
+  scroller), `StrengthRows`, `MatchStatRows`, `ScorerColumns`,
+  `TimelineRows`, `GradePitch`, `GradeList` and `PredictionRows`.
+- **Data JSON types** per submenu (`team/types.ts`, `league/types.ts`,
+  `match/types.ts`), pinned to protos 0.209.0 by
+  `parts/team-league-match.pin.test.ts`; shared shapes reuse `player/data.ts`.
+- **Example fixtures** for each type (`fixtures/{team,league,match}-*` and
+  `manager-record.example.json`, `fixtures/team-league-match.ts`). Example
+  figures only.
+
 ## [0.25.0]
 
 ### Added: game blocks, the skin and the percentile wheel

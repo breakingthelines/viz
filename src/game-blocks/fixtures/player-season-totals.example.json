@@ -1,0 +1,246 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000102",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_SEASON_TOTALS",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "highlight": "goals"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Against 41 Premier League wingers with 900 or more minutes.",
+  "lockedNote": "Per 90 figures and percentiles",
+  "text": {
+    "caption": "Bukayo Saka, Premier League 2025/26",
+    "columns": ["Stat", "Total"],
+    "rows": [
+      {
+        "cells": ["League goals", "14"]
+      },
+      {
+        "cells": ["Assists", "10"]
+      },
+      {
+        "cells": ["Shots", "88"]
+      },
+      {
+        "cells": ["Key passes", "76"]
+      },
+      {
+        "cells": ["Successful dribbles", "50"]
+      }
+    ]
+  },
+  "highlights": [
+    {
+      "key": "goals",
+      "label": "League goals"
+    },
+    {
+      "key": "assists",
+      "label": "Assists"
+    },
+    {
+      "key": "shots",
+      "label": "Shots"
+    },
+    {
+      "key": "key_passes",
+      "label": "Key passes"
+    },
+    {
+      "key": "dribbles",
+      "label": "Successful dribbles"
+    }
+  ],
+  "playerSeasonTotals": {
+    "stats": [
+      {
+        "key": "goals",
+        "label": "League goals",
+        "total": {
+          "value": 14,
+          "display": "14"
+        },
+        "per90Cell": "goals.per90",
+        "percentileCell": "goals.percentile",
+        "medianCell": "goals.median"
+      },
+      {
+        "key": "assists",
+        "label": "Assists",
+        "total": {
+          "value": 10,
+          "display": "10"
+        },
+        "per90Cell": "assists.per90",
+        "percentileCell": "assists.percentile",
+        "medianCell": "assists.median"
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "total": {
+          "value": 88,
+          "display": "88"
+        },
+        "per90Cell": "shots.per90",
+        "percentileCell": "shots.percentile",
+        "medianCell": "shots.median"
+      },
+      {
+        "key": "key_passes",
+        "label": "Key passes",
+        "total": {
+          "value": 76,
+          "display": "76"
+        },
+        "per90Cell": "key_passes.per90",
+        "percentileCell": "key_passes.percentile",
+        "medianCell": "key_passes.median"
+      },
+      {
+        "key": "dribbles",
+        "label": "Successful dribbles",
+        "total": {
+          "value": 50,
+          "display": "50"
+        },
+        "per90Cell": "dribbles.per90",
+        "percentileCell": "dribbles.percentile",
+        "medianCell": "dribbles.median"
+      }
+    ],
+    "appearances": 31,
+    "minutes": 2410,
+    "team": {
+      "id": "team-example-1",
+      "name": "Arsenal",
+      "shortName": "Arsenal",
+      "url": "/game/football/team/team-example-1/arsenal"
+    },
+    "highlightTeamRank": 1,
+    "nextTeamMate": {
+      "id": "player-example-2",
+      "name": "Kai Havertz",
+      "shortName": "Havertz"
+    },
+    "nextTeamMateTotal": {
+      "value": 9,
+      "display": "9"
+    }
+  },
+  "gatedCells": [
+    "goals.per90",
+    "goals.percentile",
+    "goals.median",
+    "assists.per90",
+    "assists.percentile",
+    "assists.median",
+    "shots.per90",
+    "shots.percentile",
+    "shots.median",
+    "key_passes.per90",
+    "key_passes.percentile",
+    "key_passes.median",
+    "dribbles.per90",
+    "dribbles.percentile",
+    "dribbles.median"
+  ],
+  "gated": {
+    "goals.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.52,
+      "display": "0.52"
+    },
+    "goals.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 95,
+      "display": "95th"
+    },
+    "goals.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.24,
+      "display": "0.24"
+    },
+    "assists.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.37,
+      "display": "0.37"
+    },
+    "assists.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 92,
+      "display": "92nd"
+    },
+    "assists.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.15,
+      "display": "0.15"
+    },
+    "shots.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 3.29,
+      "display": "3.29"
+    },
+    "shots.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 87,
+      "display": "87th"
+    },
+    "shots.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.94,
+      "display": "1.94"
+    },
+    "key_passes.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.84,
+      "display": "2.84"
+    },
+    "key_passes.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 94,
+      "display": "94th"
+    },
+    "key_passes.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.4,
+      "display": "1.40"
+    },
+    "dribbles.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.87,
+      "display": "1.87"
+    },
+    "dribbles.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 79,
+      "display": "79th"
+    },
+    "dribbles.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.21,
+      "display": "1.21"
+    }
+  }
+}

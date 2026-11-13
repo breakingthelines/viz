@@ -1,22 +1,30 @@
+import type {
+  GameBlockAbsenceJson,
+  GameBlockHonourJson,
+  GameBlockRefJson,
+  GameBlockResultJson,
+  GameBlockTransferJson,
+  GameBlockValueJson,
+  GameBlockVenueJson,
+} from '../player/data';
 import type { GameBlockConfig } from '../types';
+
+// Shared with the player blocks: defined once in `player/data.ts`.
+export type {
+  GameBlockAbsenceJson,
+  GameBlockHonourJson,
+  GameBlockRefJson,
+  GameBlockResultJson,
+  GameBlockTransferJson,
+  GameBlockValueJson,
+  GameBlockVenueJson,
+};
 
 /**
  * Shared wire shapes and formatting for the team, manager, league and match
  * blocks. The `*Json` types mirror `btl.game.v1.types` (protos 0.209.0) as
  * `toJson()` writes them; `team-league-match.pin.test.ts` pins them.
  */
-
-export type GameBlockVenueJson =
-  | 'GAME_BLOCK_VENUE_UNSPECIFIED'
-  | 'GAME_BLOCK_VENUE_HOME'
-  | 'GAME_BLOCK_VENUE_AWAY'
-  | 'GAME_BLOCK_VENUE_NEUTRAL';
-
-export type GameBlockResultJson =
-  | 'GAME_BLOCK_RESULT_UNSPECIFIED'
-  | 'GAME_BLOCK_RESULT_WIN'
-  | 'GAME_BLOCK_RESULT_DRAW'
-  | 'GAME_BLOCK_RESULT_LOSS';
 
 export type GameBlockSideJson =
   | 'GAME_BLOCK_SIDE_UNSPECIFIED'
@@ -31,19 +39,6 @@ export type GameBlockMatchStatusJson =
   | 'GAME_BLOCK_MATCH_STATUS_POSTPONED'
   | 'GAME_BLOCK_MATCH_STATUS_CANCELLED'
   | 'GAME_BLOCK_MATCH_STATUS_ABANDONED';
-
-export interface GameBlockRefJson {
-  id?: string;
-  name?: string;
-  shortName?: string;
-  imageUrl?: string;
-  url?: string;
-}
-
-export interface GameBlockValueJson {
-  value?: number;
-  display?: string;
-}
 
 export interface GameBlockMatchSideJson {
   team?: GameBlockRefJson;
@@ -73,31 +68,6 @@ export interface GameBlockTeamMatchJson {
   score?: string;
   competitionLabel?: string;
   url?: string;
-}
-
-export interface GameBlockTransferJson {
-  date?: string;
-  player?: GameBlockRefJson;
-  from?: GameBlockRefJson;
-  to?: GameBlockRefJson;
-  type?: string;
-  fee?: string;
-}
-
-export interface GameBlockHonourJson {
-  competition?: GameBlockRefJson;
-  seasonLabel?: string;
-  place?: string;
-}
-
-export interface GameBlockAbsenceJson {
-  player?: GameBlockRefJson;
-  from?: string;
-  to?: string;
-  reason?: string;
-  gamesMissed?: number;
-  expectedReturn?: string;
-  status?: string;
 }
 
 export interface GameBlockPlayerGradeJson {

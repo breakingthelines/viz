@@ -109,7 +109,13 @@ describe('league blocks', () => {
       median: { value: 3, display: '3' },
     };
     const html = render(
-      { ...c, data: data as Record<string, unknown>, gatedCells: [], snapshotId: '', lockedNote: undefined },
+      {
+        ...c,
+        data: data as Record<string, unknown>,
+        gatedCells: [],
+        snapshotId: '',
+        lockedNote: undefined,
+      },
       'free',
       {}
     );
