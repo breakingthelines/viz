@@ -1,0 +1,65 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_DETAILS",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "contextLine": "Bukayo Saka, Arsenal",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Arsenal squad average age 26.3.",
+  "text": {
+    "caption": "Bukayo Saka, details",
+    "columns": ["Detail", "Value"],
+    "rows": [
+      {
+        "cells": ["Age", "25"]
+      },
+      {
+        "cells": ["Height", "178 cm"]
+      },
+      {
+        "cells": ["Foot", "Left"]
+      },
+      {
+        "cells": ["Nationality", "England"]
+      },
+      {
+        "cells": ["Position", "Winger"]
+      },
+      {
+        "cells": ["Contract", "2027"]
+      }
+    ]
+  },
+  "playerDetails": {
+    "age": 25,
+    "dateOfBirth": "2001-09-05",
+    "heightCm": 178,
+    "foot": "Left",
+    "nationality": "England",
+    "position": "Winger",
+    "contractEnd": "2027-06-30",
+    "team": {
+      "id": "team-example-1",
+      "name": "Arsenal",
+      "shortName": "Arsenal",
+      "url": "/game/football/team/team-example-1/arsenal"
+    },
+    "squadAverageAge": 26.3
+  }
+}

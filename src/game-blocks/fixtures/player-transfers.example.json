@@ -1,0 +1,73 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_TRANSFERS",
+    "subject": {
+      "id": "player-example-4",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Declan Rice"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-4",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Declan Rice",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-4/declan-rice"
+  },
+  "contextLine": "Declan Rice, Arsenal",
+  "defaultTitle": "Declan Rice",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "text": {
+    "caption": "Declan Rice, transfers",
+    "columns": ["Date", "From", "To", "Type", "Fee"],
+    "rows": [
+      {
+        "cells": ["2023-07-15", "West Ham", "Arsenal", "Transfer", "£105m"]
+      },
+      {
+        "cells": ["2014-07-01", "Chelsea U18", "West Ham U18", "Free", ""]
+      }
+    ]
+  },
+  "playerTransfers": {
+    "transfers": [
+      {
+        "date": "2023-07-15",
+        "from": {
+          "id": "team-example-30",
+          "name": "West Ham",
+          "shortName": "West Ham",
+          "url": "/game/football/team/team-example-30/west-ham"
+        },
+        "to": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal",
+          "url": "/game/football/team/team-example-1/arsenal"
+        },
+        "type": "Transfer",
+        "fee": "£105m"
+      },
+      {
+        "date": "2014-07-01",
+        "from": {
+          "id": "team-example-31",
+          "name": "Chelsea U18",
+          "shortName": "Chelsea U18",
+          "url": "/game/football/team/team-example-31/chelsea-u18"
+        },
+        "to": {
+          "id": "team-example-32",
+          "name": "West Ham U18",
+          "shortName": "West Ham U18",
+          "url": "/game/football/team/team-example-32/west-ham-u18"
+        },
+        "type": "Free"
+      }
+    ]
+  }
+}

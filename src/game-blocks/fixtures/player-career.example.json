@@ -1,0 +1,85 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_CAREER",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "contextLine": "Bukayo Saka, Arsenal",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "text": {
+    "caption": "Bukayo Saka, career",
+    "columns": ["Team", "Years", "Apps", "Goals", "Assists"],
+    "rows": [
+      {
+        "cells": ["Arsenal", "2018 to now", "262", "68", "59"]
+      },
+      {
+        "cells": ["England", "2020 to now", "45", "13", "11"]
+      },
+      {
+        "cells": ["Arsenal U21", "2018 to 2019", "12", "4", "3"]
+      }
+    ]
+  },
+  "playerCareer": {
+    "rows": [
+      {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal",
+          "url": "/game/football/team/team-example-1/arsenal"
+        },
+        "years": "2018 to now",
+        "appearances": 262,
+        "goals": 68,
+        "assists": 59
+      },
+      {
+        "team": {
+          "id": "team-example-9",
+          "name": "England",
+          "shortName": "England",
+          "url": "/game/football/team/team-example-9/england"
+        },
+        "years": "2020 to now",
+        "appearances": 45,
+        "goals": 13,
+        "assists": 11
+      },
+      {
+        "team": {
+          "id": "team-example-8",
+          "name": "Arsenal U21",
+          "shortName": "Arsenal U21",
+          "url": "/game/football/team/team-example-8/arsenal-u21"
+        },
+        "years": "2018 to 2019",
+        "appearances": 12,
+        "goals": 4,
+        "assists": 3
+      }
+    ],
+    "total": {
+      "years": "2018 to now",
+      "appearances": 319,
+      "goals": 85,
+      "assists": 73
+    }
+  }
+}

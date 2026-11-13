@@ -1,0 +1,274 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000103",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_COMPARISON",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "comparison": {
+      "id": "player-example-3",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Phil Foden"
+    },
+    "highlight": "key"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka and Phil Foden, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka v Phil Foden",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "comparison": {
+    "id": "player-example-3",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Phil Foden",
+    "subtitle": "Manchester City",
+    "url": "/game/football/player/player-example-3/phil-foden"
+  },
+  "baseline": "Each against Premier League wingers with 900 or more minutes.",
+  "lockedNote": "Per 90 figures",
+  "text": {
+    "caption": "Bukayo Saka and Phil Foden, percentiles",
+    "columns": ["Metric", "Saka", "Foden"],
+    "rows": [
+      {
+        "cells": ["Non-penalty goals", "88", "81"]
+      },
+      {
+        "cells": ["Shots", "87", "90"]
+      },
+      {
+        "cells": ["Assists", "92", "74"]
+      },
+      {
+        "cells": ["Key passes", "94", "85"]
+      },
+      {
+        "cells": ["Successful dribbles", "79", "66"]
+      },
+      {
+        "cells": ["Fouls won", "79", "41"]
+      }
+    ]
+  },
+  "highlights": [
+    {
+      "key": "npg",
+      "label": "Non-penalty goals"
+    },
+    {
+      "key": "shots",
+      "label": "Shots"
+    },
+    {
+      "key": "ast",
+      "label": "Assists"
+    },
+    {
+      "key": "key",
+      "label": "Key passes"
+    },
+    {
+      "key": "drs",
+      "label": "Successful dribbles"
+    },
+    {
+      "key": "fd",
+      "label": "Fouls won"
+    }
+  ],
+  "views": [
+    {
+      "key": "scales",
+      "label": "Scales"
+    },
+    {
+      "key": "rows",
+      "label": "Rows"
+    }
+  ],
+  "playerComparison": {
+    "metrics": [
+      {
+        "key": "npg",
+        "label": "Non-penalty goals",
+        "shortLabel": "npG",
+        "family": "shooting",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 88,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 81,
+        "subjectValueCell": "npg.per90.subject",
+        "comparisonValueCell": "npg.per90.comparison"
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "shortLabel": "Shots",
+        "family": "shooting",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 87,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 90,
+        "subjectValueCell": "shots.per90.subject",
+        "comparisonValueCell": "shots.per90.comparison"
+      },
+      {
+        "key": "ast",
+        "label": "Assists",
+        "shortLabel": "Ast",
+        "family": "creating",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 92,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 74,
+        "subjectValueCell": "ast.per90.subject",
+        "comparisonValueCell": "ast.per90.comparison"
+      },
+      {
+        "key": "key",
+        "label": "Key passes",
+        "shortLabel": "KP",
+        "family": "creating",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 94,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 85,
+        "subjectValueCell": "key.per90.subject",
+        "comparisonValueCell": "key.per90.comparison"
+      },
+      {
+        "key": "drs",
+        "label": "Successful dribbles",
+        "shortLabel": "Drb",
+        "family": "carrying",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 79,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 66,
+        "subjectValueCell": "drs.per90.subject",
+        "comparisonValueCell": "drs.per90.comparison"
+      },
+      {
+        "key": "fd",
+        "label": "Fouls won",
+        "shortLabel": "Fouled",
+        "family": "carrying",
+        "subjectState": "METRIC_STATE_VALUE",
+        "subjectPercentile": 79,
+        "comparisonState": "METRIC_STATE_VALUE",
+        "comparisonPercentile": 41,
+        "subjectValueCell": "fd.per90.subject",
+        "comparisonValueCell": "fd.per90.comparison"
+      }
+    ],
+    "families": [
+      {
+        "key": "shooting",
+        "label": "Shooting"
+      },
+      {
+        "key": "creating",
+        "label": "Creating"
+      },
+      {
+        "key": "carrying",
+        "label": "Carrying"
+      }
+    ],
+    "subjectGroupPhrase": "Premier League wingers with 900 or more minutes",
+    "comparisonGroupPhrase": "Premier League wingers with 900 or more minutes",
+    "subjectMinutes": 2410,
+    "comparisonMinutes": 1980
+  },
+  "gatedCells": [
+    "npg.per90.subject",
+    "npg.per90.comparison",
+    "shots.per90.subject",
+    "shots.per90.comparison",
+    "ast.per90.subject",
+    "ast.per90.comparison",
+    "key.per90.subject",
+    "key.per90.comparison",
+    "drs.per90.subject",
+    "drs.per90.comparison",
+    "fd.per90.subject",
+    "fd.per90.comparison"
+  ],
+  "gated": {
+    "npg.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.38,
+      "display": "0.38"
+    },
+    "npg.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.33,
+      "display": "0.33"
+    },
+    "shots.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 3.03,
+      "display": "3.03"
+    },
+    "shots.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 3.2,
+      "display": "3.20"
+    },
+    "ast.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.34,
+      "display": "0.34"
+    },
+    "ast.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.22,
+      "display": "0.22"
+    },
+    "key.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.62,
+      "display": "2.62"
+    },
+    "key.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.11,
+      "display": "2.11"
+    },
+    "drs.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.72,
+      "display": "1.72"
+    },
+    "drs.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.35,
+      "display": "1.35"
+    },
+    "fd.per90.subject": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.88,
+      "display": "1.88"
+    },
+    "fd.per90.comparison": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.97,
+      "display": "0.97"
+    }
+  }
+}

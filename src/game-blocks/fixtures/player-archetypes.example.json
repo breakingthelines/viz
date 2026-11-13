@@ -1,0 +1,66 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_ARCHETYPES",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "baseline": "Fit against Premier League wingers.",
+  "text": {
+    "caption": "Bukayo Saka, archetypes",
+    "columns": ["Archetype", "Fit"],
+    "rows": [
+      {
+        "cells": ["Inside forward", "91"]
+      },
+      {
+        "cells": ["Creative winger", "84"]
+      },
+      {
+        "cells": ["Ball carrier", "72"]
+      }
+    ]
+  },
+  "playerArchetypes": {
+    "archetypes": [
+      {
+        "id": "inside-forward",
+        "name": "Inside forward",
+        "fit": 91,
+        "poolPhrase": "Premier League wingers"
+      },
+      {
+        "id": "creative-winger",
+        "name": "Creative winger",
+        "fit": 84,
+        "poolPhrase": "Premier League wingers"
+      },
+      {
+        "id": "ball-carrier",
+        "name": "Ball carrier",
+        "fit": 72,
+        "poolPhrase": "Premier League wingers"
+      }
+    ]
+  }
+}

@@ -7,6 +7,24 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added: player game blocks
+
+- **Every Player › block except the wheel** under `src/game-blocks/player/`,
+  registered in `PLAYER_BLOCKS`: Season totals, Form, Comparison, Career,
+  Match log, Archetypes, Season trend, Similar players, Transfers, Honours,
+  Absences and Details. Each draws in the three looks through `BlockFrame`,
+  titled by the subject, with short labels only and no default prose. Paid
+  figures are `GatedValue` cells, drawn as the viewer's cells say; nothing
+  hardcodes which cells lock.
+- **Player parts** under `src/game-blocks/parts/`, for blocks and the player
+  page: `PlayerScaleRows` and `PlayerScaleKey` (0 to 100 scales with a
+  comparator ring), `PlayerFormBars` (match ratings against the season
+  average) and `PlayerTrendChart` (percentiles by season).
+- **Player data JSON types** (`player/data.ts`), pinned to protos 0.209.0 by
+  `player/data.pin.test.ts`.
+- **Example fixtures** for each player type (`fixtures/player-*.example.json`,
+  `fixtures/player.ts`). Example figures only.
+
 ## [0.25.0]
 
 ### Added: game blocks, the skin and the percentile wheel
