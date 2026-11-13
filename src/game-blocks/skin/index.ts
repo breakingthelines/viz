@@ -3,6 +3,14 @@
 export { BlockFrame, NARROW_BELOW } from './frame';
 export type { BlockFrameProps, BlockHero, BlockMedia } from './frame';
 export {
+  DEFAULT_MEDIA_BASE,
+  GameBlockAssetsProvider,
+  playerHalftoneUrl,
+  playerHeadshotUrl,
+  resolveMediaSrc,
+  useMediaBase,
+} from './assets';
+export {
   BlockBaseline,
   BlockFigure,
   BlockRows,
