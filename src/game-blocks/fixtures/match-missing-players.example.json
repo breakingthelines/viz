@@ -1,0 +1,106 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_MATCH_MISSING_PLAYERS",
+    "subject": {
+      "id": "game-example-31",
+      "type": "SUBJECT_TYPE_GAME",
+      "label": "Arsenal v Brentford"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "game-example-31",
+    "type": "SUBJECT_TYPE_GAME",
+    "name": "Arsenal v Brentford"
+  },
+  "contextLine": "Arsenal v Brentford",
+  "defaultTitle": "Arsenal v Brentford",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "matchMissingPlayers": {
+    "match": {
+      "gameId": "game-example-31",
+      "home": {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        }
+      },
+      "away": {
+        "team": {
+          "id": "team-example-10",
+          "name": "Brentford",
+          "shortName": "Brentford"
+        }
+      },
+      "status": "GAME_BLOCK_MATCH_STATUS_SCHEDULED",
+      "competition": {
+        "id": "39",
+        "name": "Premier League",
+        "shortName": "PL"
+      },
+      "roundLabel": "Matchday 13",
+      "kickoff": "2026-11-21T15:00:00Z",
+      "url": "/game/football/match/game-example-31"
+    },
+    "home": [
+      {
+        "player": {
+          "id": "player-example-108",
+          "name": "Martin Ødegaard",
+          "shortName": "Ødegaard"
+        },
+        "reason": "Knee",
+        "status": "Out"
+      },
+      {
+        "player": {
+          "id": "player-example-112",
+          "name": "Viktor Gyökeres",
+          "shortName": "Gyökeres"
+        },
+        "reason": "Hamstring",
+        "status": "Out"
+      }
+    ],
+    "away": [
+      {
+        "player": {
+          "id": "player-example-401",
+          "name": "Rico Henry",
+          "shortName": "Henry"
+        },
+        "reason": "Knee",
+        "status": "Out"
+      },
+      {
+        "player": {
+          "id": "player-example-402",
+          "name": "Josh Dasilva",
+          "shortName": "Dasilva"
+        },
+        "reason": "Suspended",
+        "status": "Out"
+      },
+      {
+        "player": {
+          "id": "player-example-403",
+          "name": "Ethan Pinnock",
+          "shortName": "Pinnock"
+        },
+        "reason": "Calf",
+        "status": "Doubtful"
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal v Brentford",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

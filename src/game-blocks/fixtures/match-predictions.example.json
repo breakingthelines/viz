@@ -1,0 +1,66 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_MATCH_PREDICTIONS",
+    "subject": {
+      "id": "game-example-9",
+      "type": "SUBJECT_TYPE_GAME",
+      "label": "Arsenal v Liverpool"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "game-example-9",
+    "type": "SUBJECT_TYPE_GAME",
+    "name": "Arsenal v Liverpool"
+  },
+  "contextLine": "Arsenal 2-1 Liverpool",
+  "defaultTitle": "Arsenal v Liverpool",
+  "baseline": "",
+  "provider": "BTL readers",
+  "asOf": "2026-11-13T09:00:00Z",
+  "matchPredictions": {
+    "match": {
+      "gameId": "game-example-9",
+      "home": {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "score": 2
+      },
+      "away": {
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "score": 1
+      },
+      "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+      "competition": {
+        "id": "39",
+        "name": "Premier League",
+        "shortName": "PL"
+      },
+      "roundLabel": "Matchday 9",
+      "kickoff": "2026-10-25T16:30:00Z",
+      "url": "/game/football/match/game-example-9",
+      "venue": "Emirates Stadium"
+    },
+    "homeShare": 58,
+    "drawShare": 24,
+    "awayShare": 18,
+    "mostPickedScore": "2-1",
+    "mostPickedShare": 17,
+    "readerCount": 3410
+  },
+  "text": {
+    "caption": "Arsenal v Liverpool",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

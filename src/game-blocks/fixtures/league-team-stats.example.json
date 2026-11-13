@@ -1,0 +1,274 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_TEAM_STATS",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "highlight": "team-example-1",
+    "limit": 8
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "leagueTeamStats": {
+    "columns": [
+      {
+        "key": "goals_for",
+        "label": "Goals",
+        "leagueMedian": {
+          "value": 16,
+          "display": "16"
+        }
+      },
+      {
+        "key": "xg_for",
+        "label": "xG",
+        "leagueMedian": {
+          "value": 15.8,
+          "display": "15.8"
+        }
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "leagueMedian": {
+          "value": 148,
+          "display": "148"
+        }
+      },
+      {
+        "key": "possession",
+        "label": "Poss %",
+        "leagueMedian": {
+          "value": 49.5,
+          "display": "49.5"
+        }
+      }
+    ],
+    "rows": [
+      {
+        "team": {
+          "id": "team-example-2",
+          "name": "Manchester City",
+          "shortName": "Man City"
+        },
+        "values": [
+          {
+            "value": 27,
+            "display": "27"
+          },
+          {
+            "value": 24.1,
+            "display": "24.1"
+          },
+          {
+            "value": 196,
+            "display": "196"
+          },
+          {
+            "value": 61.2,
+            "display": "61.2"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "values": [
+          {
+            "value": 24,
+            "display": "24"
+          },
+          {
+            "value": 22.4,
+            "display": "22.4"
+          },
+          {
+            "value": 188,
+            "display": "188"
+          },
+          {
+            "value": 57.9,
+            "display": "57.9"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-4",
+          "name": "Chelsea",
+          "shortName": "Chelsea"
+        },
+        "values": [
+          {
+            "value": 22,
+            "display": "22"
+          },
+          {
+            "value": 20.3,
+            "display": "20.3"
+          },
+          {
+            "value": 171,
+            "display": "171"
+          },
+          {
+            "value": 58.4,
+            "display": "58.4"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "values": [
+          {
+            "value": 21,
+            "display": "21"
+          },
+          {
+            "value": 21.7,
+            "display": "21.7"
+          },
+          {
+            "value": 182,
+            "display": "182"
+          },
+          {
+            "value": 56.0,
+            "display": "56.0"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-7",
+          "name": "Tottenham Hotspur",
+          "shortName": "Spurs"
+        },
+        "values": [
+          {
+            "value": 20,
+            "display": "20"
+          },
+          {
+            "value": 17.2,
+            "display": "17.2"
+          },
+          {
+            "value": 160,
+            "display": "160"
+          },
+          {
+            "value": 52.1,
+            "display": "52.1"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-5",
+          "name": "Newcastle United",
+          "shortName": "Newcastle"
+        },
+        "values": [
+          {
+            "value": 18,
+            "display": "18"
+          },
+          {
+            "value": 17.9,
+            "display": "17.9"
+          },
+          {
+            "value": 165,
+            "display": "165"
+          },
+          {
+            "value": 50.3,
+            "display": "50.3"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-6",
+          "name": "Aston Villa",
+          "shortName": "Villa"
+        },
+        "values": [
+          {
+            "value": 16,
+            "display": "16"
+          },
+          {
+            "value": 15.1,
+            "display": "15.1"
+          },
+          {
+            "value": 142,
+            "display": "142"
+          },
+          {
+            "value": 51.0,
+            "display": "51.0"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "team-example-8",
+          "name": "Brighton and Hove Albion",
+          "shortName": "Brighton"
+        },
+        "values": [
+          {
+            "value": 16,
+            "display": "16"
+          },
+          {
+            "value": 16.0,
+            "display": "16.0"
+          },
+          {
+            "value": 150,
+            "display": "150"
+          },
+          {
+            "value": 54.8,
+            "display": "54.8"
+          }
+        ]
+      }
+    ],
+    "sort": "goals_for"
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

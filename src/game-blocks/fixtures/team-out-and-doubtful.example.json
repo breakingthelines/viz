@@ -1,0 +1,67 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_OUT_AND_DOUBTFUL",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "contextLine": "Arsenal",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamOutAndDoubtful": {
+    "players": [
+      {
+        "player": {
+          "id": "player-example-108",
+          "name": "Martin Ødegaard",
+          "shortName": "Ødegaard"
+        },
+        "reason": "Knee",
+        "status": "Out",
+        "expectedReturn": "Late November",
+        "from": "2026-10-25",
+        "gamesMissed": 3
+      },
+      {
+        "player": {
+          "id": "player-example-112",
+          "name": "Viktor Gyökeres",
+          "shortName": "Gyökeres"
+        },
+        "reason": "Hamstring",
+        "status": "Out",
+        "from": "2026-11-01",
+        "to": "2026-12-06",
+        "gamesMissed": 2
+      },
+      {
+        "player": {
+          "id": "player-example-106",
+          "name": "Riccardo Calafiori",
+          "shortName": "Calafiori"
+        },
+        "reason": "Ankle",
+        "status": "Doubtful"
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

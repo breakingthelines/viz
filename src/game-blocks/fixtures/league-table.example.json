@@ -1,0 +1,142 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_TABLE",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "view": "top_six",
+    "highlight": "team-example-1"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "leagueTable": {
+    "rows": [
+      {
+        "rank": 1,
+        "team": {
+          "id": "team-example-1",
+          "name": "Arsenal",
+          "shortName": "Arsenal"
+        },
+        "played": 12,
+        "won": 9,
+        "drawn": 2,
+        "lost": 1,
+        "goalsFor": 24,
+        "goalsAgainst": 9,
+        "goalDifference": 15,
+        "points": 29,
+        "form": "WWWDW"
+      },
+      {
+        "rank": 2,
+        "team": {
+          "id": "team-example-2",
+          "name": "Manchester City",
+          "shortName": "Man City"
+        },
+        "played": 12,
+        "won": 8,
+        "drawn": 2,
+        "lost": 2,
+        "goalsFor": 27,
+        "goalsAgainst": 11,
+        "goalDifference": 16,
+        "points": 26,
+        "form": "WDWWL"
+      },
+      {
+        "rank": 3,
+        "team": {
+          "id": "team-example-4",
+          "name": "Chelsea",
+          "shortName": "Chelsea"
+        },
+        "played": 12,
+        "won": 7,
+        "drawn": 3,
+        "lost": 2,
+        "goalsFor": 22,
+        "goalsAgainst": 12,
+        "goalDifference": 10,
+        "points": 24,
+        "form": "LWWDW"
+      },
+      {
+        "rank": 4,
+        "team": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "played": 12,
+        "won": 7,
+        "drawn": 1,
+        "lost": 4,
+        "goalsFor": 21,
+        "goalsAgainst": 17,
+        "goalDifference": 4,
+        "points": 22,
+        "form": "WLLWW"
+      },
+      {
+        "rank": 5,
+        "team": {
+          "id": "team-example-6",
+          "name": "Aston Villa",
+          "shortName": "Villa"
+        },
+        "played": 12,
+        "won": 6,
+        "drawn": 3,
+        "lost": 3,
+        "goalsFor": 16,
+        "goalsAgainst": 13,
+        "goalDifference": 3,
+        "points": 21,
+        "form": "DWWLW"
+      },
+      {
+        "rank": 6,
+        "team": {
+          "id": "team-example-7",
+          "name": "Tottenham Hotspur",
+          "shortName": "Spurs"
+        },
+        "played": 12,
+        "won": 6,
+        "drawn": 2,
+        "lost": 4,
+        "goalsFor": 20,
+        "goalsAgainst": 14,
+        "goalDifference": 6,
+        "points": 20,
+        "form": "WLWDL"
+      }
+    ],
+    "totalRows": 20
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

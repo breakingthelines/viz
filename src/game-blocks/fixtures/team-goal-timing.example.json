@@ -1,0 +1,68 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_GOAL_TIMING",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Arsenal, Premier League 2025/26",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamGoalTiming": {
+    "periods": [
+      {
+        "label": "0 to 15",
+        "goalsFor": 3,
+        "goalsAgainst": 1
+      },
+      {
+        "label": "16 to 30",
+        "goalsFor": 4,
+        "goalsAgainst": 2
+      },
+      {
+        "label": "31 to 45",
+        "goalsFor": 3,
+        "goalsAgainst": 1
+      },
+      {
+        "label": "46 to 60",
+        "goalsFor": 4,
+        "goalsAgainst": 2
+      },
+      {
+        "label": "61 to 75",
+        "goalsFor": 3,
+        "goalsAgainst": 2
+      },
+      {
+        "label": "76 to 90",
+        "goalsFor": 7,
+        "goalsAgainst": 1
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

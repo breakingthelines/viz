@@ -1,0 +1,231 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000101",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_PLAYER_RANKINGS",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "limit": 6
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "lockedNote": "Rankings for paid metrics",
+  "leaguePlayerRankings": {
+    "metricKey": "key_passes",
+    "metricLabel": "Key passes",
+    "groupLabel": "Wingers",
+    "memberCount": 41,
+    "per90": true,
+    "gated": true,
+    "rows": [
+      {
+        "rank": 1,
+        "valueCell": "row0.value",
+        "percentileCell": "row0.percentile",
+        "nameCell": "row0.name",
+        "teamCell": "row0.team"
+      },
+      {
+        "rank": 2,
+        "valueCell": "row1.value",
+        "percentileCell": "row1.percentile",
+        "nameCell": "row1.name",
+        "teamCell": "row1.team"
+      },
+      {
+        "rank": 3,
+        "valueCell": "row2.value",
+        "percentileCell": "row2.percentile",
+        "nameCell": "row2.name",
+        "teamCell": "row2.team"
+      },
+      {
+        "rank": 4,
+        "valueCell": "row3.value",
+        "percentileCell": "row3.percentile",
+        "nameCell": "row3.name",
+        "teamCell": "row3.team"
+      },
+      {
+        "rank": 5,
+        "valueCell": "row4.value",
+        "percentileCell": "row4.percentile",
+        "nameCell": "row4.name",
+        "teamCell": "row4.team"
+      },
+      {
+        "rank": 6,
+        "valueCell": "row5.value",
+        "percentileCell": "row5.percentile",
+        "nameCell": "row5.name",
+        "teamCell": "row5.team"
+      }
+    ],
+    "medianCell": "median"
+  },
+  "gatedCells": [
+    "row0.value",
+    "row0.percentile",
+    "row0.name",
+    "row0.team",
+    "row1.value",
+    "row1.percentile",
+    "row1.name",
+    "row1.team",
+    "row2.value",
+    "row2.percentile",
+    "row2.name",
+    "row2.team",
+    "row3.value",
+    "row3.percentile",
+    "row3.name",
+    "row3.team",
+    "row4.value",
+    "row4.percentile",
+    "row4.name",
+    "row4.team",
+    "row5.value",
+    "row5.percentile",
+    "row5.name",
+    "row5.team",
+    "median"
+  ],
+  "gated": {
+    "row0.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.62,
+      "display": "2.62"
+    },
+    "row0.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 98,
+      "display": "98th"
+    },
+    "row0.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Bukayo Saka"
+    },
+    "row0.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Arsenal"
+    },
+    "row1.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.31,
+      "display": "2.31"
+    },
+    "row1.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 95,
+      "display": "95th"
+    },
+    "row1.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Mohammed Kudus"
+    },
+    "row1.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Spurs"
+    },
+    "row2.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.05,
+      "display": "2.05"
+    },
+    "row2.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 90,
+      "display": "90th"
+    },
+    "row2.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Jarrod Bowen"
+    },
+    "row2.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "West Ham"
+    },
+    "row3.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.96,
+      "display": "1.96"
+    },
+    "row3.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 88,
+      "display": "88th"
+    },
+    "row3.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Anthony Gordon"
+    },
+    "row3.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Newcastle"
+    },
+    "row4.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.88,
+      "display": "1.88"
+    },
+    "row4.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 85,
+      "display": "85th"
+    },
+    "row4.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Kaoru Mitoma"
+    },
+    "row4.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Brighton"
+    },
+    "row5.value": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.8,
+      "display": "1.80"
+    },
+    "row5.percentile": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 83,
+      "display": "83th"
+    },
+    "row5.name": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Bryan Mbeumo"
+    },
+    "row5.team": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Man Utd"
+    },
+    "median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.4,
+      "display": "1.40"
+    }
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

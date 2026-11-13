@@ -1,0 +1,125 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_FORM",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "limit": 6
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Arsenal, Premier League 2025/26",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamForm": {
+    "matches": [
+      {
+        "gameId": "game-example-11",
+        "date": "2026-11-08",
+        "opponent": {
+          "id": "team-example-4",
+          "name": "Chelsea",
+          "shortName": "Chelsea"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "2-0",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-11"
+      },
+      {
+        "gameId": "game-example-10",
+        "date": "2026-11-01",
+        "opponent": {
+          "id": "team-example-5",
+          "name": "Newcastle United",
+          "shortName": "Newcastle"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "1-0",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-10"
+      },
+      {
+        "gameId": "game-example-9",
+        "date": "2026-10-25",
+        "opponent": {
+          "id": "team-example-3",
+          "name": "Liverpool",
+          "shortName": "Liverpool"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "2-1",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-9"
+      },
+      {
+        "gameId": "game-example-8",
+        "date": "2026-10-18",
+        "opponent": {
+          "id": "team-example-6",
+          "name": "Aston Villa",
+          "shortName": "Villa"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_DRAW",
+        "score": "1-1",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-8"
+      },
+      {
+        "gameId": "game-example-7",
+        "date": "2026-10-04",
+        "opponent": {
+          "id": "team-example-7",
+          "name": "Tottenham Hotspur",
+          "shortName": "Spurs"
+        },
+        "venue": "GAME_BLOCK_VENUE_HOME",
+        "result": "GAME_BLOCK_RESULT_WIN",
+        "score": "3-0",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-7"
+      },
+      {
+        "gameId": "game-example-6",
+        "date": "2026-09-27",
+        "opponent": {
+          "id": "team-example-2",
+          "name": "Manchester City",
+          "shortName": "Man City"
+        },
+        "venue": "GAME_BLOCK_VENUE_AWAY",
+        "result": "GAME_BLOCK_RESULT_LOSS",
+        "score": "1-2",
+        "competitionLabel": "Premier League",
+        "url": "/game/football/match/game-example-6"
+      }
+    ],
+    "windowPointsPerGame": 2.33,
+    "seasonPointsPerGame": 2.42
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

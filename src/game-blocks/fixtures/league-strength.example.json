@@ -1,0 +1,206 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000102",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_STRENGTH",
+    "subject": {
+      "id": "39",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Premier League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39",
+    "limit": 10
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "39",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Premier League 2025/26",
+  "defaultTitle": "Premier League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "lockedNote": "League strength figures",
+  "leagueStrength": {
+    "count": 52,
+    "methodLine": "Index from cross-league results and player moves, top league 100.",
+    "rows": [
+      {
+        "rank": 1,
+        "leagueCell": "row0.league",
+        "indexCell": "row0.index"
+      },
+      {
+        "rank": 2,
+        "leagueCell": "row1.league",
+        "indexCell": "row1.index"
+      },
+      {
+        "rank": 3,
+        "leagueCell": "row2.league",
+        "indexCell": "row2.index"
+      },
+      {
+        "rank": 4,
+        "leagueCell": "row3.league",
+        "indexCell": "row3.index"
+      },
+      {
+        "rank": 5,
+        "leagueCell": "row4.league",
+        "indexCell": "row4.index"
+      },
+      {
+        "rank": 6,
+        "leagueCell": "row5.league",
+        "indexCell": "row5.index"
+      },
+      {
+        "rank": 7,
+        "leagueCell": "row6.league",
+        "indexCell": "row6.index"
+      },
+      {
+        "rank": 8,
+        "leagueCell": "row7.league",
+        "indexCell": "row7.index"
+      },
+      {
+        "rank": 9,
+        "leagueCell": "row8.league",
+        "indexCell": "row8.index"
+      },
+      {
+        "rank": 10,
+        "leagueCell": "row9.league",
+        "indexCell": "row9.index"
+      }
+    ]
+  },
+  "gatedCells": [
+    "row0.league",
+    "row0.index",
+    "row1.league",
+    "row1.index",
+    "row2.league",
+    "row2.index",
+    "row3.league",
+    "row3.index",
+    "row4.league",
+    "row4.index",
+    "row5.league",
+    "row5.index",
+    "row6.league",
+    "row6.index",
+    "row7.league",
+    "row7.index",
+    "row8.league",
+    "row8.index",
+    "row9.league",
+    "row9.index"
+  ],
+  "gated": {
+    "row0.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Premier League"
+    },
+    "row0.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 100,
+      "display": "100.0"
+    },
+    "row1.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "La Liga"
+    },
+    "row1.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 88.4,
+      "display": "88.4"
+    },
+    "row2.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Serie A"
+    },
+    "row2.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 84.9,
+      "display": "84.9"
+    },
+    "row3.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Bundesliga"
+    },
+    "row3.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 83.1,
+      "display": "83.1"
+    },
+    "row4.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Ligue 1"
+    },
+    "row4.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 78.2,
+      "display": "78.2"
+    },
+    "row5.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Primeira Liga"
+    },
+    "row5.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 70.5,
+      "display": "70.5"
+    },
+    "row6.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Eredivisie"
+    },
+    "row6.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 68.9,
+      "display": "68.9"
+    },
+    "row7.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Belgian Pro League"
+    },
+    "row7.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 64.0,
+      "display": "64.0"
+    },
+    "row8.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Championship"
+    },
+    "row8.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 62.7,
+      "display": "62.7"
+    },
+    "row9.league": {
+      "state": "METRIC_STATE_VALUE",
+      "display": "Brasileirão"
+    },
+    "row9.index": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 61.9,
+      "display": "61.9"
+    }
+  },
+  "text": {
+    "caption": "Premier League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

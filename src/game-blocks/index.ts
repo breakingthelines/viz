@@ -28,3 +28,6 @@ export { GameBlockMessage, GameBlockView, SUPPORTED_DATA_VERSION } from './view'
 export type { GameBlockViewProps } from './view';
 export * from './skin/index';
 export * from './player/index';
+export * from './team/index';
+export * from './league/index';
+export * from './match/index';

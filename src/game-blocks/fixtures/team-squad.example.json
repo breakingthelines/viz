@@ -1,0 +1,193 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_TEAM_SQUAD",
+    "subject": {
+      "id": "team-example-1",
+      "type": "SUBJECT_TYPE_TEAM",
+      "label": "Arsenal"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "39"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "team-example-1",
+    "type": "SUBJECT_TYPE_TEAM",
+    "name": "Arsenal",
+    "subtitle": "Premier League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Arsenal, 2025/26",
+  "defaultTitle": "Arsenal",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "teamSquad": {
+    "groups": [
+      {
+        "label": "Goalkeepers",
+        "players": [
+          {
+            "player": {
+              "id": "player-example-101",
+              "name": "David Raya",
+              "shortName": "Raya"
+            },
+            "shirtNumber": 1,
+            "age": 31
+          },
+          {
+            "player": {
+              "id": "player-example-102",
+              "name": "Kepa Arrizabalaga",
+              "shortName": "Kepa"
+            },
+            "shirtNumber": 13,
+            "age": 32
+          }
+        ]
+      },
+      {
+        "label": "Defenders",
+        "players": [
+          {
+            "player": {
+              "id": "player-example-103",
+              "name": "William Saliba",
+              "shortName": "Saliba"
+            },
+            "shirtNumber": 2,
+            "age": 25
+          },
+          {
+            "player": {
+              "id": "player-example-104",
+              "name": "Gabriel Magalhães",
+              "shortName": "Gabriel"
+            },
+            "shirtNumber": 6,
+            "age": 28
+          },
+          {
+            "player": {
+              "id": "player-example-105",
+              "name": "Jurriën Timber",
+              "shortName": "Timber"
+            },
+            "shirtNumber": 12,
+            "age": 25
+          },
+          {
+            "player": {
+              "id": "player-example-106",
+              "name": "Riccardo Calafiori",
+              "shortName": "Calafiori"
+            },
+            "shirtNumber": 33,
+            "age": 24
+          },
+          {
+            "player": {
+              "id": "player-example-107",
+              "name": "Ben White",
+              "shortName": "White"
+            },
+            "shirtNumber": 4,
+            "age": 28
+          }
+        ]
+      },
+      {
+        "label": "Midfielders",
+        "players": [
+          {
+            "player": {
+              "id": "player-example-108",
+              "name": "Martin Ødegaard",
+              "shortName": "Ødegaard"
+            },
+            "shirtNumber": 8,
+            "age": 27
+          },
+          {
+            "player": {
+              "id": "player-example-109",
+              "name": "Declan Rice",
+              "shortName": "Rice"
+            },
+            "shirtNumber": 41,
+            "age": 27
+          },
+          {
+            "player": {
+              "id": "player-example-110",
+              "name": "Martín Zubimendi",
+              "shortName": "Zubimendi"
+            },
+            "shirtNumber": 36,
+            "age": 27
+          },
+          {
+            "player": {
+              "id": "player-example-111",
+              "name": "Mikel Merino",
+              "shortName": "Merino"
+            },
+            "shirtNumber": 23,
+            "age": 29
+          }
+        ]
+      },
+      {
+        "label": "Forwards",
+        "players": [
+          {
+            "player": {
+              "id": "player-example-1",
+              "name": "Bukayo Saka",
+              "shortName": "Saka"
+            },
+            "shirtNumber": 7,
+            "age": 25
+          },
+          {
+            "player": {
+              "id": "player-example-112",
+              "name": "Viktor Gyökeres",
+              "shortName": "Gyökeres"
+            },
+            "shirtNumber": 14,
+            "age": 28
+          },
+          {
+            "player": {
+              "id": "player-example-113",
+              "name": "Gabriel Martinelli",
+              "shortName": "Martinelli"
+            },
+            "shirtNumber": 11,
+            "age": 25
+          },
+          {
+            "player": {
+              "id": "player-example-114",
+              "name": "Leandro Trossard",
+              "shortName": "Trossard"
+            },
+            "shirtNumber": 19,
+            "age": 31
+          }
+        ]
+      }
+    ]
+  },
+  "text": {
+    "caption": "Arsenal",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}

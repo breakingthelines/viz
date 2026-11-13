@@ -1,0 +1,484 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_LEAGUE_BRACKET",
+    "subject": {
+      "id": "2",
+      "type": "SUBJECT_TYPE_COMPETITION",
+      "label": "Champions League"
+    },
+    "look": "GAME_BLOCK_LOOK_EDITORIAL",
+    "seasonId": "2025",
+    "competitionId": "2"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "2",
+    "type": "SUBJECT_TYPE_COMPETITION",
+    "name": "Champions League"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Champions League",
+  "contextLine": "Champions League 2025/26",
+  "defaultTitle": "Champions League",
+  "baseline": "",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "leagueBracket": {
+    "rounds": [
+      {
+        "label": "Quarter-finals",
+        "ties": [
+          {
+            "home": {
+              "id": "team-example-1",
+              "name": "Arsenal",
+              "shortName": "Arsenal"
+            },
+            "away": {
+              "id": "team-example-40",
+              "name": "Real Madrid",
+              "shortName": "Real Madrid"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-51",
+                "home": {
+                  "team": {
+                    "id": "team-example-1",
+                    "name": "Arsenal",
+                    "shortName": "Arsenal"
+                  },
+                  "score": 3
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-40",
+                    "name": "Real Madrid",
+                    "shortName": "Real Madrid"
+                  },
+                  "score": 0
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-08T19:00:00Z",
+                "url": "/game/football/match/game-example-51"
+              },
+              {
+                "gameId": "game-example-52",
+                "home": {
+                  "team": {
+                    "id": "team-example-40",
+                    "name": "Real Madrid",
+                    "shortName": "Real Madrid"
+                  },
+                  "score": 1
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-1",
+                    "name": "Arsenal",
+                    "shortName": "Arsenal"
+                  },
+                  "score": 2
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-16T19:00:00Z",
+                "url": "/game/football/match/game-example-52"
+              }
+            ],
+            "winner": {
+              "id": "team-example-1",
+              "name": "Arsenal",
+              "shortName": "Arsenal"
+            },
+            "aggregate": "5-1 on aggregate"
+          },
+          {
+            "home": {
+              "id": "team-example-43",
+              "name": "Paris Saint-Germain",
+              "shortName": "PSG"
+            },
+            "away": {
+              "id": "team-example-6",
+              "name": "Aston Villa",
+              "shortName": "Villa"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-53",
+                "home": {
+                  "team": {
+                    "id": "team-example-43",
+                    "name": "Paris Saint-Germain",
+                    "shortName": "PSG"
+                  },
+                  "score": 3
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-6",
+                    "name": "Aston Villa",
+                    "shortName": "Villa"
+                  },
+                  "score": 1
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-09T19:00:00Z",
+                "url": "/game/football/match/game-example-53"
+              },
+              {
+                "gameId": "game-example-54",
+                "home": {
+                  "team": {
+                    "id": "team-example-6",
+                    "name": "Aston Villa",
+                    "shortName": "Villa"
+                  },
+                  "score": 3
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-43",
+                    "name": "Paris Saint-Germain",
+                    "shortName": "PSG"
+                  },
+                  "score": 2
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-15T19:00:00Z",
+                "url": "/game/football/match/game-example-54"
+              }
+            ],
+            "winner": {
+              "id": "team-example-43",
+              "name": "Paris Saint-Germain",
+              "shortName": "PSG"
+            },
+            "aggregate": "5-4 on aggregate"
+          },
+          {
+            "home": {
+              "id": "team-example-41",
+              "name": "Barcelona",
+              "shortName": "Barcelona"
+            },
+            "away": {
+              "id": "team-example-42",
+              "name": "Bayern Munich",
+              "shortName": "Bayern"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-55",
+                "home": {
+                  "team": {
+                    "id": "team-example-41",
+                    "name": "Barcelona",
+                    "shortName": "Barcelona"
+                  },
+                  "score": 2
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-42",
+                    "name": "Bayern Munich",
+                    "shortName": "Bayern"
+                  },
+                  "score": 2
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-08T19:00:00Z",
+                "url": "/game/football/match/game-example-55"
+              },
+              {
+                "gameId": "game-example-56",
+                "home": {
+                  "team": {
+                    "id": "team-example-42",
+                    "name": "Bayern Munich",
+                    "shortName": "Bayern"
+                  },
+                  "score": 1
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-41",
+                    "name": "Barcelona",
+                    "shortName": "Barcelona"
+                  },
+                  "score": 1
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-15T19:00:00Z",
+                "url": "/game/football/match/game-example-56"
+              }
+            ],
+            "winner": {
+              "id": "team-example-41",
+              "name": "Barcelona",
+              "shortName": "Barcelona"
+            },
+            "aggregate": "4-3 on penalties"
+          },
+          {
+            "home": {
+              "id": "team-example-44",
+              "name": "Inter",
+              "shortName": "Inter"
+            },
+            "away": {
+              "id": "team-example-3",
+              "name": "Liverpool",
+              "shortName": "Liverpool"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-57",
+                "home": {
+                  "team": {
+                    "id": "team-example-44",
+                    "name": "Inter",
+                    "shortName": "Inter"
+                  },
+                  "score": 1
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-3",
+                    "name": "Liverpool",
+                    "shortName": "Liverpool"
+                  },
+                  "score": 0
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-09T19:00:00Z",
+                "url": "/game/football/match/game-example-57"
+              },
+              {
+                "gameId": "game-example-58",
+                "home": {
+                  "team": {
+                    "id": "team-example-3",
+                    "name": "Liverpool",
+                    "shortName": "Liverpool"
+                  },
+                  "score": 2
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-44",
+                    "name": "Inter",
+                    "shortName": "Inter"
+                  },
+                  "score": 0
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-16T19:00:00Z",
+                "url": "/game/football/match/game-example-58"
+              }
+            ],
+            "winner": {
+              "id": "team-example-3",
+              "name": "Liverpool",
+              "shortName": "Liverpool"
+            },
+            "aggregate": "2-1 on aggregate"
+          }
+        ]
+      },
+      {
+        "label": "Semi-finals",
+        "ties": [
+          {
+            "home": {
+              "id": "team-example-1",
+              "name": "Arsenal",
+              "shortName": "Arsenal"
+            },
+            "away": {
+              "id": "team-example-43",
+              "name": "Paris Saint-Germain",
+              "shortName": "PSG"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-61",
+                "home": {
+                  "team": {
+                    "id": "team-example-1",
+                    "name": "Arsenal",
+                    "shortName": "Arsenal"
+                  },
+                  "score": 0
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-43",
+                    "name": "Paris Saint-Germain",
+                    "shortName": "PSG"
+                  },
+                  "score": 1
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-29T19:00:00Z",
+                "url": "/game/football/match/game-example-61"
+              },
+              {
+                "gameId": "game-example-62",
+                "home": {
+                  "team": {
+                    "id": "team-example-43",
+                    "name": "Paris Saint-Germain",
+                    "shortName": "PSG"
+                  },
+                  "score": 2
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-1",
+                    "name": "Arsenal",
+                    "shortName": "Arsenal"
+                  },
+                  "score": 1
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-05-07T19:00:00Z",
+                "url": "/game/football/match/game-example-62"
+              }
+            ],
+            "winner": {
+              "id": "team-example-43",
+              "name": "Paris Saint-Germain",
+              "shortName": "PSG"
+            },
+            "aggregate": "3-1 on aggregate"
+          },
+          {
+            "home": {
+              "id": "team-example-41",
+              "name": "Barcelona",
+              "shortName": "Barcelona"
+            },
+            "away": {
+              "id": "team-example-3",
+              "name": "Liverpool",
+              "shortName": "Liverpool"
+            },
+            "legs": [
+              {
+                "gameId": "game-example-63",
+                "home": {
+                  "team": {
+                    "id": "team-example-41",
+                    "name": "Barcelona",
+                    "shortName": "Barcelona"
+                  },
+                  "score": 1
+                },
+                "away": {
+                  "team": {
+                    "id": "team-example-3",
+                    "name": "Liverpool",
+                    "shortName": "Liverpool"
+                  },
+                  "score": 1
+                },
+                "status": "GAME_BLOCK_MATCH_STATUS_FINISHED",
+                "competition": {
+                  "id": "39",
+                  "name": "Premier League",
+                  "shortName": "PL"
+                },
+                "roundLabel": "",
+                "kickoff": "2026-04-30T19:00:00Z",
+                "url": "/game/football/match/game-example-63"
+              }
+            ],
+            "aggregate": ""
+          }
+        ]
+      },
+      {
+        "label": "Final",
+        "ties": [
+          {
+            "home": {
+              "id": "team-example-43",
+              "name": "Paris Saint-Germain",
+              "shortName": "PSG"
+            },
+            "legs": [],
+            "aggregate": ""
+          }
+        ]
+      }
+    ]
+  },
+  "text": {
+    "caption": "Champions League",
+    "columns": [],
+    "rows": [],
+    "notes": []
+  }
+}
