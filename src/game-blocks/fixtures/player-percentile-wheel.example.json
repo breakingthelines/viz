@@ -1,0 +1,315 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real. Shape of a BuildGameBlocks response (protos 0.209.0 toJson). Replace with a staging capture once game-service ships the builder.",
+  "snapshotId": "00000000-0000-4000-8000-000000000001",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_PERCENTILE_WHEEL",
+    "subject": {
+      "id": "player-example-1",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Bukayo Saka"
+    },
+    "seasonId": "2025",
+    "competitionId": "39",
+    "highlight": "key",
+    "view": "wheel",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "player-example-1",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Bukayo Saka",
+    "subtitle": "Arsenal",
+    "url": "/game/football/player/player-example-1/bukayo-saka"
+  },
+  "seasonLabel": "2025/26",
+  "competitionLabel": "Premier League",
+  "contextLine": "Bukayo Saka, Arsenal winger, Premier League 2025/26",
+  "defaultTitle": "Bukayo Saka",
+  "baseline": "Against 41 Premier League wingers with 900 or more minutes.",
+  "provider": "API-Football",
+  "asOf": "2026-11-13T09:00:00Z",
+  "lockedNote": "Per 90 figures",
+  "playerPercentileWheel": {
+    "metrics": [
+      {
+        "key": "npg",
+        "label": "Non-penalty goals",
+        "shortLabel": "npG",
+        "family": "shooting",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 88,
+        "valueCell": "npg.per90",
+        "medianCell": "npg.median"
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "shortLabel": "Shots",
+        "family": "shooting",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 87,
+        "valueCell": "shots.per90",
+        "medianCell": "shots.median"
+      },
+      {
+        "key": "sotp",
+        "label": "Shots on target %",
+        "shortLabel": "SoT %",
+        "family": "shooting",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 62,
+        "valueCell": "sotp.per90",
+        "medianCell": "sotp.median"
+      },
+      {
+        "key": "ast",
+        "label": "Assists",
+        "shortLabel": "Ast",
+        "family": "creating",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 92,
+        "valueCell": "ast.per90",
+        "medianCell": "ast.median"
+      },
+      {
+        "key": "key",
+        "label": "Key passes",
+        "shortLabel": "KP",
+        "family": "creating",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 94,
+        "valueCell": "key.per90",
+        "medianCell": "key.median"
+      },
+      {
+        "key": "drs",
+        "label": "Successful dribbles",
+        "shortLabel": "Drb",
+        "family": "carrying",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 79,
+        "valueCell": "drs.per90",
+        "medianCell": "drs.median"
+      },
+      {
+        "key": "drp",
+        "label": "Dribble success %",
+        "shortLabel": "Drb %",
+        "family": "carrying",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 58,
+        "valueCell": "drp.per90",
+        "medianCell": "drp.median"
+      },
+      {
+        "key": "fd",
+        "label": "Fouls won",
+        "shortLabel": "Fouled",
+        "family": "carrying",
+        "state": "METRIC_STATE_VALUE",
+        "percentile": 79,
+        "valueCell": "fd.per90",
+        "medianCell": "fd.median"
+      }
+    ],
+    "families": [
+      {
+        "key": "shooting",
+        "label": "Shooting"
+      },
+      {
+        "key": "creating",
+        "label": "Creating"
+      },
+      {
+        "key": "carrying",
+        "label": "Carrying"
+      }
+    ],
+    "groupPhrase": "Premier League wingers with 900 or more minutes",
+    "groupSize": 41,
+    "minutes": 2410,
+    "appearances": 31,
+    "methodVersion": "profile-v3"
+  },
+  "gatedCells": [
+    "npg.per90",
+    "npg.median",
+    "shots.per90",
+    "shots.median",
+    "sotp.per90",
+    "sotp.median",
+    "ast.per90",
+    "ast.median",
+    "key.per90",
+    "key.median",
+    "drs.per90",
+    "drs.median",
+    "drp.per90",
+    "drp.median",
+    "fd.per90",
+    "fd.median"
+  ],
+  "gated": {
+    "npg.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.38,
+      "display": "0.38"
+    },
+    "npg.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.22,
+      "display": "0.22"
+    },
+    "shots.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 3.03,
+      "display": "3.03"
+    },
+    "shots.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.94,
+      "display": "1.94"
+    },
+    "sotp.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 41,
+      "display": "41%"
+    },
+    "sotp.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 36,
+      "display": "36%"
+    },
+    "ast.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.34,
+      "display": "0.34"
+    },
+    "ast.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.15,
+      "display": "0.15"
+    },
+    "key.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.62,
+      "display": "2.62"
+    },
+    "key.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.4,
+      "display": "1.40"
+    },
+    "drs.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.72,
+      "display": "1.72"
+    },
+    "drs.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.21,
+      "display": "1.21"
+    },
+    "drp.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 51,
+      "display": "51%"
+    },
+    "drp.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 48,
+      "display": "48%"
+    },
+    "fd.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.88,
+      "display": "1.88"
+    },
+    "fd.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.12,
+      "display": "1.12"
+    }
+  },
+  "text": {
+    "caption": "Bukayo Saka, Premier League 2025/26 percentiles",
+    "columns": ["Metric", "Percentile"],
+    "rows": [
+      {
+        "cells": ["Non-penalty goals", "88"]
+      },
+      {
+        "cells": ["Shots", "87"]
+      },
+      {
+        "cells": ["Shots on target %", "62"]
+      },
+      {
+        "cells": ["Assists", "92"]
+      },
+      {
+        "cells": ["Key passes", "94"]
+      },
+      {
+        "cells": ["Successful dribbles", "79"]
+      },
+      {
+        "cells": ["Dribble success %", "58"]
+      },
+      {
+        "cells": ["Fouls won", "79"]
+      }
+    ],
+    "notes": ["Against 41 Premier League wingers with 900 or more minutes."]
+  },
+  "highlights": [
+    {
+      "key": "npg",
+      "label": "Non-penalty goals"
+    },
+    {
+      "key": "shots",
+      "label": "Shots"
+    },
+    {
+      "key": "sotp",
+      "label": "Shots on target %"
+    },
+    {
+      "key": "ast",
+      "label": "Assists"
+    },
+    {
+      "key": "key",
+      "label": "Key passes"
+    },
+    {
+      "key": "drs",
+      "label": "Successful dribbles"
+    },
+    {
+      "key": "drp",
+      "label": "Dribble success %"
+    },
+    {
+      "key": "fd",
+      "label": "Fouls won"
+    }
+  ],
+  "views": [
+    {
+      "key": "wheel",
+      "label": "Wheel"
+    },
+    {
+      "key": "wheel_rows",
+      "label": "Wheel and rows"
+    },
+    {
+      "key": "rows",
+      "label": "Rows"
+    }
+  ]
+}

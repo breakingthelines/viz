@@ -20,7 +20,7 @@ import { HUDL_STATSBOMB_LOGO } from './provider-marks';
 export type DataProvider = 'statsbomb' | 'opta' | 'none';
 
 /** The BTL wordmark: bracket mark + "breaking / the lines", sized for a colophon. */
-function BtlWordmark() {
+export function BtlWordmark() {
   return (
     <span className="flex shrink-0 items-center gap-[7px]" aria-label="Breaking The Lines">
       <BtlMark className="size-[17px] shrink-0" />
@@ -36,7 +36,7 @@ function BtlWordmark() {
  * The Hudl StatsBomb provider mark — the official logo (white "hudl" + orange
  * "statsbomb" + the orange mark) on transparent, inlined as a data URI.
  */
-function ProviderMark({ provider }: { provider: DataProvider }) {
+export function ProviderMark({ provider }: { provider: DataProvider }) {
   if (provider === 'statsbomb') {
     return (
       // Height is inlined, not a Tailwind class: viz is a standalone package, so a

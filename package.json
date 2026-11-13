@@ -1,6 +1,6 @@
 {
   "name": "@breakingthelines/viz",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "React components for football data visualisation",
   "license": "AGPL-3.0",
   "author": "Breaking The Lines",
@@ -74,6 +74,10 @@
       "types": "./dist/utils/index.d.ts",
       "import": "./dist/utils/index.js"
     },
+    "./game-blocks": {
+      "types": "./dist/game-blocks/index.d.ts",
+      "import": "./dist/game-blocks/index.js"
+    },
     "./styles.css": "./src/styles/globals.css"
   },
   "publishConfig": {
@@ -130,8 +134,14 @@
     "vitest": "4.0.16"
   },
   "peerDependencies": {
+    "@breakingthelines/design-system": ">=0.107.0",
     "framer-motion": ">=11",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@breakingthelines/design-system": {
+      "optional": true
+    }
   }
 }
