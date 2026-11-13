@@ -1,7 +1,7 @@
 import { fromJson, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { GameBlockSchema } from '../generated/game/v1/types/game_block_pb';
 import { describe, expect, it } from 'vitest';
-import { WHEEL_EXAMPLE } from './fixtures';
+import { WHEEL_EXAMPLE } from './fixtures/index';
 import { GAME_BLOCK_REGISTRY } from './registry';
 import { gatedValuesFromJson, toGameBlockConfig } from './to-config';
 import type { GameBlockJson } from './types';

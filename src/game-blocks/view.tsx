@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { gameBlockEntry } from './registry';
-import { BlockFrame, useBlockSkin } from './skin';
+import { BlockFrame, useBlockSkin } from './skin/index';
 import type { GameBlockConfig, GameBlockDensity, GameBlockLook } from './types';
 import { GameBlockScope } from './values';
 

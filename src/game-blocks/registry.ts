@@ -1,7 +1,7 @@
-import { LEAGUE_BLOCKS } from './league';
-import { MATCH_BLOCKS } from './match';
-import { PLAYER_BLOCKS } from './player';
-import { TEAM_BLOCKS } from './team';
+import { LEAGUE_BLOCKS } from './league/index';
+import { MATCH_BLOCKS } from './match/index';
+import { PLAYER_BLOCKS } from './player/index';
+import { TEAM_BLOCKS } from './team/index';
 import type { AnyGameBlockComponent } from './block-props';
 import type { GameBlockSubjectKind, GameBlockTypeId } from './types';
 

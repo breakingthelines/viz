@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactNode } from 'react';
 import { expect, fn, waitFor, within } from 'storybook/test';
-import { WHEEL_EXAMPLE } from '../fixtures';
+import { WHEEL_EXAMPLE } from '../fixtures/index';
 import { EXAMPLE_CREST, syntheticHeadshot } from '../fixtures/media';
 import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
 import type { GameBlockConfig, GameBlockDensity, GameBlockLook, GatedCellValue } from '../types';

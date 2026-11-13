@@ -1,7 +1,7 @@
 import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { WHEEL_EXAMPLE } from '../fixtures';
+import { WHEEL_EXAMPLE } from '../fixtures/index';
 import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
 import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';

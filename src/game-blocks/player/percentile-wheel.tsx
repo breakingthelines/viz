@@ -9,7 +9,7 @@ import {
   useBlockSkin,
   type BlockHero,
   type BlockRow,
-} from '../skin';
+} from '../skin/index';
 import type { GameBlockMetricJson, MetricStateJson, PlayerPercentileWheelDataJson } from '../types';
 import { useGatedCell } from '../values';
 
