@@ -14,6 +14,7 @@ import { BtlWordmark, ProviderMark } from '#/football/lib/panel-footer';
 import type { GameBlockDensity, GameBlockLook } from '../types';
 import { useBlockLocked, usePlansHref } from '../values';
 import { Crayon, GrainDefs, arc, head, ring, seedOf, type Pt } from './crayon';
+import { playerHalftoneUrl, playerHeadshotUrl, resolveMediaSrc, useMediaBase } from './assets';
 import { pickPosterArt, useHalftone, useImageLoads, type PosterArt } from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
 import {
@@ -23,7 +24,7 @@ import {
   useBlockSkin,
   type BlockLayout,
 } from './provider';
-import { skinCssVars, type BlockSkinTokens } from './tokens';
+import { DEFAULT_BLOCK_SKIN, skinCssVars, type BlockSkinTokens } from './tokens';
 
 /** Container width below which a block stacks into one column. */
 export const NARROW_BELOW = 560;
@@ -36,6 +37,11 @@ export interface BlockMedia {
   crestSrc?: string;
   /** The second image of a pair (a comparison or a match). */
   pairSrc?: string;
+  /**
+   * A player's canonical id. The poster builds the pre-rendered halftone's
+   * address from it, and the headshot's when `src` is empty.
+   */
+  personId?: string;
 }
 
 export interface BlockHero {
@@ -123,7 +129,7 @@ export function BlockFrame(props: BlockFrameProps) {
   const skin = useBlockSkin();
   const [ref, width] = useContainerWidth<HTMLDivElement>();
   const narrow = density !== 'article' || width < NARROW_BELOW;
-  const art = usePosterArt(asked === 'poster' ? props.media : undefined, narrow, skin);
+  const art = usePosterArt(asked === 'poster' ? props.media : undefined, narrow, density, skin);
   const look: GameBlockLook = asked === 'poster' && art.status === 'none' ? 'editorial' : asked;
   const layout = useMemo<BlockLayout>(() => ({ look, density, narrow }), [look, density, narrow]);
   const onLookDrawn = useContext(DrawnLookContext);
@@ -576,21 +582,51 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
 // when there is no crest either.
 // ---------------------------------------------------------------------------
 
+function posterHeight(density: GameBlockDensity | undefined, narrow: boolean): number {
+  return density !== 'article' ? 230 : narrow ? 300 : 340;
+}
+
+function cutOutHeight(density: GameBlockDensity | undefined, narrow: boolean): number {
+  return posterHeight(density, narrow) * (narrow ? 1.02 : 1.08);
+}
+
+function devicePixelRatio(): number {
+  return typeof window === 'undefined' ? 2 : Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+}
+
 function usePosterArt(
   media: BlockMedia | undefined,
   narrow: boolean,
+  density: GameBlockDensity | undefined,
   skin: BlockSkinTokens
 ): PosterArt {
-  const photo = media?.kind === 'person' ? media.src : undefined;
-  const crest = media?.kind === 'person' ? media.crestSrc : media?.src;
-  const cut = useHalftone(photo, {
+  const mediaBase = useMediaBase();
+  const person = media?.kind === 'person' ? media : undefined;
+  const id = person?.personId;
+  // The pre-rendered halftone is drawn in the default inks; a skin that
+  // changes them keeps computing its own.
+  const defaultInks =
+    skin.halftoneInk === DEFAULT_BLOCK_SKIN.halftoneInk &&
+    skin.halftonePaper === DEFAULT_BLOCK_SKIN.halftonePaper;
+  const pre = id && defaultInks ? playerHalftoneUrl(mediaBase, id) : undefined;
+  const preLoads = useImageLoads(pre);
+  const photo =
+    resolveMediaSrc(person?.src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined);
+  const crest = resolveMediaSrc(person ? person.crestSrc : media?.src, mediaBase);
+  // Only compute a halftone here once the CDN has none.
+  const cut = useHalftone(pre && preLoads !== 'none' ? undefined : photo, {
     scale: 4,
     pitch: narrow ? 4.6 : 5.2,
     ink: skin.halftoneInk,
     paper: skin.halftonePaper,
+    targetPx: Math.round(cutOutHeight(density, narrow) * devicePixelRatio()),
   });
   const crestLoads = useImageLoads(crest);
-  return pickPosterArt(cut, { src: crest, status: crestLoads });
+  const cutState = pre && preLoads === 'working' ? { status: 'working' as const, url: null } : cut;
+  return pickPosterArt({ src: pre, status: preLoads }, cutState, {
+    src: crest,
+    status: crestLoads,
+  });
 }
 
 function wedges(s: BlockSkinTokens, W: number, H: number): [string, string][] {
@@ -606,7 +642,7 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
   const narrow = useBlockLayout().narrow;
   const skin = useBlockSkin();
   const small = p.density !== 'article';
-  const height = small ? 230 : narrow ? 300 : 340;
+  const height = posterHeight(p.density, narrow);
   const numberSize = small ? 96 : narrow ? 128 : 190;
   const art = p.art;
   const W = 680;
@@ -620,6 +656,7 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
         src={art.src}
         alt=""
         data-poster-media="halftone"
+        crossOrigin={art.src.startsWith('data:') ? undefined : 'anonymous'}
         style={{
           position: 'absolute',
           bottom: 0,

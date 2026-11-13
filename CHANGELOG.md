@@ -5,7 +5,7 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.25.4]
+## [0.26.1]
 
 ### Added: the drawn look, for hosts
 
@@ -24,6 +24,30 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   player's.
 - **`SUPPORTED_DATA_VERSION`** is 2. Builds before this one show "Update to
   see this block" for a totals comparison.
+
+## [0.26.0]
+
+### Fixed: poster with no photo for most players
+
+- **Poster look** showed no photo for players such as Kylian Mbappé because
+  the block's subject card carries no headshot for most players (game-service
+  leaves `imageUrl` empty; the platform draws headshots from the entity asset
+  chain by id). The poster now builds the addresses from the player's id when
+  the block has none.
+- **Pre-rendered halftone first.** The poster reads
+  `resolved/player-halftone/<id>` from the media CDN, drawn by
+  content-service's player-cutouts job from an ML cut-out. Then it falls back
+  to the halftone computed in the browser from the headshot, then the crest,
+  then the editorial look. A skin with its own halftone inks skips the
+  pre-rendered image.
+- **Sharper in-browser halftone.** It is drawn at the device pixels the
+  cut-out occupies (918 px for a phone at 3x) instead of a 600 px canvas the
+  browser stretched, with the same number of dots.
+- **Relative CDN keys** (`media/...`) in block images resolve on the media
+  base, not the page's origin.
+- New: `GameBlockAssetsProvider` (`mediaBase`, default
+  `https://cdn.breakingthelines.app/media`), `BlockMedia.personId`,
+  `playerHalftoneUrl`, `playerHeadshotUrl`, `resolveMediaSrc`.
 
 ## [0.25.3]
 

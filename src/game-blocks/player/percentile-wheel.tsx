@@ -182,7 +182,12 @@ export function PlayerPercentileWheelBlock({
       titleSlot={titleSlot}
       context={context}
       subheading={config.subheading}
-      media={{ kind: 'person', src: subject.imageUrl, crestSrc: subject.crestUrl }}
+      media={{
+        kind: 'person',
+        src: subject.imageUrl,
+        crestSrc: subject.crestUrl,
+        personId: subject.kind === 'player' ? subject.id : undefined,
+      }}
       hero={hero}
       lockedNote={config.lockedNote}
       density={density}

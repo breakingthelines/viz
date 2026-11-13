@@ -11,12 +11,22 @@ import { useEffect, useState } from 'react';
  *
  * Resolves `null` when the image cannot be read (no CORS, a broken URL, a
  * photo with no background to key out), so the poster falls back to the crest
- * or the editorial look. An image pipeline that stores the cut-out next to the
- * headshot replaces this later.
+ * or the editorial look. The poster prefers the halftone content-service
+ * pre-renders next to the headshot (an ML cut-out, no halo, no lost white
+ * shirts); this is the fallback for players it has not reached yet.
  */
 export interface HalftoneOptions {
+  /** Canvas pixels per source pixel. Raised to reach `targetPx`. */
   scale?: number;
+  /** Dot pitch in canvas pixels at scale 4; scales with the canvas. */
   pitch?: number;
+  /**
+   * The device pixels the cut-out is drawn at (CSS size times
+   * devicePixelRatio). A 150 px headshot at scale 4 is a 600 px canvas, which
+   * a phone at 3x stretches to 918 px and softens every dot; the canvas is
+   * drawn at this size instead, with the same number of dots.
+   */
+  targetPx?: number;
   ink: string;
   paper: string;
   gamma?: number;
@@ -26,14 +36,15 @@ export interface HalftoneOptions {
 const MIN_BACKGROUND = 0.08;
 
 export function halftone(src: string, opts: HalftoneOptions): Promise<string | null> {
-  const { scale = 4, pitch = 5, ink, paper, gamma = 0.75 } = opts;
+  const { scale = 4, pitch = 5, ink, paper, gamma = 0.75, targetPx = 0 } = opts;
   return new Promise((resolve) => {
     if (typeof document === 'undefined') return resolve(null);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
-        resolve(draw(img, { scale, pitch, ink, paper, gamma }));
+        const s = canvasScale(img.naturalWidth, scale, targetPx);
+        resolve(draw(img, { scale: s, pitch: (pitch * s) / 4, ink, paper, gamma, targetPx }));
       } catch {
         resolve(null);
       }
@@ -41,6 +52,16 @@ export function halftone(src: string, opts: HalftoneOptions): Promise<string | n
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+/**
+ * Canvas pixels per source pixel: `scale`, or enough to cover `targetPx`,
+ * capped so a large source never asks for a canvas over 2048 px.
+ */
+export function canvasScale(width: number, scale: number, targetPx: number): number {
+  if (!width) return scale;
+  const want = Math.max(scale, Math.ceil(targetPx / width));
+  return Math.max(1, Math.min(want, Math.floor(2048 / width) || 1));
 }
 
 function draw(img: HTMLImageElement, o: Required<HalftoneOptions>): string | null {
@@ -139,7 +160,7 @@ function draw(img: HTMLImageElement, o: Required<HalftoneOptions>): string | nul
   }
   ox.globalCompositeOperation = 'destination-in';
   ox.imageSmoothingEnabled = true;
-  ox.filter = 'blur(1.2px)';
+  ox.filter = `blur(${(1.2 * o.scale) / 4}px)`;
   ox.drawImage(m, 0, 0, W, H);
   return out.toDataURL('image/png');
 }
@@ -157,17 +178,17 @@ export function useHalftone(
     url: string | null;
     done: boolean;
   }>({ for: undefined, url: null, done: false });
-  const { scale, pitch, ink, paper, gamma } = opts;
+  const { scale, pitch, ink, paper, gamma, targetPx } = opts;
   useEffect(() => {
     if (!src) return;
     let live = true;
-    void halftone(src, { scale, pitch, ink, paper, gamma }).then((u) => {
+    void halftone(src, { scale, pitch, ink, paper, gamma, targetPx }).then((u) => {
       if (live) setState({ for: src, url: u, done: true });
     });
     return () => {
       live = false;
     };
-  }, [src, scale, pitch, ink, paper, gamma]);
+  }, [src, scale, pitch, ink, paper, gamma, targetPx]);
   if (!src) return { status: 'none', url: null };
   if (state.for !== src || !state.done) return { status: 'working', url: null };
   return state.url ? { status: 'ready', url: state.url } : { status: 'none', url: null };
@@ -209,15 +230,21 @@ export type PosterArt =
   | { status: 'ready'; kind: 'halftone' | 'crest'; src: string }
   | { status: 'none' };
 
+type Loads = { src: string | undefined; status: 'working' | 'ok' | 'none' };
+
 /**
- * The poster's image, in order: the halftone cut-out of the headshot, then
- * the crest drawn flat in the same position, then nothing, which tells the
- * frame to draw the editorial look instead of an empty poster.
+ * The poster's image, in order: the pre-rendered halftone from the CDN, the
+ * halftone cut-out of the headshot computed here, the crest drawn flat in the
+ * same position, then nothing, which tells the frame to draw the editorial
+ * look instead of an empty poster.
  */
 export function pickPosterArt(
+  pre: Loads,
   cut: { status: 'working' | 'ready' | 'none'; url: string | null },
-  crest: { src: string | undefined; status: 'working' | 'ok' | 'none' }
+  crest: Loads
 ): PosterArt {
+  if (pre.src && pre.status === 'ok') return { status: 'ready', kind: 'halftone', src: pre.src };
+  if (pre.src && pre.status === 'working') return { status: 'working' };
   if (cut.status === 'ready' && cut.url) return { status: 'ready', kind: 'halftone', src: cut.url };
   if (cut.status === 'working') return { status: 'working' };
   if (crest.src && crest.status === 'ok') return { status: 'ready', kind: 'crest', src: crest.src };

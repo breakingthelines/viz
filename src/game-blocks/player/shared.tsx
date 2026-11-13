@@ -45,7 +45,12 @@ export function baseFrame(
     titleSlot,
     context: playerContext(config),
     subheading: config.subheading,
-    media: media ?? { kind: 'person', src: subject.imageUrl, crestSrc: subject.crestUrl },
+    media: media ?? {
+      kind: 'person',
+      src: subject.imageUrl,
+      crestSrc: subject.crestUrl,
+      personId: subject.kind === 'player' ? subject.id : undefined,
+    },
     lockedNote: config.lockedNote,
     density,
     exportName: `btl-${subject.name}-${exportSuffix}`,
