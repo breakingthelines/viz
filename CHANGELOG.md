@@ -5,6 +5,27 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0]
+
+### Added: club context in the form chart
+
+- **`FormChartMatch.team`** names the club the player played each match for.
+  When the visible window spans more than one club, a thin divider sits
+  between the bars where the club changes and each club's short name sits
+  small and muted over its run of bars. A window at one club draws nothing
+  extra. Each bar's accessible name adds "for <club>".
+- **Opens on the current club.** When the newest ten cross a change of club
+  and the latest club has at least `latestClubMinimum` (default 5) matches,
+  the chart opens on those alone. "Earlier matches" widens to the full window
+  with the divider, then pages back as before. Below the minimum it opens on
+  the last ten with the divider.
+
+### Fixed: rating read twice in a bar's link text
+
+- A bar's link held both its title ("..., rating 6.7") and the rating numeral,
+  so its text read "rating 6.76.7". The numerals now sit outside the link,
+  and the whole column is the pointer target.
+
 ## [0.26.1]
 
 ### Added: the drawn look, for hosts

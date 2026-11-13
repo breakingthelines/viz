@@ -390,3 +390,73 @@ export const UnlinkedBarsStayPresentational: Story = {
     expect(svg?.getAttribute('role')).toBe('img');
   },
 };
+
+const VILLA = { id: 'villa', label: 'Aston Villa F.C.', shortLabel: 'Aston Villa' };
+const VALENCIA = { id: 'valencia', label: 'Valencia CF', shortLabel: 'Valencia' };
+
+/** Harvey Elliott, 2025-27: `villa` matches on loan at Villa, then `valencia` at Valencia. */
+function transferMatches(villa: number, valencia: number): FormChartMatch[] {
+  return buildMatches(villa + valencia).map((m, i) => ({
+    ...m,
+    href: `/game/${m.id}`,
+    team: i < villa ? VILLA : VALENCIA,
+  }));
+}
+
+const clubNames = (el: HTMLElement) =>
+  Array.from(el.querySelectorAll('[data-slot="form-club"]')).map((c) => c.textContent);
+
+/**
+ * Opens on the six matches at his current club with no club marks; one step
+ * earlier widens to the last ten, with a divider where the club changes and
+ * each club named over its bars. Later returns to the current club.
+ */
+export const AcrossATransfer: Story = {
+  name: 'Across a transfer: opens on the current club',
+  args: { matches: transferMatches(8, 6) },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 358 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const earlier = canvas.getByRole('button', { name: 'Earlier matches' });
+    const later = canvas.getByRole('button', { name: 'Later matches' });
+    const bars = () => canvasElement.querySelectorAll('[data-slot="form-bar"]').length;
+
+    expect(bars(), 'opens on the six at the current club').toBe(6);
+    expect(clubNames(canvasElement), 'one club, nothing extra').toEqual([]);
+    expect(later).toBeDisabled();
+
+    await userEvent.click(earlier);
+    expect(bars()).toBe(10);
+    expect(clubNames(canvasElement)).toEqual(['Aston Villa', 'Valencia']);
+    expect(canvasElement.querySelectorAll('[data-slot="form-club-divider"]').length).toBe(1);
+    const link = canvas.getAllByRole('link')[0];
+    expect(link?.getAttribute('aria-label')).toContain('for Aston Villa F.C.,');
+
+    await userEvent.click(later);
+    expect(bars()).toBe(6);
+    expect(later).toBeDisabled();
+  },
+};
+
+/** Fewer than five at the new club: opens on the last ten, divider included. */
+export const ShortlyAfterATransfer: Story = {
+  name: 'Shortly after a transfer: last ten with a divider',
+  args: { matches: transferMatches(8, 3) },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 358 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    expect(canvasElement.querySelectorAll('[data-slot="form-bar"]').length).toBe(10);
+    expect(clubNames(canvasElement)).toEqual(['Aston Villa', 'Valencia']);
+  },
+};

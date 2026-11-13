@@ -1,6 +1,11 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   clampWindowEnd,
+  FormChart,
+  formClubSegments,
+  latestClubOpening,
   computeWindowStats,
   formatWindowRange,
   formBarAccessibleName,
@@ -156,5 +161,119 @@ describe('formOpponentCode', () => {
   it('skips spaces and punctuation', () => {
     expect(formOpponentCode({ label: 'A.F.C. Wimbledon' })).toBe('AFC');
     expect(formOpponentCode({ label: 'Go Ahead Eagles', shortLabel: "Go A'head" })).toBe('GOA');
+  });
+});
+
+const VILLA = { id: 'villa', label: 'Aston Villa F.C.', shortLabel: 'Aston Villa' };
+const VALENCIA = { id: 'valencia', label: 'Valencia CF', shortLabel: 'Valencia' };
+
+/** `villa` matches for Villa, then `valencia` for Valencia, oldest to newest. */
+function transfer(villa: number, valencia: number): FormChartMatch[] {
+  return [
+    ...Array.from({ length: villa }, (_, i) =>
+      match({ id: `v${i}`, team: VILLA, rating: 6.3, title: 'Villa, rating 6.3' })
+    ),
+    ...Array.from({ length: valencia }, (_, i) =>
+      match({ id: `c${i}`, team: VALENCIA, rating: 6.7, title: 'Valencia, rating 6.7' })
+    ),
+  ];
+}
+
+describe('formClubSegments', () => {
+  it('is empty when no match carries a team', () => {
+    expect(formClubSegments([match({ id: 'a' }), match({ id: 'b' })])).toEqual([]);
+  });
+
+  it('splits the window into runs per club', () => {
+    const segs = formClubSegments(transfer(4, 6));
+    expect(segs.map((s) => [s.start, s.length, s.team.id])).toEqual([
+      [0, 4, 'villa'],
+      [4, 6, 'valencia'],
+    ]);
+  });
+
+  it('keeps a match with no team in the run around it rather than reading it as a move', () => {
+    const ms = transfer(3, 0);
+    ms[1] = match({ id: 'gap' });
+    expect(formClubSegments(ms)).toHaveLength(1);
+    expect(formClubSegments([match({ id: 'x' }), ...transfer(2, 0)])).toHaveLength(1);
+  });
+
+  it('keys clubs by id, then by name', () => {
+    const a = match({ id: 'a', team: { label: 'Valencia CF' } });
+    const b = match({ id: 'b', team: { label: 'Valencia CF' } });
+    expect(formClubSegments([a, b])).toHaveLength(1);
+  });
+});
+
+describe('latestClubOpening', () => {
+  it('opens on the latest club when it has at least the minimum and the window crosses a move', () => {
+    expect(latestClubOpening(transfer(4, 6), 10, 5)).toBe(6);
+    expect(latestClubOpening(transfer(20, 5), 10, 5)).toBe(5);
+  });
+
+  it('keeps the full window when the latest club has fewer than the minimum', () => {
+    expect(latestClubOpening(transfer(8, 4), 10, 5)).toBeUndefined();
+  });
+
+  it('keeps the full window when it is all one club', () => {
+    expect(latestClubOpening(transfer(0, 14), 10, 5)).toBeUndefined();
+    expect(latestClubOpening(transfer(4, 10), 10, 5)).toBeUndefined();
+  });
+
+  it('does nothing without team data', () => {
+    expect(latestClubOpening([match({ id: 'a' }), match({ id: 'b' })], 10, 1)).toBeUndefined();
+  });
+});
+
+describe('formBarAccessibleName with a club', () => {
+  it('names the club the player played for', () => {
+    const name = formBarAccessibleName(match({ id: 'a', team: VILLA, rating: 6.3 }));
+    expect(name).toContain('for Aston Villa F.C.,');
+    expect(name.match(/6\.3/g)).toHaveLength(1);
+  });
+});
+
+describe('FormChart render', () => {
+  const render = (matches: FormChartMatch[], extra: Record<string, unknown> = {}) =>
+    renderToStaticMarkup(createElement(FormChart, { matches, ...extra }));
+
+  it('opens on the latest club alone, with no divider, when it has five or more', () => {
+    const html = render(transfer(4, 6));
+    expect(html.match(/data-slot="form-bar"/g)).toHaveLength(6);
+    expect(html).not.toContain('form-club-divider');
+    expect(html).not.toContain('form-chart-clubs');
+  });
+
+  it('opens on the last ten with a divider and each club named when the latest has fewer than five', () => {
+    const html = render(transfer(8, 4));
+    expect(html.match(/data-slot="form-bar"/g)).toHaveLength(10);
+    expect(html.match(/data-slot="form-club-divider"/g)).toHaveLength(1);
+    expect(html).toContain('>Aston Villa</li>');
+    expect(html).toContain('>Valencia</li>');
+  });
+
+  it('draws nothing extra for a player at one club', () => {
+    const html = render(transfer(0, 12));
+    expect(html.match(/data-slot="form-bar"/g)).toHaveLength(10);
+    expect(html).not.toContain('form-club');
+  });
+
+  it('opens on the full window when the latest-club opening is turned off', () => {
+    const html = render(transfer(4, 6), { latestClubMinimum: Infinity });
+    expect(html.match(/data-slot="form-bar"/g)).toHaveLength(10);
+    expect(html).toContain('form-club-divider');
+  });
+
+  it('keeps the rating out of the bar link text, so it does not run on after the title', () => {
+    const html = render(
+      transfer(0, 3).map((m) => ({ ...m, href: `/game/${m.id}`, title: 'Valencia, rating 6.7' }))
+    );
+    const links = html.match(/<a [^>]*tabindex="-1"[^>]*>.*?<\/a>/g) ?? [];
+    expect(links).toHaveLength(3);
+    for (const link of links) {
+      const text = link.replace(/<[^>]+>/g, '');
+      expect(text).toBe('Valencia, rating 6.7');
+    }
   });
 });
