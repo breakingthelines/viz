@@ -1,3 +1,4 @@
+import { askedLook } from '../fixtures/look';
 import { describe, expect, it } from 'vitest';
 import { gameBlockEntry } from '../registry';
 import type { GameBlockLook, GameBlockTypeId } from '../types';
@@ -34,7 +35,7 @@ describe('match blocks', () => {
     for (const id of MATCH_TYPES) {
       for (const look of ['editorial', 'poster', 'annotated'] as GameBlockLook[]) {
         const html = render(config(id, { look }));
-        expect(html, id).toContain(`data-game-block-look="${look}"`);
+        expect(askedLook(html), id).toBe(look);
         expect(html, id).toContain('aria-label="Breaking The Lines"');
         expect(copyProblems(html), `${id} ${look}`).toEqual([]);
         expect(text(html), id).not.toContain('BTL readers');

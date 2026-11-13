@@ -8,6 +8,7 @@ import { pickTeamStat } from '../parts/team-season-stats';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
 import { peakPeriod } from './goal-timing';
 import type { GameBlockTeamStatJson } from './types';
+import { askedLook } from '../fixtures/look';
 
 const TEAM_TYPES: GameBlockTypeId[] = [
   'team-season-totals',
@@ -29,7 +30,7 @@ describe('team and manager blocks', () => {
     for (const id of TEAM_TYPES) {
       for (const look of ['editorial', 'poster', 'annotated'] as GameBlockLook[]) {
         const html = render(config(id, { look }));
-        expect(html, id).toContain(`data-game-block-look="${look}"`);
+        expect(askedLook(html), id).toBe(look);
         expect(html, id).toContain('aria-label="Breaking The Lines"');
         expect(copyProblems(html), `${id} ${look}`).toEqual([]);
         expect(html, id).not.toContain('data-block-locked-note');

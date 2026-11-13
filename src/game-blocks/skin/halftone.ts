@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
  *
  * Resolves `null` when the image cannot be read (no CORS, a broken URL, a
  * photo with no background to key out), so the poster falls back to the crest
- * or the number alone. An image pipeline that stores the cut-out next to the
+ * or the editorial look. An image pipeline that stores the cut-out next to the
  * headshot replaces this later.
  */
 export interface HalftoneOptions {
@@ -171,4 +171,56 @@ export function useHalftone(
   if (!src) return { status: 'none', url: null };
   if (state.for !== src || !state.done) return { status: 'working', url: null };
   return state.url ? { status: 'ready', url: state.url } : { status: 'none', url: null };
+}
+
+/**
+ * Whether `src` loads as a CORS image, the way the poster draws it (the saved
+ * image needs it untainted). `working` until it settles, `none` with no src.
+ */
+export function useImageLoads(src: string | undefined): 'working' | 'ok' | 'none' {
+  const [state, setState] = useState<{ for: string | undefined; ok: boolean }>({
+    for: undefined,
+    ok: false,
+  });
+  useEffect(() => {
+    if (!src || typeof Image === 'undefined') return;
+    let live = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (live) setState({ for: src, ok: img.naturalWidth > 0 });
+    };
+    img.onerror = () => {
+      if (live) setState({ for: src, ok: false });
+    };
+    img.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  if (!src) return 'none';
+  if (state.for !== src) return 'working';
+  return state.ok ? 'ok' : 'none';
+}
+
+/** What the poster's cut-out position holds. */
+export type PosterArt =
+  | { status: 'working' }
+  | { status: 'ready'; kind: 'halftone' | 'crest'; src: string }
+  | { status: 'none' };
+
+/**
+ * The poster's image, in order: the halftone cut-out of the headshot, then
+ * the crest drawn flat in the same position, then nothing, which tells the
+ * frame to draw the editorial look instead of an empty poster.
+ */
+export function pickPosterArt(
+  cut: { status: 'working' | 'ready' | 'none'; url: string | null },
+  crest: { src: string | undefined; status: 'working' | 'ok' | 'none' }
+): PosterArt {
+  if (cut.status === 'ready' && cut.url) return { status: 'ready', kind: 'halftone', src: cut.url };
+  if (cut.status === 'working') return { status: 'working' };
+  if (crest.src && crest.status === 'ok') return { status: 'ready', kind: 'crest', src: crest.src };
+  if (crest.src && crest.status === 'working') return { status: 'working' };
+  return { status: 'none' };
 }

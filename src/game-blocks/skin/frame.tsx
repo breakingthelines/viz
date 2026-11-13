@@ -13,7 +13,7 @@ import { BtlWordmark, ProviderMark } from '#/football/lib/panel-footer';
 import type { GameBlockDensity, GameBlockLook } from '../types';
 import { useBlockLocked, usePlansHref } from '../values';
 import { Crayon, GrainDefs, arc, head, ring, seedOf, type Pt } from './crayon';
-import { useHalftone } from './halftone';
+import { pickPosterArt, useHalftone, useImageLoads, type PosterArt } from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
 import { LayoutContext, useBlockLayout, useBlockSkin, type BlockLayout } from './provider';
 import { skinCssVars, type BlockSkinTokens } from './tokens';
@@ -41,7 +41,10 @@ export interface BlockHero {
 }
 
 export interface BlockFrameProps {
-  /** Author option. Default editorial. */
+  /**
+   * Author option. Default editorial. A poster with no usable headshot or
+   * crest draws as editorial.
+   */
   look?: GameBlockLook;
   /** One plain line: "Arsenal, 2025/26". */
   context: string;
@@ -109,10 +112,12 @@ function cssId(raw: string): string {
  * appears on hover or focus and is never part of the saved image.
  */
 export function BlockFrame(props: BlockFrameProps) {
-  const { look = 'editorial', density, exportName } = props;
+  const { look: asked = 'editorial', density, exportName } = props;
   const skin = useBlockSkin();
   const [ref, width] = useContainerWidth<HTMLDivElement>();
   const narrow = density !== 'article' || width < NARROW_BELOW;
+  const art = usePosterArt(asked === 'poster' ? props.media : undefined, narrow, skin);
+  const look: GameBlockLook = asked === 'poster' && art.status === 'none' ? 'editorial' : asked;
   const layout = useMemo<BlockLayout>(() => ({ look, density, narrow }), [look, density, narrow]);
   const uid = cssId(useId());
   const ids = { crayon: `btl-crayon-${uid}`, paper: `btl-paper-${uid}` };
@@ -149,6 +154,7 @@ export function BlockFrame(props: BlockFrameProps) {
         role="figure"
         aria-label={props.title}
         data-game-block-look={look}
+        data-game-block-look-fallback={look !== asked ? asked : undefined}
         data-game-block-density={density}
         style={root}
         onMouseEnter={() => setHover(true)}
@@ -158,7 +164,7 @@ export function BlockFrame(props: BlockFrameProps) {
       >
         <GrainDefs crayon={ids.crayon} paper={ids.paper} />
         {look === 'poster' ? (
-          <PosterBody {...props} paperId={ids.paper} />
+          <PosterBody {...props} art={art} paperId={ids.paper} />
         ) : look === 'annotated' ? (
           <AnnotatedBody {...props} crayonId={ids.crayon} width={width} />
         ) : (
@@ -554,9 +560,27 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
 
 // ---------------------------------------------------------------------------
 // Poster: a halftone cut-out on flat colour wedges, the hero number in the
-// condensed face crossing the diagonal. Falls back to the crest, or the
-// number alone, when there is no usable photo.
+// condensed face crossing the diagonal. Falls back to the crest, large in the
+// cut-out position, when there is no usable photo, and to the editorial look
+// when there is no crest either.
 // ---------------------------------------------------------------------------
+
+function usePosterArt(
+  media: BlockMedia | undefined,
+  narrow: boolean,
+  skin: BlockSkinTokens
+): PosterArt {
+  const photo = media?.kind === 'person' ? media.src : undefined;
+  const crest = media?.kind === 'person' ? media.crestSrc : media?.src;
+  const cut = useHalftone(photo, {
+    scale: 4,
+    pitch: narrow ? 4.6 : 5.2,
+    ink: skin.halftoneInk,
+    paper: skin.halftonePaper,
+  });
+  const crestLoads = useImageLoads(crest);
+  return pickPosterArt(cut, { src: crest, status: crestLoads });
+}
 
 function wedges(s: BlockSkinTokens, W: number, H: number): [string, string][] {
   return [
@@ -567,30 +591,22 @@ function wedges(s: BlockSkinTokens, W: number, H: number): [string, string][] {
   ];
 }
 
-function PosterBody(p: BlockFrameProps & { paperId: string }) {
+function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
   const narrow = useBlockLayout().narrow;
   const skin = useBlockSkin();
   const small = p.density !== 'article';
   const height = small ? 230 : narrow ? 300 : 340;
   const numberSize = small ? 96 : narrow ? 128 : 190;
-  const media = p.media;
-  const photo = media?.kind === 'person' ? media.src : undefined;
-  const cut = useHalftone(photo, {
-    scale: 4,
-    pitch: narrow ? 4.6 : 5.2,
-    ink: skin.halftoneInk,
-    paper: skin.halftonePaper,
-  });
-  const crest = media?.kind === 'person' ? media.crestSrc : media?.src;
+  const art = p.art;
   const W = 680;
   const cutH = height * (narrow ? 1.02 : 1.08);
   const hasFigure = !!p.hero;
 
   let image: ReactNode = null;
-  if (cut.status === 'ready' && cut.url) {
+  if (art.status === 'ready' && art.kind === 'halftone') {
     image = (
       <img
-        src={cut.url}
+        src={art.src}
         alt=""
         data-poster-media="halftone"
         style={{
@@ -603,19 +619,22 @@ function PosterBody(p: BlockFrameProps & { paperId: string }) {
         }}
       />
     );
-  } else if (cut.status === 'none' && crest) {
+  } else if (art.status === 'ready' && art.kind === 'crest') {
+    // The crest leads: large, flat, where the cut-out stands, clear of the
+    // title and the diagonal.
+    const size = height * (narrow ? 0.46 : 0.66);
     image = (
       <img
-        src={crest}
+        src={art.src}
         alt=""
         data-poster-media="crest"
         crossOrigin="anonymous"
         style={{
           position: 'absolute',
-          top: height * 0.14,
-          right: narrow ? 20 : 48,
-          height: height * 0.5,
-          width: height * 0.5,
+          top: height * (narrow ? 0.34 : 0.1),
+          right: narrow ? 14 : 44,
+          height: size,
+          width: size,
           objectFit: 'contain',
         }}
       />
@@ -648,7 +667,7 @@ function PosterBody(p: BlockFrameProps & { paperId: string }) {
             ))}
           </svg>
           {image}
-          {image ? (
+          {art.status === 'ready' && art.kind === 'halftone' ? (
             <div
               style={{
                 position: 'absolute',
