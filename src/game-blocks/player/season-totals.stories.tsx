@@ -3,6 +3,7 @@ import {
   EXAMPLE_ARG_TYPES,
   EXAMPLE_ARGS,
   crestPosterChecks,
+  drawnLookChecks,
   editorialFallbackChecks,
   lockedChecks,
   marksChecks,
@@ -48,6 +49,7 @@ export const PosterCrest680: Story = {
   play: async (ctx) => {
     await proChecks(F)(ctx);
     await crestPosterChecks(ctx);
+    await drawnLookChecks('poster')(ctx);
   },
 };
 export const PosterCrest390: Story = {
@@ -64,6 +66,7 @@ export const PosterNoImage: Story = {
   play: async (ctx) => {
     await proChecks(F)(ctx);
     await editorialFallbackChecks(ctx);
+    await drawnLookChecks('editorial')(ctx);
   },
 };
 /** A headshot and crest that fail to load: editorial too. */

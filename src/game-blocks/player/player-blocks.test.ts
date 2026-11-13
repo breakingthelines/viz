@@ -9,7 +9,9 @@ import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';
 import { GameBlockView } from '../view';
 import { absenceDates } from './absences';
-import { pickComparisonHighlight } from './comparison';
+import { isTotalsComparison, pickComparisonHighlight } from './comparison';
+import comparisonTotals from '../fixtures/player-comparison-totals.example.json';
+import type { GameBlockJson } from '../types';
 import { oldestFirst } from './form';
 import { PLAYER_BLOCKS } from './index';
 import { teamRankLabel } from './season-totals';
@@ -200,6 +202,51 @@ describe('Comparison', () => {
     const html = render('player-comparison', 'pro', { options: { view: 'rows' } });
     expect(html).toContain('Per 90');
     expect(html).toContain('2.62');
+  });
+});
+
+describe('Comparison of season totals', () => {
+  const json = comparisonTotals as unknown as GameBlockJson;
+  function renderTotals(reader: 'pro' | 'pending' = 'pro') {
+    const res = toGameBlockConfig(json);
+    if (!res.ok) throw new Error(res.reason);
+    const view = h(GameBlockView, { config: res.config });
+    if (reader === 'pending') return renderToStaticMarkup(view);
+    return renderToStaticMarkup(
+      h(GameBlockValuesProvider, {
+        initial: { [res.config.snapshotId]: gatedValuesFromJson(json.gated) },
+        children: view,
+      })
+    );
+  }
+
+  it('draws totals and per 90 side by side with no scales', () => {
+    const html = renderTotals();
+    expect(html).toContain('data-comparison-totals');
+    expect(html).not.toContain('data-scale-comparator');
+    expect(html).toContain('Season totals');
+    expect(html).toContain('Per 90');
+    expect(html).toContain('Minutes');
+    expect(html).toContain('2,210');
+    expect(html).toContain('0.96');
+    expect(html).toContain('Real Madrid and Inter Miami, 2026/27 and 2026');
+    expect(html).toContain('All competitions');
+    expect(html).not.toContain('percentile');
+  });
+
+  it('heroes the highlighted total beside the second player', () => {
+    const html = renderTotals();
+    expect(html).toContain('>14<');
+    expect(html).toContain('Messi 19');
+  });
+
+  it('tells a percentile comparison from a totals one', () => {
+    const totals = (toGameBlockConfig(json) as { config: GameBlockConfig }).config.data as {
+      metrics: Parameters<typeof isTotalsComparison>[0];
+    };
+    const ranked = config('player-comparison').data as typeof totals;
+    expect(isTotalsComparison(totals.metrics)).toBe(true);
+    expect(isTotalsComparison(ranked.metrics)).toBe(false);
   });
 });
 

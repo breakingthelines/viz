@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { EXAMPLE_CREST, syntheticHeadshot } from '../fixtures/media';
 import { PLAYER_EXAMPLES, type PlayerExampleId } from '../fixtures/player';
@@ -43,9 +43,19 @@ export function exampleValues(id: PlayerExampleId, reader: 'pro' | 'free') {
   >;
 }
 
-export function Page({ width, children }: { width: number; children: ReactNode }) {
+export function Page({
+  width,
+  drawnLook,
+  children,
+}: {
+  width: number;
+  /** The look the block reported drawing, as `data-drawn-look`. */
+  drawnLook?: GameBlockLook;
+  children: ReactNode;
+}) {
   return (
     <div
+      data-drawn-look={drawnLook}
       style={{
         width,
         maxWidth: '100vw',
@@ -61,6 +71,7 @@ export function Page({ width, children }: { width: number; children: ReactNode }
 
 export function PlayerExample({ id, ...args }: ExampleArgs & { id: PlayerExampleId }) {
   const c = exampleConfig(id);
+  const [drawn, setDrawn] = useState<GameBlockLook>();
   const config: GameBlockConfig = {
     ...c,
     look: args.look,
@@ -88,11 +99,16 @@ export function PlayerExample({ id, ...args }: ExampleArgs & { id: PlayerExample
             : undefined,
     },
   };
-  const view = <GameBlockView config={config} density={args.density} />;
-  if (args.reader === 'pending') return <Page width={args.width}>{view}</Page>;
+  const view = <GameBlockView config={config} density={args.density} onLookDrawn={setDrawn} />;
+  if (args.reader === 'pending')
+    return (
+      <Page width={args.width} drawnLook={drawn}>
+        {view}
+      </Page>
+    );
   const values: GameBlockValuesMap = { [config.snapshotId]: exampleValues(id, args.reader) };
   return (
-    <Page width={args.width}>
+    <Page width={args.width} drawnLook={drawn}>
       <GameBlockValuesProvider initial={values}>{view}</GameBlockValuesProvider>
     </Page>
   );
@@ -173,6 +189,16 @@ export const editorialFallbackChecks: Play = async ({ canvasElement }) => {
   await expect(canvasElement.querySelector('[data-game-block-look="editorial"]')).not.toBeNull();
   await expect(canvasElement.querySelector('[data-poster-media]')).toBeNull();
 };
+
+/** `GameBlockView`'s `onLookDrawn` told the host this look (`PlayerExample` only). */
+export const drawnLookChecks =
+  (look: GameBlockLook): Play =>
+  async ({ canvasElement }) => {
+    await waitFor(
+      () => expect(canvasElement.querySelector(`[data-drawn-look="${look}"]`)).not.toBeNull(),
+      { timeout: 4000 }
+    );
+  };
 
 /** The annotated look's crayon layer lands once fonts settle. */
 export const marksChecks: Play = async ({ canvasElement }) => {
