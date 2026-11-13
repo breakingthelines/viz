@@ -4,7 +4,13 @@ import type { GameBlockLook, GameBlockTypeId } from '../types';
 import { matchHero } from '../parts/match-common';
 import { scorerLines } from '../parts/match-scorers';
 import { eventWho } from '../parts/match-timeline';
-import { formatDay, kickoffParts, matchTitle } from '../parts/team-league-match-common';
+import { topGraded } from '../parts/match-fan-grades';
+import {
+  formatDay,
+  gradeToScale,
+  kickoffParts,
+  matchTitle,
+} from '../parts/team-league-match-common';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
 
 const MATCH_TYPES: GameBlockTypeId[] = [
@@ -74,29 +80,48 @@ describe('match blocks', () => {
     ).toBe('X');
   });
 
-  it('fan grades: the top grade as the hero, both sides in formation', () => {
+  it('fan grades: the best (lowest) grade as the hero, both sides in formation', () => {
     const html = render(config('match-fan-grades'));
     const t = text(html);
-    expect(t).toContain('8.6 top grade, Saka');
-    expect(t).toContain('Arsenal, 4-3-3, average 7.2');
-    expect(t).toContain('Liverpool, 4-2-3-1, average 6.3');
+    expect(t).toContain('1.3 best grade, Saka');
+    expect(t).toContain('Arsenal, 4-3-3, average 2.2');
+    expect(t).toContain('Liverpool, 4-2-3-1, average 2.9');
     expect(html.match(/data-top-grade/g)?.length).toBe(1);
-    expect(t).toContain('Martinelli 6.9');
+    expect(t).toContain('Martinelli 2.5');
   });
 
-  it('fan grades, list view: grades on the scale with the team average as the tick', () => {
+  it('fan grades, list view: best grade first, on the 1 to 6 scale with the average as the tick', () => {
     const html = render(config('match-fan-grades', { options: { view: 'list' } }));
     expect(html).not.toContain('data-top-grade');
     expect(html.match(/data-scale-median/g)?.length).toBe(23);
+    expect(html).toContain('aria-label="Grade 1.3 of 6, 1 is best"');
+    expect(html).not.toContain('out of 100');
+    const t = text(html);
+    const list = t.slice(t.indexOf('average 2.2'));
+    expect(list.indexOf('Saka')).toBeGreaterThan(-1);
+    expect(list.indexOf('Saka')).toBeLessThan(list.indexOf('Rice'));
+    expect(list.indexOf('Salah')).toBeLessThan(list.indexOf('Kerkez'));
+  });
+
+  it('fan grades: lower is better on the scale and in the ranking', () => {
+    expect(gradeToScale(1)).toBe(100);
+    expect(gradeToScale(6)).toBe(0);
+    expect(gradeToScale(3.5)).toBe(50);
+    expect(gradeToScale(1.5)).toBeGreaterThan(gradeToScale(2.5));
+    const p = (name: string, grade?: number) => ({ player: { name }, grade });
+    expect(topGraded([p('A', 2.4), p('B', 1.6), p('C'), p('D', 4.8)])?.player?.name).toBe('B');
+    expect(topGraded([p('A', 2), p('B', 2)])?.player?.name).toBe('A');
+    expect(topGraded([p('A')])).toBeUndefined();
   });
 
   it('player of the match: his grade, name and the runner-up as the comparator', () => {
     const html = render(config('match-player-of-the-match'));
     const t = text(html);
-    expect(t).toContain('8.6 Bukayo Saka');
+    expect(t).toContain('1.3 Bukayo Saka');
     expect(t).toContain('912 votes');
-    expect(t).toContain('Runner-up Rice 7.8');
+    expect(t).toContain('Runner-up Rice 1.8');
     expect(html).toContain('data-scale-comparator');
+    expect(html).toContain('aria-label="Grade 1.3 of 6, 1 is best"');
   });
 
   it('predictions: the most backed outcome and the result once played', () => {

@@ -1,19 +1,32 @@
 import { BlockScale, TABULAR, useBlockLayout, useBlockSkin } from '../skin/index';
-import { oneDecimal, refName, type GameBlockPlayerGradeJson } from './team-league-match-common';
+import {
+  gradeScaleLabel,
+  gradeToScale,
+  oneDecimal,
+  refName,
+  type GameBlockPlayerGradeJson,
+} from './team-league-match-common';
 import { BlockGrid, ScaleCell, SectionLabel } from './team-league-match-ui';
 
-/** The top graded player across both sides; the earlier listed one on a tie. */
+/**
+ * The best graded player across both sides, the lowest grade on BTL's 1 to 6
+ * scale; the earlier listed one on a tie.
+ */
 export function topGraded(
   players: GameBlockPlayerGradeJson[]
 ): GameBlockPlayerGradeJson | undefined {
   let best: GameBlockPlayerGradeJson | undefined;
   for (const p of players) {
-    if (typeof p.grade === 'number' && (!best || p.grade > (best.grade ?? -1))) best = p;
+    if (typeof p.grade !== 'number') continue;
+    if (!best || p.grade < (best.grade ?? Infinity)) best = p;
   }
   return best;
 }
 
-/** One side as a list: player, grade, votes, and the grade on the scale with the team average as the tick. */
+/**
+ * One side as a list, best grade first: player, grade, votes, and the grade on
+ * the scale (1 at the full end) with the team average as the tick.
+ */
 export function GradeList({
   players,
   average,
@@ -21,7 +34,7 @@ export function GradeList({
   players: GameBlockPlayerGradeJson[];
   average?: number;
 }) {
-  const graded = [...players].sort((a, b) => (b.grade ?? -1) - (a.grade ?? -1));
+  const graded = [...players].sort((a, b) => (a.grade ?? Infinity) - (b.grade ?? Infinity));
   return (
     <BlockGrid
       label="Fan grades"
@@ -40,9 +53,10 @@ export function GradeList({
           typeof p.grade === 'number' ? (
             <ScaleCell>
               <BlockScale
-                value={p.grade * 10}
-                median={typeof average === 'number' ? average * 10 : undefined}
+                value={gradeToScale(p.grade)}
+                median={typeof average === 'number' ? gradeToScale(average) : undefined}
                 size="row"
+                label={gradeScaleLabel(p.grade)}
               />
             </ScaleCell>
           ) : null,
@@ -60,7 +74,7 @@ function gridOf(g: string | undefined): [number, number] | null {
 
 /**
  * One side in its formation: a line per grid row, goalkeeper first, each
- * player's grade over his name. The match's top grade carries the red rule.
+ * player's grade over his name. The match's best grade carries the red rule.
  * Substitutes, who have no grid slot, follow as one plain line.
  */
 export function GradePitch({

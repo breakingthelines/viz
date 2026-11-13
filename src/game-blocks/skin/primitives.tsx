@@ -249,7 +249,7 @@ export function BlockRows({ columns, rows }: { columns: string[]; rows: BlockRow
  * One 0 to 100 scale: the subject as a red fill, the median as a tick at its
  * own position, a comparator as an outlined ring. Ranks map onto it as
  * `(n - rank) / (n - 1) * 100`. Locked or pending draws the track dashed with
- * no fill.
+ * no fill. `label` names the drawn value when it is not itself out of 100.
  */
 export function BlockScale({
   value,
@@ -257,12 +257,14 @@ export function BlockScale({
   comparator,
   size,
   state = 'value',
+  label,
 }: {
   value: number;
   median?: number;
   comparator?: number;
   size: 'row' | 'hero';
   state?: 'value' | 'locked' | 'pending';
+  label?: string;
 }) {
   const skin = useBlockSkin();
   const h = size === 'hero' ? 10 : 6;
@@ -273,7 +275,11 @@ export function BlockScale({
       data-scale-state={state}
       role="img"
       aria-label={
-        filled ? `${Math.round(value)} out of 100` : state === 'locked' ? 'Locked' : 'Loading'
+        filled
+          ? (label ?? `${Math.round(value)} out of 100`)
+          : state === 'locked'
+            ? 'Locked'
+            : 'Loading'
       }
       style={{ position: 'relative', display: 'block', height: h + 6, minWidth: 48 }}
     >

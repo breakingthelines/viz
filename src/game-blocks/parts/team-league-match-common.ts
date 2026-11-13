@@ -73,6 +73,7 @@ export interface GameBlockTeamMatchJson {
 export interface GameBlockPlayerGradeJson {
   player?: GameBlockRefJson;
   team?: GameBlockRefJson;
+  /** BTL fan grade, 1 (best) to 6 (worst). */
   grade?: number;
   votes?: number;
   position?: string;
@@ -195,6 +196,21 @@ export function oneDecimal(n: number | undefined): string {
 export function rankToScale(rank: number, n: number): number {
   if (n <= 1 || rank <= 0) return 0;
   return Math.max(0, Math.min(100, ((n - rank) / (n - 1)) * 100));
+}
+
+/** BTL fan grades run from 1, the best, to 6, the worst. */
+export const GRADE_BEST = 1;
+export const GRADE_WORST = 6;
+
+/** A fan grade on the 0 to 100 scale, best at the full end: 1 is 100, 6 is 0. */
+export function gradeToScale(grade: number): number {
+  const v = ((GRADE_WORST - grade) / (GRADE_WORST - GRADE_BEST)) * 100;
+  return Math.max(0, Math.min(100, v));
+}
+
+/** A fan grade as the scale's accessible label: "Grade 1.6 of 6, 1 is best". */
+export function gradeScaleLabel(grade: number): string {
+  return `Grade ${oneDecimal(grade)} of ${GRADE_WORST}, ${GRADE_BEST} is best`;
 }
 
 // ---------------------------------------------------------------------------
