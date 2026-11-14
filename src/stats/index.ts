@@ -54,7 +54,7 @@ export type {
 export { LeagueLadder } from './league-ladder';
 export type { LeagueLadderProps, LeagueLadderRow } from './league-ladder';
 
-export { StyleMap, nudgeStyleMap, styleMapAxis, styleMapStep } from './style-map';
+export { StyleMap, nudgeStyleMap, styleMapAxis, styleMapStep, tickAnchor } from './style-map';
 export type { StyleMapPlaced, StyleMapPoint, StyleMapProps } from './style-map';
 
 export { ordinal, formatMetricValue, formatPercentile } from './format';

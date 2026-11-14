@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nudgeStyleMap, styleMapAxis, styleMapStep } from './style-map';
+import { nudgeStyleMap, styleMapAxis, styleMapStep, tickAnchor } from './style-map';
 
 describe('styleMapStep', () => {
   it('picks a round step for about five ticks', () => {
@@ -74,5 +74,13 @@ describe('nudgeStyleMap', () => {
       expect(p.x).toBeGreaterThanOrEqual(14);
       expect(p.y).toBeGreaterThanOrEqual(14);
     }
+  });
+});
+
+describe('tickAnchor', () => {
+  it('reads the edge ticks inward', () => {
+    expect(tickAnchor(40, 40, 350)).toBe('start');
+    expect(tickAnchor(350, 40, 350)).toBe('end');
+    expect(tickAnchor(200, 40, 350)).toBe('middle');
   });
 });

@@ -5,6 +5,13 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.1]
+
+### Fixed: `StyleMap` edge tick labels
+
+- The x tick labels at the plot's left and right edges anchor inward
+  (`tickAnchor`), so "70%" is no longer clipped at phone width.
+
 ## [0.28.0]
 
 ### Added: `StyleMap`
