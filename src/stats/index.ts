@@ -1,7 +1,7 @@
 /**
  * `@breakingthelines/viz/stats` — the player-profile stat charts (spec §4.1):
  * `PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
- * `FormChart`, `SeasonTrend`, `LeagueLadder`, `SimilarList`.
+ * `FormChart`, `SeasonTrend`, `LeagueLadder`, `SimilarList`, `StyleMap`.
  *
  * PF-V2 ships `PercentileWheel`. PF-V3 ships `ComparisonBars`,
  * `PercentileRows`, `ArchetypeList` and `SimilarList`, plus the shared
@@ -53,6 +53,9 @@ export type {
 
 export { LeagueLadder } from './league-ladder';
 export type { LeagueLadderProps, LeagueLadderRow } from './league-ladder';
+
+export { StyleMap, nudgeStyleMap, styleMapAxis, styleMapStep } from './style-map';
+export type { StyleMapPlaced, StyleMapPoint, StyleMapProps } from './style-map';
 
 export { ordinal, formatMetricValue, formatPercentile } from './format';
 

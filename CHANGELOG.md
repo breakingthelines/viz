@@ -5,6 +5,17 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0]
+
+### Added: `StyleMap`
+
+- **`StyleMap`** draws teams as crests on two axes for one league season
+  (the league style map: possession against PPDA). The league mean of each
+  axis is a dotted line; `invertY` puts lower values at the top. Crests that
+  overlap are nudged apart (`nudgeStyleMap`) and kept inside the plot. The
+  chart measures its container, so crests and type keep their size from
+  phone to desktop; a crest with `href` links to the team.
+
 ## [0.27.0]
 
 ### Added: club context in the form chart
