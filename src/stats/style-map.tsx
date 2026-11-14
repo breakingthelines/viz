@@ -121,6 +121,16 @@ export function nudgeStyleMap(
   return out;
 }
 
+/**
+ * An x tick label's anchor: one at the plot's left or right edge reads
+ * inward, so a phone-width chart does not clip it.
+ */
+export function tickAnchor(x: number, left: number, right: number): 'start' | 'middle' | 'end' {
+  if (x <= left + 1) return 'start';
+  if (x >= right - 1) return 'end';
+  return 'middle';
+}
+
 const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
 /**
@@ -196,7 +206,13 @@ export function StyleMap({
         {xTicks.map((v) => (
           <g key={`x${v}`}>
             <line x1={X(v)} x2={X(v)} y1={T} y2={H - B} stroke={GRID} />
-            <text x={X(v)} y={H - B + 18} textAnchor="middle" fill={MUTED} fontSize={font}>
+            <text
+              x={X(v)}
+              y={H - B + 18}
+              textAnchor={tickAnchor(X(v), L, W - R)}
+              fill={MUTED}
+              fontSize={font}
+            >
               {formatX(v)}
             </text>
           </g>
