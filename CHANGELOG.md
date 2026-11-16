@@ -5,6 +5,23 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0]
+
+### Added: orbits across two pools
+
+- `OrbitMember.outsidePool`: the pair's other player when he is not in the
+  orbit's pool (a striker v an attacking midfielder, or a league outside the
+  top five). He keeps his dot and face, and is left out of the pool's size
+  ("the 157 other strikers"), of everyone else's place and of the nearest
+  three. His label reads "Martin Ødegaard, from outside this pool, would be
+  43rd closest of the 157 other strikers to Erling Haaland" and his strip
+  line "43rd closest to Haaland among strikers". Never "joint": his rank
+  leaves him out of the count, so it cannot say whether a pool member shares
+  his score.
+- `OrbitData.poolLabel`: the pool's caption. `SimilarityOrbitPair` shows one
+  under each orbit when both have one and they differ, and none otherwise.
+- `poolSize` is exported.
+
 ## [0.32.2]
 
 ### Changed
