@@ -13,7 +13,7 @@ import {
   playerRouteId,
 } from './orbit-links';
 import type { PlayerSimilarityOrbitDataJson } from './data';
-import { orbitContext, orbitVerdict, toOrbitData } from './similarity-orbit';
+import { acrossPools, areaRows, orbitVerdict, roleRows, toOrbitData } from './similarity-orbit';
 
 function config(json: GameBlockJson): GameBlockConfig<PlayerSimilarityOrbitDataJson> {
   const res = toGameBlockConfig(json);
@@ -42,30 +42,43 @@ describe('similarity orbit block', () => {
     expect(d.members[haaland + 1]!.rank).toBe(85);
   });
 
-  it('draws one orbit with no text on it, its place in the label', () => {
+  it('draws one orbit with its three closest beside it, and no scope line', () => {
     const html = render(SINGLE, 'tile');
     expect(html).toContain('data-slot="orbit-block-single"');
     expect(html).toContain('role="img"');
-    expect(html).toContain('Donyell Malen');
+    expect(html).toContain('Closest to Mbappé');
+    expect(html).toMatch(/Donyell Malen<\/span><span[^>]*>Aston Villa</);
     expect(html).not.toContain('orbit-block-verdict');
-    expect(html).toContain('Strikers, top five leagues, 2026/27');
+    expect(html).not.toContain('Strikers, top five leagues');
   });
 
-  it('draws a pair with the verdict, the Both and Only rows and the family line', () => {
+  it('draws a same-pool pair as one orbit, with the verdict, Roles and Areas', () => {
     const html = render(PAIR, 'tile');
-    expect(html).toContain('data-slot="orbit-block-pair"');
+    expect(html).toContain('data-slot="orbit-block-combined"');
+    expect(html).not.toContain('data-slot="orbit-block-pair"');
     expect(html).toContain('>Different profiles<');
-    expect(html).toContain('Only Mbappé:');
-    expect(html).toContain('Only Haaland:');
-    expect(html).toContain('Runner in behind');
+    expect(html).toContain('>Roles<');
+    expect(html).toContain('>Areas<');
+    expect(html).toMatch(/Both:<\/dt>/);
+    expect(html).toMatch(/Mbappé:<\/dt><dd[^>]*>Inside forward, Runner in behind</);
+    expect(html).toMatch(/Haaland:<\/dt><dd[^>]*>Target man</);
+    expect(html).not.toContain('Only ');
     expect(html).toMatch(/Similar:<\/dt><dd[^>]*>Shooting</);
     expect(html).toMatch(/Different:<\/dt><dd[^>]*>Dribbling, Creating</);
-    expect(html).not.toContain('Alike in');
-    expect(html).not.toContain('Differ on');
+    expect(html).not.toContain('Strikers, top five leagues');
+    // Both directions in the accessible name, the first-named player's orbit drawn.
     expect(html).toContain(
-      'Erling Haaland is joint 85th closest of the 157 other strikers to Kylian Mbappé. Closest: Donyell Malen.'
+      'Haaland is Mbappé&#x27;s 85th closest of the 157 other strikers. Mbappé is Haaland&#x27;s 60th closest.'
     );
-    expect(html).toContain('Mbappé v Haaland');
+    // Static: no switch, no strip.
+    expect(html).not.toContain('orbit-block-combined-switch');
+  });
+
+  it('offers the swap switch only when interactive', () => {
+    const html = render(PAIR, 'article');
+    expect(html).toContain('data-slot="orbit-block-combined-switch"');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Mbappé</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Haaland</);
   });
 
   it('is interactive in an article and in chat, still in a picker tile', () => {
@@ -83,9 +96,12 @@ describe('similarity orbit block', () => {
     expect(orbitVerdict(undefined)).toBe('');
   });
 
-  it('reads its context from the pool and the season', () => {
-    expect(orbitContext(config(SINGLE))).toBe('Strikers, top five leagues, 2026/27');
-    expect(orbitContext(config(PAIR))).toBe('Strikers, top five leagues, 2026/27');
+  it('names Roles without "Only" and keeps Areas to the families it has', () => {
+    const d = config(PAIR).data;
+    expect(roleRows(d).map((r) => r.label)).toEqual(['Both', 'Mbappé', 'Haaland']);
+    expect(areaRows({ alikeFamilies: ['Shooting'] })).toEqual([
+      { label: 'Similar', values: ['Shooting'] },
+    ]);
   });
 
   it('marks a pair across two pools: outsiders, captions and a scope without the position', () => {
@@ -96,7 +112,8 @@ describe('similarity orbit block', () => {
     second!.poolPhrase = 'attacking midfielders';
     first!.members!.find((m) => m.player?.name === 'Erling Haaland')!.outsidePool = true;
     const c = config(cross);
-    expect(orbitContext(c)).toBe('Top five leagues, 2026/27');
+    expect(acrossPools((c.data.orbits ?? []).map(toOrbitData))).toBe(true);
+    expect(acrossPools((config(PAIR).data.orbits ?? []).map(toOrbitData))).toBe(false);
     const a = toOrbitData(c.data.orbits![0]!);
     const b = toOrbitData(c.data.orbits![1]!);
     expect(a.poolLabel).toBe('Strikers');
@@ -104,6 +121,7 @@ describe('similarity orbit block', () => {
     expect(a.members.filter((m) => m.outsidePool).map((m) => m.name)).toEqual(['Erling Haaland']);
     expect(b.members.some((m) => m.outsidePool)).toBe(false);
     const html = render(cross, 'tile');
+    expect(html).toContain('data-slot="orbit-block-pair"');
     expect(html).toContain(
       'Erling Haaland, from outside this pool, would be 85th closest of the 156 other strikers to Kylian Mbappé.'
     );

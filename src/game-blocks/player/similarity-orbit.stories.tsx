@@ -96,9 +96,11 @@ const pairChecks: Play = async (ctx) => {
   await frameChecks(ctx);
   const text = ctx.canvasElement.textContent ?? '';
   await expect(text).toContain('Different profiles');
-  await expect(text).toContain('Only Mbappé:');
+  await expect(text).toContain('Mbappé:Inside forward');
+  await expect(text).not.toContain('Only ');
   await expect(text).toContain('Similar:Shooting');
   await expect(text).toContain('Different:Dribbling, Creating');
+  await expect(text).not.toContain('top five leagues, 2026/27');
 };
 
 export const Single680: Story = { play: frameChecks };
@@ -123,7 +125,7 @@ export const PairChat: Story = {
 export const PairAcrossPools680: Story = {
   args: { pair: true, acrossPools: true },
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.textContent).toContain('Top five leagues, 2026/27');
+    await expect(canvasElement.querySelector('[data-slot="orbit-block-pair"]')).not.toBeNull();
     await expect(canvasElement.textContent).toContain('Attacking midfielders');
   },
 };
@@ -135,54 +137,100 @@ export const PairTile: Story = {
     const labels = [...canvasElement.querySelectorAll('[role="img"]')].map((e) =>
       e.getAttribute('aria-label')
     );
-    await expect(labels).toContain(
-      'Erling Haaland is joint 85th closest of the 157 other strikers to Kylian Mbappé. Closest: Donyell Malen.'
-    );
+    await expect(labels).toEqual([
+      "Haaland is Mbappé's 85th closest of the 157 other strikers. Mbappé is Haaland's 60th closest.",
+    ]);
+    await expect(
+      canvasElement.querySelector('[data-slot="orbit-block-combined-switch"]')
+    ).toBeNull();
   },
 };
 
-/** A tap on a face opens the strip: name, club, place, his page and the comparison pages. */
+/** A tap on a face opens the strip: name, club, places, his page and Compare with. */
 export const VerifyTapOpensStrip: Story = {
   args: { pair: true },
   play: async ({ canvasElement }) => {
     const face = await waitFor(() => {
       const el = canvasElement.querySelector(
-        '[data-slot="orbit-block-pair-orbit-face"][aria-label="Donyell Malen"]'
+        '[data-slot="orbit-block-combined-orbit-face"][aria-label="Donyell Malen"]'
       );
       if (!el) throw new Error('no face');
       return el as HTMLElement;
     });
     await userEvent.click(face);
     const strip = await waitFor(() => {
-      const el = canvasElement.querySelector('[data-slot="orbit-block-pair-detail"]');
+      const el = canvasElement.querySelector('[data-slot="orbit-block-combined-detail"]');
       if (!el) throw new Error('no strip');
       return el;
     });
     await expect(strip).toHaveAttribute('role', 'region');
     await expect(strip).toHaveAttribute('aria-label', 'Donyell Malen, Aston Villa');
-    await expect(
-      strip.querySelector('[data-slot="orbit-block-pair-detail-club"]')?.textContent
-    ).toBe('Aston Villa');
     const places = [
-      ...strip.querySelectorAll('[data-slot="orbit-block-pair-detail-places"] span'),
+      ...strip.querySelectorAll('[data-slot="orbit-block-combined-detail-places"] span'),
     ].map((e) => e.textContent);
     await expect(places).toEqual(['Closest to Mbappé', '8th closest to Haaland']);
-    await expect(strip.textContent).not.toContain(' · ');
-    const links = [...strip.querySelectorAll('a')].map((a) => [
-      a.textContent,
-      a.getAttribute('href'),
-    ]);
-    await expect(links).toContainEqual([
-      'Player page',
-      '/game/football/player/pex101/donyell-malen',
-    ]);
-    await expect(links).toContainEqual([
-      'Compare with Mbappé',
-      '/game/football/compare/p4b7614c5-vs-pex101/kylian-mbappe-vs-donyell-malen',
-    ]);
-    await expect(links).toContainEqual([
-      'Compare with Haaland',
-      '/game/football/compare/paf9e90f4-vs-pex101/erling-haaland-vs-donyell-malen',
-    ]);
+    const page = strip.querySelector('a');
+    await expect(page?.textContent).toBe('Player page');
+    await expect(page).toHaveAttribute('href', '/game/football/player/pex101/donyell-malen');
+    const select = strip.querySelector('select') as HTMLSelectElement;
+    await expect(select).toHaveAccessibleName('Compare with');
+    await expect([...select.options].map((o) => o.textContent)).toEqual(['Mbappé', 'Haaland']);
+    const show = [...strip.querySelectorAll('a')].find((a) => a.textContent === 'Show')!;
+    await expect(show).toHaveAttribute(
+      'href',
+      '/game/football/compare/p4b7614c5-vs-pex101/kylian-mbappe-vs-donyell-malen'
+    );
+    await userEvent.selectOptions(select, '1');
+    await expect(show).toHaveAttribute(
+      'href',
+      '/game/football/compare/paf9e90f4-vs-pex101/erling-haaland-vs-donyell-malen'
+    );
+  },
+};
+
+/** Tapping the second player's face, or the switch, re-centres the orbit on him and back. */
+export const VerifySwap: Story = {
+  args: { pair: true },
+  play: async ({ canvasElement }) => {
+    const root = () =>
+      canvasElement.querySelector('[data-slot="orbit-block-combined"]') as HTMLElement;
+    await expect(root()).toHaveAttribute('data-orbit-centre', 'btl_football_player_p4b7614c5');
+    const face = canvasElement.querySelector(
+      '[data-slot="orbit-block-combined-orbit-face"][aria-label="Erling Haaland"]'
+    ) as HTMLElement;
+    await userEvent.click(face);
+    await waitFor(() =>
+      expect(root()).toHaveAttribute('data-orbit-centre', 'btl_football_player_paf9e90f4')
+    );
+    const options = [
+      ...canvasElement.querySelectorAll('[data-slot="orbit-block-combined-switch-option"]'),
+    ];
+    await expect(options[1]).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(options[0] as HTMLElement);
+    await waitFor(() =>
+      expect(root()).toHaveAttribute('data-orbit-centre', 'btl_football_player_p4b7614c5')
+    );
+  },
+};
+
+/** The single orbit's strip: one place and a plain Compare with link. */
+export const VerifySingleStrip: Story = {
+  play: async ({ canvasElement }) => {
+    const face = await waitFor(() => {
+      const el = canvasElement.querySelector(
+        '[data-slot="orbit-block-single-orbit-face"][aria-label="Donyell Malen"]'
+      );
+      if (!el) throw new Error('no face');
+      return el as HTMLElement;
+    });
+    await userEvent.click(face);
+    const strip = await waitFor(() => {
+      const el = canvasElement.querySelector('[data-slot="orbit-block-single-detail"]');
+      if (!el) throw new Error('no strip');
+      return el;
+    });
+    const links = [...strip.querySelectorAll('a')].map((a) => a.textContent);
+    await expect(links).toEqual(['Player page', 'Compare with Mbappé']);
+    await expect(strip.querySelector('select')).toBeNull();
   },
 };

@@ -1,8 +1,13 @@
-import { useMemo, type ReactNode } from 'react';
-import { SimilarityOrbit, SimilarityOrbitPair } from '../../stats/similarity-orbit';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  SimilarityOrbit,
+  SimilarityOrbitCombined,
+  SimilarityOrbitPair,
+} from '../../stats/similarity-orbit';
 import type { OrbitFaceSources } from '../../stats/similarity-orbit';
 import {
   ORBIT_COMPACT,
+  ORBIT_REGULAR,
   ORBIT_SINGLE,
   type OrbitData,
   type OrbitPlayer,
@@ -17,24 +22,27 @@ import {
   useBodyFont,
   useMediaBase,
 } from '../skin/index';
-import type { GameBlockConfig } from '../types';
 import type { GameBlockOrbitJson, PlayerSimilarityOrbitDataJson } from './data';
 import { orbitSurname, playerComparePath, playerPagePath } from './orbit-links';
 import { baseFrame } from './shared';
 
 /**
- * Player › Orbit. One player's top five league position group as
- * dots around his headshot, closer meaning more alike, his three closest as
- * faces ("who is he like?"); or, when the spec names a comparison, both
- * players' orbits side by side, each the other's lit dot, with the Compare
- * page's verdict and its rows: "Both" and "Only <surname>" archetypes, then
- * "Similar" and "Different" metric families, each only when it names one. Ranks only: the orbit has no text and no numbers on it; exact places
- * are in its accessible labels and the detail strip.
+ * Player › Orbit. One player's top five league position group as dots round
+ * his headshot, closer meaning more alike, his three closest as faces ("who
+ * is he like?"), with those three named beside it. With a comparison:
  *
- * Drawn with the shared `SimilarityOrbit` and `SimilarityOrbitPair`.
- * Interactive (drift, names on hover, a tap opens the detail strip with his
- * page and "Compare with" links to the comparison page) in an article and in Regista;
- * still in a picker tile and in a saved image.
+ * - one pool (both strikers): one orbit, centred on the first-named player,
+ *   the second his dot and face; a tap on that face or the name switch
+ *   re-centres it on him (`SimilarityOrbitCombined`);
+ * - two pools (a striker v an attacking midfielder): both players' orbits
+ *   side by side, each captioned with its pool (`SimilarityOrbitPair`).
+ *
+ * Beside a pair: the verdict, then Roles ("Both", each player's own
+ * archetypes) and Areas ("Similar", "Different"). No text on the orbit; the
+ * places are in its accessible name and the detail strip, whose actions are
+ * "Player page" and "Compare with". Interactive in an article and in
+ * Regista; the first-named player's orbit, still, in a picker tile and in a
+ * saved image.
  */
 
 /** The block's orbit as the shared component takes it. */
@@ -83,40 +91,124 @@ function useFaceSources(): OrbitFaceSources {
   );
 }
 
-function StripLinks({ links }: { links: { href: string; label: string }[] }) {
+/* ── strip actions ──────────────────────────────────────────────────────── */
+
+/**
+ * The strip's actions: "Player page", then the comparison page with each
+ * centre player the tapped one is not: a plain "Compare with Mbappé" for
+ * one, else "Compare with [Mbappé ▾] Show". The select copies platform's
+ * ProfileMenuSelect (13 px semibold, underline, caret); Show its bordered
+ * button.
+ */
+function StripActions({
+  player,
+  anchors,
+}: {
+  player: OrbitPlayer;
+  anchors: readonly OrbitPlayer[];
+}) {
   const font = useBodyFont();
+  const [pick, setPick] = useState(0);
+  const page = playerPagePath(player);
+  const options = anchors
+    .filter((a) => a.id !== player.id)
+    .map((a) => ({ href: playerComparePath(player, a), label: orbitSurname(a.name) }))
+    .filter((o): o is { href: string; label: string } => !!o.href);
+  const text: CSSProperties = { fontFamily: font, fontSize: 13, color: 'var(--btl-block-ink-1)' };
+  const link: CSSProperties = { ...text, textDecoration: 'none' };
+  const chosen = options[Math.min(pick, options.length - 1)];
   return (
     <>
-      {links.map((l) => (
-        <a
-          key={l.href}
-          href={l.href}
+      {page ? (
+        <a href={page} style={link}>
+          Player page
+        </a>
+      ) : null}
+      {options.length === 1 ? (
+        <a href={options[0]!.href} style={link}>
+          Compare with {options[0]!.label}
+        </a>
+      ) : options.length > 1 && chosen ? (
+        <span
+          data-slot="orbit-block-compare"
           style={{
-            fontFamily: font,
-            fontSize: 13.5,
-            color: 'var(--btl-block-ink-1)',
-            textDecoration: 'none',
+            ...text,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            whiteSpace: 'nowrap',
           }}
         >
-          {l.label}
-        </a>
-      ))}
+          <span style={{ color: 'var(--btl-block-ink-3)' }}>Compare with</span>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <select
+              aria-label="Compare with"
+              value={pick}
+              onChange={(e) => setPick(Number(e.target.value))}
+              style={{
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                cursor: 'pointer',
+                border: 0,
+                borderBottom: '1px solid var(--btl-block-line-strong)',
+                borderRadius: 0,
+                padding: '0 15px 1px 0',
+                background: 'transparent',
+                fontFamily: font,
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--btl-block-ink-1)',
+              }}
+            >
+              {options.map((o, i) => (
+                <option key={o.href} value={i} style={{ background: 'var(--btl-block-surface)' }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <svg
+              aria-hidden="true"
+              width="8"
+              height="5"
+              viewBox="0 0 8 5"
+              style={{
+                position: 'absolute',
+                right: 2,
+                top: '50%',
+                marginTop: -2,
+                pointerEvents: 'none',
+              }}
+            >
+              <path
+                d="M1 1l3 3 3-3"
+                fill="none"
+                stroke="var(--btl-block-ink-3)"
+                strokeWidth="1.3"
+              />
+            </svg>
+          </span>
+          <a
+            href={chosen.href}
+            style={{
+              ...link,
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: 6,
+              border: '1px solid var(--btl-block-line-strong)',
+              background: 'var(--btl-block-track)',
+              padding: '4px 10px',
+              fontWeight: 600,
+            }}
+          >
+            Show
+          </a>
+        </span>
+      ) : null}
     </>
   );
 }
 
-/** A tapped player's links: his page, then "Compare with" each centre player he is not. */
-function stripLinks(player: OrbitPlayer, anchors: readonly OrbitPlayer[]) {
-  const out: { href: string; label: string }[] = [];
-  const page = playerPagePath(player);
-  if (page) out.push({ href: page, label: 'Player page' });
-  for (const a of anchors) {
-    if (a.id === player.id) continue;
-    const href = playerComparePath(player, a);
-    if (href) out.push({ href, label: `Compare with ${orbitSurname(a.name)}` });
-  }
-  return out;
-}
+/* ── text beside the orbit ─────────────────────────────────────────────── */
 
 /**
  * The pair's verdict as the block shows it: "Very similar profiles",
@@ -152,55 +244,181 @@ function Verdict({ text }: { text: string }) {
   );
 }
 
-function ArchetypeRows({ rows }: { rows: { label: string; archetypes: string[] }[] }) {
-  const font = useBodyFont();
+interface TextRow {
+  label: string;
+  values: string[];
+}
+
+/** One group: a quiet heading, then label and value rows on one label column. */
+function Group({ heading, rows, slot }: { heading: string; rows: TextRow[]; slot: string }) {
+  const skin = useBlockSkin();
+  const { look } = useBlockLayout();
+  const value = look === 'editorial' ? skin.fontSerif : skin.fontSans;
   if (rows.length === 0) return null;
   return (
-    <dl data-slot="orbit-block-archetypes" style={{ margin: '10px 0 0', fontFamily: font }}>
-      {rows.map((r) => (
-        <div
-          key={r.label}
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            columnGap: 8,
-            padding: '7px 0',
-            borderTop: '1px solid var(--btl-block-line)',
-            fontSize: 14,
-          }}
-        >
-          <dt style={{ color: 'var(--btl-block-ink-3)' }}>{r.label}:</dt>
-          <dd style={{ margin: 0, fontWeight: 600, color: 'var(--btl-block-ink-1)' }}>
-            {r.archetypes.join(', ')}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <section data-slot={slot} style={{ minWidth: 0 }}>
+      <h4
+        style={{
+          margin: '0 0 6px',
+          fontFamily: skin.fontSans,
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--btl-block-ink-2)',
+        }}
+      >
+        {heading}
+      </h4>
+      <dl
+        style={{
+          margin: 0,
+          display: 'grid',
+          gridTemplateColumns: 'max-content minmax(0, 1fr)',
+          columnGap: 12,
+          rowGap: 5,
+          alignItems: 'baseline',
+        }}
+      >
+        {rows.map((r) => (
+          <div key={r.label} style={{ display: 'contents' }}>
+            <dt
+              style={{ fontFamily: skin.fontSans, fontSize: 13, color: 'var(--btl-block-ink-3)' }}
+            >
+              {r.label}:
+            </dt>
+            <dd
+              style={{
+                margin: 0,
+                fontFamily: value,
+                fontSize: 16,
+                lineHeight: 1.3,
+                color: 'var(--btl-block-ink-1)',
+              }}
+            >
+              {r.values.join(', ')}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
-function OrbitVisual({
-  data,
-  interactive,
-}: {
-  data: PlayerSimilarityOrbitDataJson;
-  interactive: boolean;
-}) {
+/** Roles: "Both" and each player's own archetypes, named without "Only". */
+export function roleRows(data: PlayerSimilarityOrbitDataJson): TextRow[] {
+  return (data.archetypeRows ?? [])
+    .map((r) => ({ label: (r.label ?? '').replace(/^Only\s+/, ''), values: r.archetypes ?? [] }))
+    .filter((r) => r.label && r.values.length > 0);
+}
+
+/** Areas: "Similar" and "Different" metric families. */
+export function areaRows(data: PlayerSimilarityOrbitDataJson): TextRow[] {
+  return [
+    { label: 'Similar', values: data.alikeFamilies ?? [] },
+    { label: 'Different', values: data.differFamilies ?? [] },
+  ].filter((r) => r.values.length > 0);
+}
+
+function PairText({ data }: { data: PlayerSimilarityOrbitDataJson }) {
+  const verdict = orbitVerdict(data.verdict);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {verdict ? <Verdict text={verdict} /> : null}
+      <Group heading="Roles" rows={roleRows(data)} slot="orbit-block-roles" />
+      <Group heading="Areas" rows={areaRows(data)} slot="orbit-block-areas" />
+    </div>
+  );
+}
+
+/** The single orbit's three closest: name, then club. */
+function ClosestList({ orbit }: { orbit: OrbitData }) {
+  const skin = useBlockSkin();
+  const { look } = useBlockLayout();
+  const value = look === 'editorial' ? skin.fontSerif : skin.fontSans;
+  const top = orbit.members.filter((m) => !m.outsidePool).slice(0, 3);
+  if (top.length === 0) return null;
+  return (
+    <section data-slot="orbit-block-closest">
+      <h4
+        style={{
+          margin: '0 0 6px',
+          fontFamily: skin.fontSans,
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--btl-block-ink-2)',
+        }}
+      >
+        Closest to {orbitSurname(orbit.anchor.name)}
+      </h4>
+      <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', rowGap: 6 }}>
+        {top.map((m) => (
+          <li key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span
+              style={{
+                fontFamily: value,
+                fontSize: 16,
+                lineHeight: 1.3,
+                color: 'var(--btl-block-ink-1)',
+              }}
+            >
+              {m.name}
+            </span>
+            {m.club ? (
+              <span
+                style={{ fontFamily: skin.fontSans, fontSize: 13, color: 'var(--btl-block-ink-3)' }}
+              >
+                {m.club}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/* ── the orbit ──────────────────────────────────────────────────────────── */
+
+/** A pair whose two orbits draw different pools: any outsider, or two pool labels. */
+export function acrossPools(orbits: readonly OrbitData[]): boolean {
+  if (orbits.some((o) => o.members.some((m) => m.outsidePool))) return true;
+  const [a, b] = orbits;
+  return !!a?.poolLabel && !!b?.poolLabel && a.poolLabel !== b.poolLabel;
+}
+
+function OrbitVisual({ orbits, interactive }: { orbits: OrbitData[]; interactive: boolean }) {
   const faces = useFaceSources();
-  const orbits = (data.orbits ?? []).map(toOrbitData).filter((o) => o.members.length > 0);
   if (orbits.length >= 2) {
     const pair = [orbits[0]!, orbits[1]!] as const;
     const anchors = [pair[0].anchor, pair[1].anchor];
+    const shortNames = [
+      orbitSurname(pair[0].anchor.name),
+      orbitSurname(pair[1].anchor.name),
+    ] as const;
+    const actions = (p: OrbitPlayer) => <StripActions player={p} anchors={anchors} />;
+    if (acrossPools(pair)) {
+      return (
+        <SimilarityOrbitPair
+          slot="orbit-block-pair"
+          orbits={pair}
+          shortNames={shortNames}
+          scales={[{ scale: ORBIT_COMPACT }]}
+          interactive={interactive}
+          motion={interactive}
+          faceSources={faces}
+          renderActions={actions}
+        />
+      );
+    }
     return (
-      <SimilarityOrbitPair
-        slot="orbit-block-pair"
+      <SimilarityOrbitCombined
+        slot="orbit-block-combined"
         orbits={pair}
-        shortNames={[orbitSurname(pair[0].anchor.name), orbitSurname(pair[1].anchor.name)]}
-        scales={[{ scale: ORBIT_COMPACT }]}
+        shortNames={shortNames}
+        scales={[{ scale: ORBIT_REGULAR }]}
         interactive={interactive}
         motion={interactive}
         faceSources={faces}
-        renderActions={(p) => <StripLinks links={stripLinks(p, anchors)} />}
+        renderActions={actions}
       />
     );
   }
@@ -215,53 +433,34 @@ function OrbitVisual({
       interactive={interactive}
       motion={interactive}
       faceSources={faces}
-      renderActions={(p) => <StripLinks links={stripLinks(p, [single.anchor])} />}
+      renderActions={(p) => <StripActions player={p} anchors={[single.anchor]} />}
     />
   );
 }
 
 /** The visual, still in a picker tile and while Save image captures it. */
-function OrbitBody({ data }: { data: PlayerSimilarityOrbitDataJson }) {
+function OrbitBody({ orbits }: { orbits: OrbitData[] }) {
   const { density, capturing } = useBlockLayout();
-  return <OrbitVisual data={data} interactive={density !== 'tile' && !capturing} />;
-}
-
-/**
- * "Strikers, top five leagues, 2026/27": the pool and the season. A pair
- * whose two pools differ (a striker v an attacking midfielder) reads "Top
- * five leagues, 2026/27": each orbit then carries its own caption.
- */
-export function orbitContext(config: GameBlockConfig<PlayerSimilarityOrbitDataJson>): string {
-  const pools = new Set((config.data?.orbits ?? []).map((o) => o.poolPhrase ?? ''));
-  const scope = pools.size > 1 ? 'Top five leagues' : config.baseline;
-  const parts = [scope, config.scope.seasonLabel].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : config.context;
+  return <OrbitVisual orbits={orbits} interactive={density !== 'tile' && !capturing} />;
 }
 
 export function PlayerSimilarityOrbitBlock(
   props: GameBlockComponentProps<PlayerSimilarityOrbitDataJson>
 ) {
   const data = props.config.data ?? {};
-  const pair = (data.orbits ?? []).length >= 2;
-  const rows = [
-    ...(data.archetypeRows ?? []).map((r) => ({
-      label: r.label ?? '',
-      archetypes: r.archetypes ?? [],
-    })),
-    { label: 'Similar', archetypes: data.alikeFamilies ?? [] },
-    { label: 'Different', archetypes: data.differFamilies ?? [] },
-  ].filter((r) => r.label && r.archetypes.length > 0);
+  const orbits = (data.orbits ?? []).map(toOrbitData).filter((o) => o.members.length > 0);
+  const pair = orbits.length >= 2;
   const aside: ReactNode = pair ? (
-    <>
-      {orbitVerdict(data.verdict) ? <Verdict text={orbitVerdict(data.verdict)} /> : null}
-      <ArchetypeRows rows={rows} />
-    </>
+    <PairText data={data} />
+  ) : orbits[0] ? (
+    <ClosestList orbit={orbits[0]} />
   ) : null;
-  const frame = baseFrame(props, pair ? 'similarity-orbits' : 'similarity-orbit');
+  const frame = baseFrame(props, pair ? 'orbit-pair' : 'orbit');
+  // No scope line: the orbit is its own key.
   return (
-    <BlockFrame {...frame} context={orbitContext(props.config)} aside={aside}>
+    <BlockFrame {...frame} context="" aside={aside}>
       <div data-slot="orbit-block" style={{ marginTop: 14 }}>
-        <OrbitBody data={data} />
+        <OrbitBody orbits={orbits} />
       </div>
     </BlockFrame>
   );
