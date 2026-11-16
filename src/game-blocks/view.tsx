@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { gameBlockEntry } from './registry';
 import { BlockFrame, useBlockSkin } from './skin/index';
-import { DrawnLookContext } from './skin/provider';
+import { BlockActionsContext, DrawnLookContext, type BlockActions } from './skin/provider';
 import type { GameBlockConfig, GameBlockDensity, GameBlockLook } from './types';
 import { GameBlockScope } from './values';
 
@@ -22,6 +22,12 @@ export interface GameBlockViewProps {
    * can say the chosen look fell back.
    */
   onLookDrawn?: (look: GameBlockLook) => void;
+  /**
+   * `host` when the host draws the block's actions itself (Regista's Share
+   * and Save image row): the frame then draws no hover download icon.
+   * Default `frame`.
+   */
+  actions?: BlockActions;
 }
 
 /**
@@ -30,11 +36,13 @@ export interface GameBlockViewProps {
  * read. An unknown type, a type with no component yet, or a newer
  * `dataVersion` draws the frame with "Update to see this block", never a crash.
  */
-export function GameBlockView({ onLookDrawn, ...props }: GameBlockViewProps) {
+export function GameBlockView({ onLookDrawn, actions = 'frame', ...props }: GameBlockViewProps) {
   return (
-    <DrawnLookContext.Provider value={onLookDrawn}>
-      <GameBlockBody {...props} />
-    </DrawnLookContext.Provider>
+    <BlockActionsContext.Provider value={actions}>
+      <DrawnLookContext.Provider value={onLookDrawn}>
+        <GameBlockBody {...props} />
+      </DrawnLookContext.Provider>
+    </BlockActionsContext.Provider>
   );
 }
 

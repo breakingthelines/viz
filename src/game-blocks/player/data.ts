@@ -4,7 +4,7 @@
  * paid figure is a cell key. `data.pin.test.ts` pins every field name to the
  * generated protos types.
  */
-import type { GameBlockFamilyJson, MetricStateJson } from '../types';
+import type { GameBlockFamilyJson, MetricStateJson, PlayerPercentileWheelDataJson } from '../types';
 
 export type GameBlockVenueJson =
   | 'GAME_BLOCK_VENUE_UNSPECIFIED'
@@ -88,6 +88,10 @@ export interface PlayerSeasonTotalsDataJson {
   highlightTeamRank?: number;
   nextTeamMate?: GameBlockRefJson;
   nextTeamMateTotal?: GameBlockValueJson;
+  /** "Serie A strikers": the group the percentiles rank him in, no count. */
+  groupPhrase?: string;
+  /** His wheel in the same league season: the poster's fallback. */
+  wheel?: PlayerPercentileWheelDataJson;
 }
 
 export interface PlayerFormDataJson {

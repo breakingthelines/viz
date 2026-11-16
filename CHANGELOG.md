@@ -5,6 +5,42 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0]
+
+### Changed: the Player season card
+
+- **Season totals is rebuilt as the season card.** One stat leads: its
+  total, then "1.02 per 90" (never "Per 90 1.02"). The other stats are
+  bars headed by the group they are ranked in ("vs Serie A strikers"):
+  each stat, its per 90 value and a bar whose fill is the percentile.
+  - No ordinals ("97th"), no median ticks or labels, no group counts, no
+    team rank line and no appearances or minutes line.
+  - A stat with no percentile (a cup, too few minutes) draws its per 90
+    value with no bar.
+- **The poster is the default look.** `GameBlockRegistryEntry.defaultLook`
+  (`'poster'` for `player-season-totals`), `defaultLookFor(id)`, and
+  `toGameBlockConfig` uses it when the spec has no look. A player with no
+  cut-out (no pre-rendered halftone and no headshot) draws his percentile
+  wheel for the same season from `data.wheel`, inside
+  `[data-season-fallback="wheel"]`; with no wheel either, the editorial
+  look. A crest alone no longer makes a season poster.
+- **`PercentileWheel` `marks`**: `false` draws the wedges and labels with
+  no percentile numbers and no dashed median ring. The season card's wheel
+  passes it.
+- `PlayerSeasonTotalsDataJson.groupPhrase` and `.wheel` (protos#321).
+  `src/generated/game` carries the new fields.
+- The wheel's and the season trend's locked hero read "1.02 per 90".
+
+### Added: one set of actions per surface
+
+- **`GameBlockView` `actions`**: `'frame'` (default) draws the quiet
+  download icon on hover, as in an article; `'host'` draws none, for a
+  host that draws its own Share and Save image row under the block
+  (Regista). `BlockActionsContext` and `BlockActions` from the skin.
+- **`usePersonArtStatus(media)`**: whether one player can have a poster
+  cut-out (`'working' | 'ok' | 'none'`), the single-player twin of
+  `usePairArtStatus`.
+
 ## [0.34.0]
 
 ### Added: one orbit for a pair in one pool

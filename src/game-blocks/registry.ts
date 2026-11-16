@@ -3,7 +3,7 @@ import { MATCH_BLOCKS } from './match/index';
 import { PLAYER_BLOCKS } from './player/index';
 import { TEAM_BLOCKS } from './team/index';
 import type { AnyGameBlockComponent } from './block-props';
-import type { GameBlockSubjectKind, GameBlockTypeId } from './types';
+import type { GameBlockLook, GameBlockSubjectKind, GameBlockTypeId } from './types';
 
 /**
  * Every game block type: its id, the proto enum and oneof key it arrives
@@ -30,6 +30,8 @@ export interface GameBlockRegistryEntry {
   subjectKinds: GameBlockSubjectKind[];
   node: GameBlockNodeType;
   keywords: string[];
+  /** The look a new block of this type takes. Default editorial. */
+  defaultLook?: GameBlockLook;
   component?: AnyGameBlockComponent;
 }
 
@@ -60,6 +62,7 @@ const ENTRIES: Omit<GameBlockRegistryEntry, 'component'>[] = [
     subjectKinds: ['player'],
     node: 'stats-card',
     keywords: ['season', 'totals', 'stats', 'goals', 'assists', 'per 90'],
+    defaultLook: 'poster',
   },
   {
     id: 'player-form',
@@ -424,6 +427,11 @@ export function gameBlockEntry(id: string): GameBlockRegistryEntry | undefined {
 
 export function gameBlockEntryForProto(protoType: string): GameBlockRegistryEntry | undefined {
   return BY_PROTO.get(protoType);
+}
+
+/** The look a new block of this type takes: its `defaultLook`, else editorial. */
+export function defaultLookFor(id: string): GameBlockLook {
+  return gameBlockEntry(id)?.defaultLook ?? 'editorial';
 }
 
 export function isGameBlockTypeId(id: string): id is GameBlockTypeId {

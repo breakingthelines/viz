@@ -34,6 +34,15 @@ export const DrawnLookContext = createContext<((look: GameBlockLook) => void) | 
   undefined
 );
 
+/**
+ * Who draws the block's Save image control. `frame` (the default): the quiet
+ * download icon on hover, as in an article. `host`: the host draws its own
+ * actions under the block (Regista's Share and Save image row), so the frame
+ * draws none.
+ */
+export type BlockActions = 'frame' | 'host';
+export const BlockActionsContext = createContext<BlockActions>('frame');
+
 export interface BlockLayout {
   look: GameBlockLook;
   density: GameBlockDensity;

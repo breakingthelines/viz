@@ -25,6 +25,7 @@ import {
 } from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
 import {
+  BlockActionsContext,
   DrawnLookContext,
   LayoutContext,
   useBlockLayout,
@@ -158,6 +159,7 @@ export function BlockFrame(props: BlockFrameProps) {
     [look, density, narrow, capturing]
   );
   const onLookDrawn = useContext(DrawnLookContext);
+  const actions = useContext(BlockActionsContext);
   useEffect(() => {
     onLookDrawn?.(look);
   }, [onLookDrawn, look]);
@@ -220,7 +222,9 @@ export function BlockFrame(props: BlockFrameProps) {
         )}
         <LockedNote lockedNote={props.lockedNote} />
         <Colophon provider={props.provider} />
-        {density !== 'tile' ? <SaveAction visible={hover} busy={saving} onSave={onSave} /> : null}
+        {density !== 'tile' && actions === 'frame' ? (
+          <SaveAction visible={hover} busy={saving} onSave={onSave} />
+        ) : null}
       </div>
       {overlay}
     </LayoutContext.Provider>
@@ -726,6 +730,27 @@ export function usePairArtStatus(media: BlockMedia | undefined): 'working' | 'ok
   const photoB = useImageLoads(preB === 'none' ? photo(1) : undefined);
   if (!ids[0] || !ids[1]) return 'none';
   return pairArtStatus({ pre: preA, photo: photoA }, { pre: preB, photo: photoB });
+}
+
+/**
+ * Whether one player can have a poster cut-out, before any halftone is
+ * computed: a pre-rendered halftone or a headshot. A crest does not count.
+ * The season card reads it to draw its wheel when there is none.
+ */
+export function usePersonArtStatus(media: BlockMedia | undefined): 'working' | 'ok' | 'none' {
+  const mediaBase = useMediaBase();
+  const id = media?.kind === 'person' ? media.personId : undefined;
+  const src = media?.kind === 'person' ? media.src : undefined;
+  const pre = useImageLoads(id ? playerHalftoneUrl(mediaBase, id) : undefined);
+  const photo = useImageLoads(
+    pre === 'none'
+      ? (resolveMediaSrc(src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined))
+      : undefined
+  );
+  if (!id && !src) return 'none';
+  if (pre === 'ok') return 'ok';
+  if (pre === 'working') return 'working';
+  return photo;
 }
 
 // The duel: two cut-outs facing each other across the poster wedges, the

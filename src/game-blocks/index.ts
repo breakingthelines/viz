@@ -10,6 +10,7 @@ export {
   GAME_BLOCK_REGISTRY,
   SUBMENU_LABELS,
   gameBlockEntry,
+  defaultLookFor,
   gameBlockEntryForProto,
   isGameBlockTypeId,
 } from './registry';

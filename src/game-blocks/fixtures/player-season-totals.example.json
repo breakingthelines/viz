@@ -147,6 +147,110 @@
     "nextTeamMateTotal": {
       "value": 9,
       "display": "9"
+    },
+    "groupPhrase": "Premier League wingers",
+    "wheel": {
+      "metrics": [
+        {
+          "key": "npg",
+          "label": "Non-penalty goals",
+          "shortLabel": "npG",
+          "family": "shooting",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 88,
+          "valueCell": "wheel.npg.per90",
+          "medianCell": "wheel.npg.median"
+        },
+        {
+          "key": "shots",
+          "label": "Shots",
+          "shortLabel": "Shots",
+          "family": "shooting",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 87,
+          "valueCell": "wheel.shots.per90",
+          "medianCell": "wheel.shots.median"
+        },
+        {
+          "key": "sotp",
+          "label": "Shots on target %",
+          "shortLabel": "SoT %",
+          "family": "shooting",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 62,
+          "valueCell": "wheel.sotp.per90",
+          "medianCell": "wheel.sotp.median"
+        },
+        {
+          "key": "ast",
+          "label": "Assists",
+          "shortLabel": "Ast",
+          "family": "creating",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 92,
+          "valueCell": "wheel.ast.per90",
+          "medianCell": "wheel.ast.median"
+        },
+        {
+          "key": "key",
+          "label": "Key passes",
+          "shortLabel": "KP",
+          "family": "creating",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 94,
+          "valueCell": "wheel.key.per90",
+          "medianCell": "wheel.key.median"
+        },
+        {
+          "key": "drs",
+          "label": "Successful dribbles",
+          "shortLabel": "Drb",
+          "family": "carrying",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 79,
+          "valueCell": "wheel.drs.per90",
+          "medianCell": "wheel.drs.median"
+        },
+        {
+          "key": "drp",
+          "label": "Dribble success %",
+          "shortLabel": "Drb %",
+          "family": "carrying",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 58,
+          "valueCell": "wheel.drp.per90",
+          "medianCell": "wheel.drp.median"
+        },
+        {
+          "key": "fd",
+          "label": "Fouls won",
+          "shortLabel": "Fouled",
+          "family": "carrying",
+          "state": "METRIC_STATE_VALUE",
+          "percentile": 79,
+          "valueCell": "wheel.fd.per90",
+          "medianCell": "wheel.fd.median"
+        }
+      ],
+      "families": [
+        {
+          "key": "shooting",
+          "label": "Shooting"
+        },
+        {
+          "key": "creating",
+          "label": "Creating"
+        },
+        {
+          "key": "carrying",
+          "label": "Carrying"
+        }
+      ],
+      "groupPhrase": "Premier League wingers with 900 or more minutes",
+      "groupSize": 41,
+      "minutes": 2410,
+      "appearances": 31,
+      "methodVersion": "profile-v3"
     }
   },
   "gatedCells": [
@@ -164,7 +268,23 @@
     "key_passes.median",
     "dribbles.per90",
     "dribbles.percentile",
-    "dribbles.median"
+    "dribbles.median",
+    "wheel.npg.per90",
+    "wheel.npg.median",
+    "wheel.shots.per90",
+    "wheel.shots.median",
+    "wheel.sotp.per90",
+    "wheel.sotp.median",
+    "wheel.ast.per90",
+    "wheel.ast.median",
+    "wheel.key.per90",
+    "wheel.key.median",
+    "wheel.drs.per90",
+    "wheel.drs.median",
+    "wheel.drp.per90",
+    "wheel.drp.median",
+    "wheel.fd.per90",
+    "wheel.fd.median"
   ],
   "gated": {
     "goals.per90": {
@@ -241,6 +361,86 @@
       "state": "METRIC_STATE_VALUE",
       "value": 1.21,
       "display": "1.21"
+    },
+    "wheel.npg.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.38,
+      "display": "0.38"
+    },
+    "wheel.npg.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.22,
+      "display": "0.22"
+    },
+    "wheel.shots.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 3.03,
+      "display": "3.03"
+    },
+    "wheel.shots.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.94,
+      "display": "1.94"
+    },
+    "wheel.sotp.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 41,
+      "display": "41%"
+    },
+    "wheel.sotp.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 36,
+      "display": "36%"
+    },
+    "wheel.ast.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.34,
+      "display": "0.34"
+    },
+    "wheel.ast.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 0.15,
+      "display": "0.15"
+    },
+    "wheel.key.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 2.62,
+      "display": "2.62"
+    },
+    "wheel.key.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.4,
+      "display": "1.40"
+    },
+    "wheel.drs.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.72,
+      "display": "1.72"
+    },
+    "wheel.drs.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.21,
+      "display": "1.21"
+    },
+    "wheel.drp.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 51,
+      "display": "51%"
+    },
+    "wheel.drp.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 48,
+      "display": "48%"
+    },
+    "wheel.fd.per90": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.88,
+      "display": "1.88"
+    },
+    "wheel.fd.median": {
+      "state": "METRIC_STATE_VALUE",
+      "value": 1.12,
+      "display": "1.12"
     }
   }
 }

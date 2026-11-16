@@ -102,40 +102,61 @@ describe('every player block', () => {
 });
 
 describe('Season totals', () => {
-  it('shows the hero total, team rank, next team-mate and paid figures to Pro', () => {
+  it('leads with the total and "per 90", then bars headed by the group', () => {
     const html = render('player-season-totals');
     expect(html).toContain('>14<');
     expect(html).toContain('league goals');
-    expect(html).toContain('Most at Arsenal');
-    expect(html).toContain('Havertz 9');
-    expect(html).toContain('95th');
-    expect(html).toContain('0.52');
-    expect(html).toMatch(/Median (<!-- -->)?0\.24/);
-    expect(html).toContain('31 apps');
-    expect(html).toContain('2,410 mins');
+    expect(html).toMatch(/0\.52(<!-- -->)? per 90/);
+    expect(html).toContain('vs Premier League wingers<');
     expect(html).toContain('Successful dribbles');
     expect(html).toContain('data-scale-state="value"');
+  });
+
+  it('draws no ranks, ordinals, medians, counts or appearances', () => {
+    const html = render('player-season-totals');
+    expect(html).not.toContain('Most at Arsenal');
+    expect(html).not.toContain('Havertz');
+    expect(html).not.toMatch(/\d(st|nd|rd|th)</);
+    expect(html).not.toContain('Median');
+    expect(html).not.toContain('data-scale-median');
+    expect(html).not.toContain('Per 90 ');
+    expect(html).not.toContain('vs 41');
+    expect(html).not.toContain('apps');
+    expect(html).not.toContain('mins');
   });
 
   it('keeps totals and locks paid cells for a reader below the plan', () => {
     const html = render('player-season-totals', 'free');
     expect(html).toContain('>14<');
-    expect(html).toContain('>88<');
     expect(html).not.toContain('0.52');
-    expect(html).not.toContain('95th');
     expect(html).toContain('data-cell-state="locked"');
     expect(html).toContain('data-scale-state="locked"');
     expect(html).toContain('Per 90 figures and percentiles are for Pro readers.');
   });
 
-  it('draws whatever the cells say: free per 90 with a locked median', () => {
+  it('draws whatever the cells say: free per 90 with a locked percentile', () => {
     const cells = values('player-season-totals', 'pro');
-    for (const k of Object.keys(cells)) if (k.endsWith('.median')) cells[k] = { state: 'locked' };
+    for (const k of Object.keys(cells))
+      if (k.endsWith('.percentile')) cells[k] = { state: 'locked' };
     const html = render('player-season-totals', 'free', {}, cells);
     expect(html).toContain('0.52');
-    expect(html).toContain('95th');
-    expect(html).not.toContain('0.24');
+    expect(html).toContain('data-scale-state="locked"');
     expect(html).toContain('data-block-locked-note');
+  });
+
+  it('draws the hover Save image only when the frame owns the actions', () => {
+    const c = config('player-season-totals');
+    const withIcon = renderToStaticMarkup(h(GameBlockView, { config: c }));
+    const host = renderToStaticMarkup(h(GameBlockView, { config: c, actions: 'host' }));
+    expect(withIcon).toContain('aria-label="Save image"');
+    expect(host).not.toContain('aria-label="Save image"');
+  });
+
+  it('defaults to the poster', () => {
+    const json = { ...PLAYER_EXAMPLES['player-season-totals'] };
+    json.spec = { ...json.spec, look: undefined };
+    const res = toGameBlockConfig(json);
+    expect(res.ok && res.config.look).toBe('poster');
   });
 
   it('heroes the author highlight', () => {
