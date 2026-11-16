@@ -160,6 +160,15 @@ describe('Season totals', () => {
     expect(html).not.toContain('class="btl-pw-tip');
   });
 
+  it('names the scope in the context line', () => {
+    const league = render('player-season-totals');
+    expect(league).toContain('Arsenal, Premier League 2025/26');
+    const all = render('player-season-totals', 'pro', {
+      scope: { seasonLabel: '2025/26', competitionLabel: 'All competitions' },
+    });
+    expect(all).toContain('Arsenal, all competitions 2025/26');
+  });
+
   it('defaults to the poster', () => {
     const json = { ...PLAYER_EXAMPLES['player-season-totals'] };
     json.spec = { ...json.spec, look: undefined };

@@ -191,7 +191,12 @@ export function PlayerSeasonTotalsBlock(
 
   // The scope is part of the card: "Inter Milan, Serie A 2026/27".
   const base = baseFrame(props, 'season');
-  const scope = [config.scope.competitionLabel, config.scope.seasonLabel].filter(Boolean).join(' ');
+  // "All competitions" reads mid-line: "Inter Milan, all competitions 2026/27".
+  const comp =
+    config.scope.competitionLabel === 'All competitions'
+      ? 'all competitions'
+      : config.scope.competitionLabel;
+  const scope = [comp, config.scope.seasonLabel].filter(Boolean).join(' ');
   const frame = {
     ...base,
     context: [config.subject.subtitle, scope].filter(Boolean).join(', ') || base.context,
