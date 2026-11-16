@@ -991,7 +991,10 @@ export function singleOrbitFaces(
   data: OrbitData,
   selected: string | null
 ): { id: string; role: OrbitFaceRole }[] {
-  const out = data.members.slice(0, 3).map(({ id }) => ({ id, role: NEAR }));
+  const out = data.members
+    .filter((m) => !m.outsidePool)
+    .slice(0, 3)
+    .map(({ id }) => ({ id, role: NEAR }));
   if (selected && !out.some((f) => f.id === selected) && memberIndex(data, selected) >= 0) {
     out.push({ id: selected, role: TEMP });
   }
@@ -1113,7 +1116,11 @@ export function pairOrbitFaces(
   const out: { id: string; role: OrbitFaceRole }[] = [];
   if (m >= 0)
     out.push({ id: comparedId, role: { ring: comparedInk, ink: comparedInk, big: true } });
-  data.members.slice(0, 3).forEach(({ id, rank }) => {
+  // The pool's nearest three: someone from outside it is never one of them.
+  const pool = data.members.filter((p) => !p.outsidePool);
+  const outside = !!data.members[m]?.outsidePool;
+  const nearest = outside ? pool.slice(0, 3) : data.members.slice(0, 3);
+  nearest.forEach(({ id, rank }) => {
     if (id === comparedId) return;
     const closer = m < 0 || rank < comparedRank;
     out.push({
@@ -1176,6 +1183,9 @@ export function SimilarityOrbitPair({
   useDrift(s.rootRef, moving, s.still, `${orbits[0].anchor.id}:${orbits[1].anchor.id}`);
   const inks = [ORBIT_RED, ORBIT_WHITE] as const;
   const anchors = [orbits[0].anchor, orbits[1].anchor] as const;
+  // Two pools (a striker v an attacking midfielder): each orbit names its own.
+  const captioned =
+    !!orbits[0].poolLabel && !!orbits[1].poolLabel && orbits[0].poolLabel !== orbits[1].poolLabel;
   const pick = s.pick;
   const picked: OrbitPlayer | undefined = pick
     ? (anchors.find((a) => a.id === pick.id) ??
@@ -1236,6 +1246,21 @@ export function SimilarityOrbitPair({
                 onAnchor={() => s.select(o)(anchors[o].id, false)}
                 sources={faceSources}
               />
+              {captioned ? (
+                <span
+                  data-slot={`${slot}-pool`}
+                  aria-hidden="true"
+                  style={{
+                    display: 'block',
+                    marginTop: 8,
+                    textAlign: 'center',
+                    fontSize: 12.5,
+                    color: MUTED,
+                  }}
+                >
+                  {d.poolLabel}
+                </span>
+              ) : null}
             </div>
           );
         })}

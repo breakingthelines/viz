@@ -32,8 +32,17 @@ export interface OrbitPlayer {
 }
 
 export interface OrbitMember extends OrbitPlayer {
-  /** 1 is closest; equal scores share a rank. */
+  /**
+   * 1 is closest; equal scores share a rank. Counts pool members only: a
+   * member outside the pool takes no one's place.
+   */
   rank: number;
+  /**
+   * The pair's other player when he is not in this pool (another position
+   * group, a league outside the top five): placed against the anchor for the
+   * pair only, and left out of the pool's size and everyone else's place.
+   */
+  outsidePool?: boolean;
 }
 
 export interface OrbitData {
@@ -42,6 +51,21 @@ export interface OrbitData {
   plural: string;
   /** Everyone else in the pool, closest first. */
   members: OrbitMember[];
+  /**
+   * The pool's caption under the orbit: "Strikers". A pair shows its two
+   * captions only when they differ (a striker v an attacking midfielder).
+   */
+  poolLabel?: string;
+}
+
+/** The pool's size: the members, without anyone from outside it. */
+export function poolSize(data: OrbitData): number {
+  return data.members.filter((m) => !m.outsidePool).length;
+}
+
+/** The closest member of the pool itself. */
+function closestInPool(data: OrbitData): OrbitMember | undefined {
+  return data.members.find((m) => !m.outsidePool);
 }
 
 /** The index of a player among the members, -1 when he is not one. */
@@ -49,11 +73,14 @@ export function memberIndex(data: OrbitData, id: string): number {
   return data.members.findIndex((m) => m.id === id);
 }
 
-/** Another member shares his rank (his score). */
+/**
+ * A pool member shares his rank (his score). Ranks count pool members only,
+ * so equal ranks mean equal scores among them; an outsider is never joint.
+ */
 export function isJoint(data: OrbitData, index: number): boolean {
   const m = data.members[index];
-  if (!m) return false;
-  return data.members.some((o, i) => i !== index && o.rank === m.rank);
+  if (!m || m.outsidePool) return false;
+  return data.members.some((o, i) => i !== index && !o.outsidePool && o.rank === m.rank);
 }
 
 /**
@@ -63,9 +90,18 @@ export function isJoint(data: OrbitData, index: number): boolean {
  * labels do.
  */
 export function rankPhrase(data: OrbitData, index: number, anchorShort: string): string {
-  if (!data.members[index]) return '';
-  if (index === 0) return `Closest to ${anchorShort}`;
-  return `${ordinal(index + 1)} closest to ${anchorShort}`;
+  const m = data.members[index];
+  if (!m) return '';
+  if (m.outsidePool) {
+    // Where he would sit among the pool: "43rd closest to Haaland among strikers".
+    const among = data.plural ? ` among ${data.plural}` : '';
+    return m.rank === 1
+      ? `Closest to ${anchorShort}${among}`
+      : `${ordinal(m.rank)} closest to ${anchorShort}${among}`;
+  }
+  const place = 1 + data.members.slice(0, index).filter((o) => !o.outsidePool).length;
+  if (place === 1) return `Closest to ${anchorShort}`;
+  return `${ordinal(place)} closest to ${anchorShort}`;
 }
 
 /**
@@ -73,12 +109,18 @@ export function rankPhrase(data: OrbitData, index: number, anchorShort: string):
  * of the 157 other strikers to Kylian Mbappé. Closest: Donyell Malen."
  */
 export function pairOrbitLabel(data: OrbitData, compared: OrbitPlayer): string {
-  const pool = `the ${data.members.length} other ${data.plural || 'players'}`;
-  const closest = data.members[0]?.name ?? '';
+  const pool = `the ${poolSize(data)} other ${data.plural || 'players'}`;
+  const closest = closestInPool(data)?.name ?? '';
   const i = memberIndex(data, compared.id);
   if (i < 0) return `${data.anchor.name} among ${pool}. Closest: ${closest}.`;
   const joint = isJoint(data, i);
   const rank = data.members[i]!.rank;
+  if (data.members[i]!.outsidePool) {
+    // No "joint" here: his rank leaves him out of the pool's count, so a
+    // pool member just below him can share the number without his score.
+    const place = rank === 1 ? 'closest' : `${ordinal(rank)} closest`;
+    return `${compared.name}, from outside this pool, would be ${place} of ${pool} to ${data.anchor.name}. Closest: ${closest}.`;
+  }
   if (rank === 1 && !joint)
     return `${compared.name} is the closest of ${pool} to ${data.anchor.name}.`;
   const place = rank === 1 ? 'closest' : `${ordinal(rank)} closest`;
@@ -92,11 +134,12 @@ export function pairOrbitLabel(data: OrbitData, compared: OrbitPlayer): string {
  */
 export function singleOrbitLabel(data: OrbitData): string {
   const top = data.members
+    .filter((m) => !m.outsidePool)
     .slice(0, 3)
     .map((m) => m.name)
     .filter(Boolean)
     .join(', ');
-  return `${data.anchor.name} at the centre, the ${data.members.length} other ${data.plural || 'players'} in the top five leagues around him, nearer means more alike. Closest: ${top}.`;
+  return `${data.anchor.name} at the centre, the ${poolSize(data)} other ${data.plural || 'players'} in the top five leagues around him, nearer means more alike. Closest: ${top}.`;
 }
 
 /**

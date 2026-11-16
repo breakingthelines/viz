@@ -146,3 +146,58 @@ export const VerifyKeyboard: Story = {
     await expect(document.activeElement).toBe(dot);
   },
 };
+
+const STRIKERS: OrbitData = {
+  anchor: { id: 'st', name: 'Sam Striker', club: 'Red FC' },
+  plural: 'strikers',
+  poolLabel: 'Strikers',
+  members: [
+    ...pool('s', 12, { 0: ['closest', 'Carl Closest', 'Near United'] }),
+    { id: 'ten', name: 'Tom Ten', club: 'White FC', rank: 13, outsidePool: true },
+    ...pool('t', 20, {}).map((m) => ({ ...m, id: `x${m.id}`, rank: m.rank + 12 })),
+  ],
+};
+
+const TENS: OrbitData = {
+  anchor: { id: 'ten', name: 'Tom Ten', club: 'White FC' },
+  plural: 'attacking midfielders',
+  poolLabel: 'Attacking midfielders',
+  members: [
+    ...pool('m', 4, {}),
+    { id: 'st', name: 'Sam Striker', club: 'Red FC', rank: 5, outsidePool: true },
+    ...pool('n', 20, {}).map((m) => ({ ...m, id: `y${m.id}`, rank: m.rank + 4 })),
+  ],
+};
+
+/** A striker v an attacking midfielder: each orbit names its pool, the other is from outside it. */
+export const VerifyTwoPools: Story = {
+  args: { orbits: [STRIKERS, TENS], shortNames: ['Striker', 'Ten'] },
+  play: async ({ canvasElement }) => {
+    const captions = [
+      ...canvasElement.querySelectorAll('[data-slot="similarity-orbits-pool"]'),
+    ].map((e) => e.textContent);
+    await expect(captions).toEqual(['Strikers', 'Attacking midfielders']);
+    const names = [...canvasElement.querySelectorAll('[role="group"]')].map((e) =>
+      e.getAttribute('aria-label')
+    );
+    await expect(names[0]).toBe(
+      'Tom Ten, from outside this pool, would be 13th closest of the 32 other strikers to Sam Striker. Closest: Carl Closest.'
+    );
+    const face = canvasElement.querySelector(
+      '[data-slot="similarity-orbits-orbit-face"][aria-label="Tom Ten"]'
+    ) as HTMLElement;
+    await userEvent.click(face);
+    const strip = canvasElement.querySelector('[data-slot="similarity-orbits-detail"]')!;
+    await expect(strip.textContent).toContain('13th closest to Striker among strikers');
+  },
+};
+
+/** One pool: no captions. */
+export const VerifyOnePoolNoCaption: Story = {
+  args: Pair.args,
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelectorAll('[data-slot="similarity-orbits-pool"]')
+    ).toHaveLength(0);
+  },
+};
