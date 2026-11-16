@@ -84,6 +84,23 @@ export interface LeaguePlayerRankingsDataJson {
   rows?: GameBlockRankingRowJson[];
   median?: GameBlockValueJson;
   medianCell?: string;
+  /**
+   * Several stats ranked at once: the leaders across goals, assists, key
+   * passes and tackles, or a position's key stats. The fields above repeat
+   * the first. Empty for a one-stat ask.
+   */
+  categories?: LeaguePlayerRankingsCategoryJson[];
+}
+
+/** One stat's board within a several-stat ranking. */
+export interface LeaguePlayerRankingsCategoryJson {
+  metricKey?: string;
+  metricLabel?: string;
+  per90?: boolean;
+  gated?: boolean;
+  rows?: GameBlockRankingRowJson[];
+  median?: GameBlockValueJson;
+  medianCell?: string;
 }
 
 export interface LeagueFixturesDataJson {

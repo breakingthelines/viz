@@ -5,6 +5,7 @@ import {
   blockStory,
   commonChecks,
   lockedChecks,
+  rankingCategoriesStory,
   unavailableStory,
 } from '../fixtures/block-story';
 
@@ -52,3 +53,5 @@ export const Chat: Story = { args: { density: 'chat', width: 420 } };
 export const Unavailable: Story = {
   render: unavailableStory('league-player-rankings', 'Not ranked in cup competitions'),
 };
+export const Categories680: Story = { render: rankingCategoriesStory(680) };
+export const Categories390: Story = { render: rankingCategoriesStory(390) };
