@@ -5,6 +5,31 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0]
+
+### Added: similarity orbits
+
+- **`SimilarityOrbit`** (one player) and **`SimilarityOrbitPair`** (two side
+  by side, each the other's compared player) in `@breakingthelines/viz/stats`:
+  the anchor's headshot at the centre and his position group as a golden-angle
+  sunflower of dots, rank as the radius. Faces sit on stems from their own
+  dots (the nearest three; in a pair the compared player in his colour, the
+  disc inside his radius lit), nudged out along the stem when they would
+  overlap. No text on the field.
+- Interactions behind `interactive` (default on): names on hover and focus,
+  tap or Enter to select (lit disc, a face on a stem, the dot ringed in both
+  orbits of a pair) and open `OrbitDetailStrip` with the caller's actions
+  (`renderActions`); arrows move through the dots by rank; Escape, the same
+  dot, the close control or a tap outside closes. Ambient drift (Web
+  Animations, seeded per player id, under a seventh of the dot spacing) is
+  off under reduced motion and with `motion={false}`, and pauses off screen
+  and during any interaction.
+- Plain data (`OrbitData`: anchor, plural, members closest first with
+  `rank`, `name`, `club`, `url`, `imageUrl`), so game-service's
+  `SimilarityOrbit` and the game block's `GameBlockOrbit` both map onto it.
+  Ties are equal ranks and read "joint". The geometry, labels and drift are
+  exported from `similarity-orbit-model.ts`.
+
 ## [0.30.0]
 
 ### Added: comparison views
