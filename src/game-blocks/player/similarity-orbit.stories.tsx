@@ -16,6 +16,8 @@ import { Page } from './story-kit';
 
 interface OrbitArgs {
   pair: boolean;
+  /** The pair across two pools: Haaland outside Mbappé's, captions shown. */
+  acrossPools?: boolean;
   look: GameBlockLook;
   width: number;
   density: GameBlockDensity;
@@ -40,9 +42,25 @@ function exampleConfig(json: GameBlockJson): GameBlockConfig<PlayerSimilarityOrb
   return { ...c, data: { ...c.data, orbits: (c.data.orbits ?? []).map(withBusts) } };
 }
 
-function OrbitExample({ pair, look, width, density }: OrbitArgs) {
+/** The pair fixture with the second orbit's pool another position group. */
+function acrossPools(json: GameBlockJson): GameBlockJson {
+  const out = structuredClone(json) as GameBlockJson & {
+    playerSimilarityOrbit: PlayerSimilarityOrbitDataJson;
+  };
+  const [first, second] = out.playerSimilarityOrbit.orbits ?? [];
+  if (second) second.poolPhrase = 'attacking midfielders';
+  const outsider = first?.members?.find((m) => m.player?.name === 'Erling Haaland');
+  if (outsider) outsider.outsidePool = true;
+  return out;
+}
+
+function OrbitExample({ pair, acrossPools: across, look, width, density }: OrbitArgs) {
   const c = exampleConfig(
-    pair ? PLAYER_ORBIT_PAIR_EXAMPLE : PLAYER_EXAMPLES['player-similarity-orbit']
+    pair
+      ? across
+        ? acrossPools(PLAYER_ORBIT_PAIR_EXAMPLE)
+        : PLAYER_ORBIT_PAIR_EXAMPLE
+      : PLAYER_EXAMPLES['player-similarity-orbit']
   );
   return (
     <Page width={width}>
@@ -102,6 +120,14 @@ export const PairChat: Story = {
   args: { pair: true, density: 'chat', width: 420 },
   play: pairChecks,
 };
+export const PairAcrossPools680: Story = {
+  args: { pair: true, acrossPools: true },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.textContent).toContain('Top five leagues, 2026/27');
+    await expect(canvasElement.textContent).toContain('Attacking midfielders');
+  },
+};
+export const PairAcrossPools390: Story = { args: { pair: true, acrossPools: true, width: 390 } };
 export const PairTile: Story = {
   args: { pair: true, density: 'tile', width: 320 },
   play: async ({ canvasElement }) => {

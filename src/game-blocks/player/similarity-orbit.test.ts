@@ -85,6 +85,28 @@ describe('similarity orbit block', () => {
 
   it('reads its context from the pool and the season', () => {
     expect(orbitContext(config(SINGLE))).toBe('Strikers, top five leagues, 2026/27');
+    expect(orbitContext(config(PAIR))).toBe('Strikers, top five leagues, 2026/27');
+  });
+
+  it('marks a pair across two pools: outsiders, captions and a scope without the position', () => {
+    const cross = structuredClone(PAIR) as GameBlockJson & {
+      playerSimilarityOrbit: PlayerSimilarityOrbitDataJson;
+    };
+    const [first, second] = cross.playerSimilarityOrbit.orbits!;
+    second!.poolPhrase = 'attacking midfielders';
+    first!.members!.find((m) => m.player?.name === 'Erling Haaland')!.outsidePool = true;
+    const c = config(cross);
+    expect(orbitContext(c)).toBe('Top five leagues, 2026/27');
+    const a = toOrbitData(c.data.orbits![0]!);
+    const b = toOrbitData(c.data.orbits![1]!);
+    expect(a.poolLabel).toBe('Strikers');
+    expect(b.poolLabel).toBe('Attacking midfielders');
+    expect(a.members.filter((m) => m.outsidePool).map((m) => m.name)).toEqual(['Erling Haaland']);
+    expect(b.members.some((m) => m.outsidePool)).toBe(false);
+    const html = render(cross, 'tile');
+    expect(html).toContain(
+      'Erling Haaland, from outside this pool, would be 85th closest of the 156 other strikers to Kylian Mbappé.'
+    );
   });
 });
 

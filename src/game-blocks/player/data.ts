@@ -214,6 +214,8 @@ export interface GameBlockOrbitMemberJson {
   team?: GameBlockRefJson;
   /** 1 is closest; equal scores share a rank. */
   rank?: number;
+  /** The pair's other player when he is not in this orbit's pool. */
+  outsidePool?: boolean;
 }
 
 /** One player's pool, closest first. Ranks only, never scores. */
