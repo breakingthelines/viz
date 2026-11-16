@@ -28,6 +28,12 @@ export interface PercentileRowsProps {
   groups: { name: string; metrics: StatMetric[] }[];
   focusKeys?: string[] | null;
   onFocus?: (key: string | null) => void;
+  /**
+   * The percentile ordinal at the end of each bar ("90th"). `false` draws
+   * the value and the bar alone, for a host that shows the percentile
+   * elsewhere (the wheel). Defaults to `true`.
+   */
+  ordinals?: boolean;
 }
 
 const WHITE = '#ffffff';
@@ -69,9 +75,10 @@ interface ValueRowProps {
   metric: StatMetric;
   focused: boolean;
   onFocus?: (key: string | null) => void;
+  ordinals: boolean;
 }
 
-function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
+function ValueRow({ metric, focused, onFocus, ordinals }: ValueRowProps) {
   const percentile = metric.percentile;
   const width = percentile === null || !Number.isFinite(percentile) ? 0 : Math.max(percentile, 0);
   const colour = ramp(percentile, 'subject');
@@ -106,7 +113,7 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
         style={{
           gridColumn: '1 / 3',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 34px',
+          gridTemplateColumns: ordinals ? 'minmax(0, 1fr) 34px' : 'minmax(0, 1fr)',
           gap: 10,
           alignItems: 'center',
         }}
@@ -135,23 +142,31 @@ function ValueRow({ metric, focused, onFocus }: ValueRowProps) {
             }}
           />
         </span>
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: percentile !== null && percentile >= 90 ? '#ff3b3b' : MUTED,
-            textAlign: 'right',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {formatPercentile(percentile)}
-        </span>
+        {ordinals ? (
+          <span
+            data-slot="percentile-rows-ordinal"
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: percentile !== null && percentile >= 90 ? '#ff3b3b' : MUTED,
+              textAlign: 'right',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatPercentile(percentile)}
+          </span>
+        ) : null}
       </span>
     </li>
   );
 }
 
-export function PercentileRows({ groups, focusKeys, onFocus }: PercentileRowsProps) {
+export function PercentileRows({
+  groups,
+  focusKeys,
+  onFocus,
+  ordinals = true,
+}: PercentileRowsProps) {
   const focusSet = useMemo(() => new Set(focusKeys ?? []), [focusKeys]);
   const scopeClass = `btl-pr-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
@@ -194,6 +209,7 @@ export function PercentileRows({ groups, focusKeys, onFocus }: PercentileRowsPro
                   metric={metric}
                   focused={focusSet.has(metric.focusKey ?? metric.key)}
                   onFocus={onFocus}
+                  ordinals={ordinals}
                 />
               )
             )}
