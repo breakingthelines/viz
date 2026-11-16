@@ -10,6 +10,8 @@ import matchLog from './player-match-log.example.json';
 import seasonTotals from './player-season-totals.example.json';
 import seasonTrend from './player-season-trend.example.json';
 import similar from './player-similar.example.json';
+import similarityOrbitPair from './player-similarity-orbit-pair.example.json';
+import similarityOrbit from './player-similarity-orbit.example.json';
 import transfers from './player-transfers.example.json';
 
 /**
@@ -31,6 +33,10 @@ export const PLAYER_EXAMPLES = {
   'player-honours': json(honours),
   'player-absences': json(absences),
   'player-details': json(details),
+  'player-similarity-orbit': json(similarityOrbit),
 } as const;
 
 export type PlayerExampleId = keyof typeof PLAYER_EXAMPLES;
+
+/** The similarity orbit as a pair (the spec names a comparison). */
+export const PLAYER_ORBIT_PAIR_EXAMPLE = json(similarityOrbitPair);

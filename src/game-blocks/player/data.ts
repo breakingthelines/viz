@@ -207,3 +207,38 @@ export interface PlayerDetailsDataJson {
   team?: GameBlockRefJson;
   squadAverageAge?: number;
 }
+
+/** One player in an orbit's pool. Only faces carry `player.imageUrl`. */
+export interface GameBlockOrbitMemberJson {
+  player?: GameBlockRefJson;
+  team?: GameBlockRefJson;
+  /** 1 is closest; equal scores share a rank. */
+  rank?: number;
+}
+
+/** One player's pool, closest first. Ranks only, never scores. */
+export interface GameBlockOrbitJson {
+  anchor?: GameBlockRefJson;
+  /** "strikers", "centre-backs". */
+  poolPhrase?: string;
+  members?: GameBlockOrbitMemberJson[];
+}
+
+/** "Both", "Only Mbappé", and the archetypes on that row. */
+export interface GameBlockArchetypeRowJson {
+  label?: string;
+  archetypes?: string[];
+}
+
+/**
+ * One orbit ("who is he like?"), or two when the spec names a comparison: the
+ * subject's, then the comparison's, with the pair's verdict and the rows
+ * under it.
+ */
+export interface PlayerSimilarityOrbitDataJson {
+  orbits?: GameBlockOrbitJson[];
+  verdict?: string;
+  archetypeRows?: GameBlockArchetypeRowJson[];
+  alikeFamilies?: string[];
+  differFamilies?: string[];
+}

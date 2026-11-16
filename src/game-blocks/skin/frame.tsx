@@ -114,6 +114,14 @@ function useContainerWidth<T extends HTMLElement>() {
   return [ref, width] as const;
 }
 
+/** Resolves after the next two animation frames: a state change has painted. */
+function nextPaint(): Promise<void> {
+  if (typeof requestAnimationFrame === 'undefined') return Promise.resolve();
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+}
+
 function slugify(s: string): string {
   return (
     s
@@ -144,7 +152,11 @@ export function BlockFrame(props: BlockFrameProps) {
   const narrow = density !== 'article' || width < NARROW_BELOW;
   const art = usePosterArt(asked === 'poster' ? props.media : undefined, narrow, density, skin);
   const look: GameBlockLook = asked === 'poster' && art.status === 'none' ? 'editorial' : asked;
-  const layout = useMemo<BlockLayout>(() => ({ look, density, narrow }), [look, density, narrow]);
+  const [capturing, setCapturing] = useState(false);
+  const layout = useMemo<BlockLayout>(
+    () => ({ look, density, narrow, capturing }),
+    [look, density, narrow, capturing]
+  );
   const onLookDrawn = useContext(DrawnLookContext);
   useEffect(() => {
     onLookDrawn?.(look);
@@ -159,10 +171,14 @@ export function BlockFrame(props: BlockFrameProps) {
     if (!el || saving) return;
     const prev = el.style.padding;
     el.style.padding = '28px 28px 22px';
+    // Blocks draw their still picture for the file; wait for it to paint.
+    setCapturing(true);
+    await nextPaint();
     try {
       await save(el, { fileName: slugify(exportName), backgroundColor: skin.surface });
     } finally {
       el.style.padding = prev;
+      setCapturing(false);
     }
   }, [ref, save, saving, exportName, skin.surface]);
 

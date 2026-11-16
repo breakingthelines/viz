@@ -11,6 +11,7 @@ import { PlayerPercentileWheelBlock } from './percentile-wheel';
 import { PlayerSeasonTotalsBlock } from './season-totals';
 import { PlayerSeasonTrendBlock } from './season-trend';
 import { PlayerSimilarBlock } from './similar';
+import { PlayerSimilarityOrbitBlock } from './similarity-orbit';
 import { PlayerTransfersBlock } from './transfers';
 
 /** Player block components, keyed by type id. */
@@ -28,6 +29,7 @@ export const PLAYER_BLOCKS: GameBlockComponentMap = {
   'player-honours': PlayerHonoursBlock,
   'player-absences': PlayerAbsencesBlock,
   'player-details': PlayerDetailsBlock,
+  'player-similarity-orbit': PlayerSimilarityOrbitBlock,
 };
 
 export {
@@ -43,8 +45,17 @@ export {
   PlayerSeasonTotalsBlock,
   PlayerSeasonTrendBlock,
   PlayerSimilarBlock,
+  PlayerSimilarityOrbitBlock,
   PlayerTransfersBlock,
 };
+export { orbitContext, toOrbitData } from './similarity-orbit';
+export {
+  identitySlug,
+  orbitSurname,
+  playerComparePath,
+  playerPagePath,
+  playerRouteId,
+} from './orbit-links';
 export type * from './data';
 export { PlayerFormBars } from '../parts/player-form-bars';
 export type { PlayerFormBar } from '../parts/player-form-bars';

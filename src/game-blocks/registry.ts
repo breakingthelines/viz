@@ -172,6 +172,16 @@ const ENTRIES: Omit<GameBlockRegistryEntry, 'component'>[] = [
     keywords: ['details', 'age', 'height', 'foot', 'contract'],
   },
   {
+    id: 'player-similarity-orbit',
+    protoType: 'GAME_BLOCK_TYPE_PLAYER_SIMILARITY_ORBIT',
+    dataKey: 'playerSimilarityOrbit',
+    label: 'Similarity orbit',
+    submenu: 'player',
+    subjectKinds: ['player'],
+    node: 'game-block',
+    keywords: ['similar', 'similarity', 'orbit', 'like', 'alike', 'pair'],
+  },
+  {
     id: 'team-season-totals',
     protoType: 'GAME_BLOCK_TYPE_TEAM_SEASON_TOTALS',
     dataKey: 'teamSeasonTotals',
