@@ -44,6 +44,11 @@ export interface ComparisonBarsProps {
   left: { name: string; seasonLabel?: string };
   right: { name: string; seasonLabel?: string };
   rows: ComparisonBarsRow[];
+  /**
+   * The percentile ordinal under each value ("90th"). `false` draws the
+   * values and the bars alone. Defaults to `true`.
+   */
+  ordinals?: boolean;
 }
 
 const MUTED = '#a29e9e';
@@ -81,9 +86,19 @@ interface SideValueProps {
   stronger: boolean;
   /** Text alignment for the value stack, away from the centre gutter. */
   align: 'left' | 'right';
+  ordinals: boolean;
 }
 
-function SideValue({ value, display, percentile, unit, side, stronger, align }: SideValueProps) {
+function SideValue({
+  value,
+  display,
+  percentile,
+  unit,
+  side,
+  stronger,
+  align,
+  ordinals,
+}: SideValueProps) {
   // The value text is flat, not ramped (mock: `.hv b{color:#fff}`,
   // `.hr.win-l .hv.l b{color:#eb0000}`, `.hr.win-r .hv.r b{color:#fff}`):
   // only the left/subject side ever turns red, and only when it is the
@@ -110,9 +125,14 @@ function SideValue({ value, display, percentile, unit, side, stronger, align }: 
       >
         {display ?? formatMetricValue(value, unit)}
       </b>
-      <span style={{ fontSize: 11.5, color: MUTED, fontVariantNumeric: 'tabular-nums' }}>
-        {formatPercentile(percentile)}
-      </span>
+      {ordinals ? (
+        <span
+          data-slot="comparison-bars-ordinal"
+          style={{ fontSize: 11.5, color: MUTED, fontVariantNumeric: 'tabular-nums' }}
+        >
+          {formatPercentile(percentile)}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -165,7 +185,7 @@ function SideBar({ percentile, side, fillFrom }: SideBarProps) {
   );
 }
 
-export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
+export function ComparisonBars({ left, right, rows, ordinals = true }: ComparisonBarsProps) {
   const groups = useMemo(() => groupRows(rows), [rows]);
   const scopeClass = `btl-cb-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
@@ -242,6 +262,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
                   side="subject"
                   stronger={leftStronger}
                   align="left"
+                  ordinals={ordinals}
                 />
                 <SideBar percentile={leftP} side="subject" fillFrom="right" />
                 <span
@@ -259,6 +280,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
                   side="comparison"
                   stronger={rightStronger}
                   align="right"
+                  ordinals={ordinals}
                 />
               </div>
             );

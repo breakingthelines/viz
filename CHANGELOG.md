@@ -5,7 +5,7 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.29.0]
+## [0.30.0]
 
 ### Added: comparison views
 
@@ -36,6 +36,23 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - A comparison asked for as a poster drew the first player's headshot where
   a crest goes and left the second player out. It now draws the duel, or
   the wheel when either player has no picture, and never a crest.
+
+## [0.29.1]
+
+### Fixed: `SeasonTrend` keeps "not ranked" without ordinals
+
+- With `ordinals={false}`, a season with a value but no ranking still reads
+  "1.84 per 90, not ranked" in its tooltip and the hidden table; only the
+  percentile ordinal is dropped.
+
+## [0.29.0]
+
+### Added: `ordinals` on the percentile charts
+
+- **`PercentileRows`**, **`ComparisonBars`** and **`SeasonTrend`** take
+  `ordinals` (default `true`). `false` drops the percentile ordinal ("90th"):
+  rows keep the value and the bar, the side by side keeps the values and the
+  bars, and a season point reads its value alone ("0.83 per 90").
 
 ## [0.28.1]
 

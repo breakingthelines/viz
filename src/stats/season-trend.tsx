@@ -36,6 +36,13 @@ export interface SeasonTrendProps {
   visibleSeasons?: number;
   /** Names the visually hidden table of the chart's values. */
   ariaLabel?: string;
+  /**
+   * The percentile ordinal in each point's tooltip and the hidden table
+   * ("0.83 per 90, 94th percentile"). `false` reads the value alone
+   * ("0.83 per 90"); a season with no ranking still reads "not ranked".
+   * Defaults to `true`.
+   */
+  ordinals?: boolean;
 }
 
 const WHITE = '#ffffff';
@@ -86,14 +93,18 @@ export function seasonTrendRuns(points: readonly SeasonTrendPoint[]): number[][]
   return runs;
 }
 
-/** "0.83 per 90, 94th percentile" / "58%, not ranked". */
-export function seasonTrendReading(point: SeasonTrendPoint, unit: SeasonTrendRow['unit']): string {
+/** "0.83 per 90, 94th percentile" / "58%, not ranked"; without ordinals, "0.83 per 90" (a season with no ranking still reads "not ranked"). */
+export function seasonTrendReading(
+  point: SeasonTrendPoint,
+  unit: SeasonTrendRow['unit'],
+  ordinals = true
+): string {
   if (point.value === null) return 'No data';
   const value = formatMetricValue(point.value, unit);
   const shown = unit === 'per90' ? `${value} per 90` : value;
-  return point.percentile === null || !Number.isFinite(point.percentile)
-    ? `${shown}, not ranked`
-    : `${shown}, ${ordinal(Math.round(point.percentile))} percentile`;
+  if (point.percentile === null || !Number.isFinite(point.percentile))
+    return `${shown}, not ranked`;
+  return ordinals ? `${shown}, ${ordinal(Math.round(point.percentile))} percentile` : shown;
 }
 
 /**
@@ -117,6 +128,7 @@ export function SeasonTrend({
   renderLabel,
   visibleSeasons = 5,
   ariaLabel = 'Percentile by season',
+  ordinals = true,
 }: SeasonTrendProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const n = seasons.length;
@@ -155,7 +167,7 @@ export function SeasonTrend({
               </div>
               <div className="flex" aria-hidden="true">
                 <Gutter opaque={overflow} />
-                <Plot row={row} n={n} />
+                <Plot row={row} n={n} ordinals={ordinals} />
               </div>
             </div>
           ))}
@@ -218,7 +230,8 @@ export function SeasonTrend({
                   <td key={row.key}>
                     {seasonTrendReading(
                       row.points[i] ?? { value: null, percentile: null },
-                      row.unit
+                      row.unit,
+                      ordinals
                     )}
                   </td>
                 ))}
@@ -255,7 +268,7 @@ function Gutter({ opaque }: { opaque: boolean }) {
   );
 }
 
-function Plot({ row, n }: { row: SeasonTrendRow; n: number }) {
+function Plot({ row, n, ordinals }: { row: SeasonTrendRow; n: number; ordinals: boolean }) {
   return (
     <div className="relative min-w-0 flex-1" style={{ height: PLOT_H }}>
       {[100, 0].map((p) => (
@@ -300,6 +313,7 @@ function Plot({ row, n }: { row: SeasonTrendRow; n: number }) {
             unit={row.unit}
             x={seasonTrendX(i, n)}
             edge={i === 0 ? 'start' : i === n - 1 ? 'end' : undefined}
+            ordinals={ordinals}
           />
         )
       )}
@@ -312,18 +326,20 @@ function Point({
   unit,
   x,
   edge,
+  ordinals,
 }: {
   point: SeasonTrendPoint;
   unit: SeasonTrendRow['unit'];
   x: number;
   /** The first or last column: the tooltip opens inward so it never leaves the chart. */
   edge?: 'start' | 'end';
+  ordinals: boolean;
 }) {
   const tipAnchor =
     edge === 'start' ? 'left-0' : edge === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2';
   const ranked = point.percentile !== null && Number.isFinite(point.percentile);
   const y = ranked ? seasonTrendY(point.percentile!) : SEASON_TREND_UNRANKED_Y;
-  const reading = seasonTrendReading(point, unit);
+  const reading = seasonTrendReading(point, unit, ordinals);
   return (
     <div
       data-slot="season-trend-point"
