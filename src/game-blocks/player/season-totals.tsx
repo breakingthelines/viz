@@ -28,7 +28,7 @@ import { baseFrame } from './shared';
  *
  * The default look is the poster. A player with no cut-out draws his wheel
  * for the same season instead, and the editorial look when there is no
- * wheel either.
+ * wheel either. The `wheel` view draws the wheel whatever the look.
  */
 
 export function pickStat(
@@ -201,8 +201,10 @@ export function PlayerSeasonTotalsBlock(
   const wheel = data.wheel;
   const wheelMetrics = wheel?.metrics ?? [];
 
-  // Poster with no cut-out: the wheel for the same season.
-  if (asked === 'poster' && art === 'none' && wheelMetrics.length > 0) {
+  // The wheel view (Regista's "show it as a wheel"), or a poster with no
+  // cut-out: the wheel for the same season.
+  const wheelView = config.options.view === 'wheel';
+  if (wheelMetrics.length > 0 && (wheelView || (asked === 'poster' && art === 'none'))) {
     const families = wheel?.families ?? [];
     const familyLabel = new Map(families.map((f) => [f.key ?? '', f.label ?? f.key ?? '']));
     const focus = top?.key ? WHEEL_KEY[top.key] : undefined;

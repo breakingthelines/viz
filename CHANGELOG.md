@@ -23,7 +23,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   cut-out (no pre-rendered halftone and no headshot) draws his percentile
   wheel for the same season from `data.wheel`, inside
   `[data-season-fallback="wheel"]`; with no wheel either, the editorial
-  look. A crest alone no longer makes a season poster.
+  look. The `wheel` view (`options.view`, Regista's "show it as a wheel")
+  draws the wheel whatever the look. A crest alone no longer makes a season poster.
 - **`PercentileWheel` `marks`**: `false` draws the wedges and labels with
   no percentile numbers and no dashed median ring. The season card's wheel
   passes it.

@@ -152,6 +152,14 @@ describe('Season totals', () => {
     expect(host).not.toContain('aria-label="Save image"');
   });
 
+  it('draws the wheel for the wheel view, with no numbers or median ring', () => {
+    const html = render('player-season-totals', 'pro', { options: { view: 'wheel' } });
+    expect(html).toContain('data-season-fallback="wheel"');
+    expect(html).toContain('btl-pw-slc');
+    expect(html).not.toContain('data-median');
+    expect(html).not.toContain('class="btl-pw-tip');
+  });
+
   it('defaults to the poster', () => {
     const json = { ...PLAYER_EXAMPLES['player-season-totals'] };
     json.spec = { ...json.spec, look: undefined };
