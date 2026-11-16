@@ -5,6 +5,15 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.1]
+
+### Fixed
+
+- The orbits' drift runs only on the layout on screen. A pair renders one
+  layout per breakpoint and hides the other, and both were animating (644
+  animations on a Compare page instead of about 320). A resize re-runs it
+  for the layout that is then shown.
+
 ## [0.32.0]
 
 ### Added: similarity orbit game block
