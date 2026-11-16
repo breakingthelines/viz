@@ -213,6 +213,32 @@ export const VerifySwap: Story = {
   },
 };
 
+/** After a swap, Compare with starts on the player now at the centre. */
+export const VerifyCompareStartsOnCentre: Story = {
+  args: { pair: true },
+  play: async ({ canvasElement }) => {
+    const options = [
+      ...canvasElement.querySelectorAll('[data-slot="orbit-block-combined-switch-option"]'),
+    ];
+    await userEvent.click(options[1] as HTMLElement);
+    const face = await waitFor(() => {
+      const el = canvasElement.querySelector(
+        '[data-slot="orbit-block-combined-orbit-face"][aria-label="Lois Openda"]'
+      );
+      if (!el) throw new Error('no face');
+      return el as HTMLElement;
+    });
+    await userEvent.click(face);
+    const strip = await waitFor(() => {
+      const el = canvasElement.querySelector('[data-slot="orbit-block-combined-detail"]');
+      if (!el) throw new Error('no strip');
+      return el;
+    });
+    const select = strip.querySelector('select') as HTMLSelectElement;
+    await expect(select.options[select.selectedIndex]?.textContent).toBe('Haaland');
+  },
+};
+
 /** The single orbit's strip: one place and a plain Compare with link. */
 export const VerifySingleStrip: Story = {
   play: async ({ canvasElement }) => {
