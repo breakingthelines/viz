@@ -99,7 +99,7 @@ export function toGameBlockConfig(
     snapshotId: json.snapshotId ?? '',
     title: json.defaultTitle || subject.name,
     titleOrigin: 'default',
-    look: LOOKS[spec.look ?? ''] ?? 'editorial',
+    look: LOOKS[spec.look ?? ''] ?? entry.defaultLook ?? 'editorial',
     subject,
     scope: dropEmpty({
       seasonId: spec.seasonId,

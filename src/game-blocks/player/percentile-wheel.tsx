@@ -71,7 +71,7 @@ export function pickHighlight(
   return best ?? metrics[0];
 }
 
-function toStatMetric(m: GameBlockMetricJson, family: Map<string, string>): StatMetric {
+export function toStatMetric(m: GameBlockMetricJson, family: Map<string, string>): StatMetric {
   return {
     key: m.key ?? '',
     label: m.label ?? '',
@@ -135,7 +135,7 @@ export function PlayerPercentileWheelBlock({
         baseline: [
           top.valueCell ? (
             <>
-              Per 90 <GatedValue cell={top.valueCell} width={28} />
+              <GatedValue cell={top.valueCell} width={28} /> per 90
             </>
           ) : null,
           median,
@@ -168,6 +168,7 @@ export function PlayerPercentileWheelBlock({
         labels="short"
         surface={skin.surface}
         announce={false}
+        marks={false}
       />
     ) : null;
 
@@ -193,6 +194,7 @@ export function PlayerPercentileWheelBlock({
       density={density}
       exportName={`btl-${subject.name}-percentiles`}
       annotate={top?.key ? { target: `path.btl-pw-slc[data-k="${top.key}"]` } : undefined}
+      titleFace
       aside={aside}
     >
       {visual}

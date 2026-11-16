@@ -115,6 +115,12 @@ export interface PercentileWheelProps {
    * shrink the narrow number past legibility by passing a smaller `tipSize`.
    */
   tipSize?: number;
+  /**
+   * `false` draws the wedges and labels only: no percentile number in or
+   * beside each wedge, and no dashed median ring. The season card's wheel
+   * shows standing by the wedge alone. Default `true`.
+   */
+  marks?: boolean;
 }
 
 const DEFAULT_TIP_SIZE = 11;
@@ -291,6 +297,7 @@ export function PercentileWheel({
   surface = '#151515',
   announce = true,
   tipSize = DEFAULT_TIP_SIZE,
+  marks = true,
   tone = 'subject',
 }: PercentileWheelProps) {
   const interactive = variant === 'web';
@@ -457,20 +464,22 @@ export function PercentileWheel({
             );
           })}
       </g>
-      <circle
-        cx={WHEEL_CX}
-        cy={WHEEL_CY}
-        r={radiusFor(50)}
-        fill="none"
-        stroke={MEDIAN}
-        strokeWidth={1}
-        strokeDasharray="2 4"
-        pointerEvents="none"
-        data-median=""
-      />
+      {marks ? (
+        <circle
+          cx={WHEEL_CX}
+          cy={WHEEL_CY}
+          r={radiusFor(50)}
+          fill="none"
+          stroke={MEDIAN}
+          strokeWidth={1}
+          strokeDasharray="2 4"
+          pointerEvents="none"
+          data-median=""
+        />
+      ) : null}
       {layers.map((L) => (
         <g key={L.id} className={`btl-pw-${L.id}`}>
-          {L.tips.map((t) => (
+          {(marks ? L.tips : []).map((t) => (
             <text
               key={`n-${t.key}`}
               className={`btl-pw-tip btl-pw-dm${on(t.key)}`}

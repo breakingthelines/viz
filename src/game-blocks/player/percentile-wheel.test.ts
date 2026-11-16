@@ -29,6 +29,13 @@ function render(c: GameBlockConfig, values?: Record<string, GatedCellValue>) {
 }
 
 describe('Percentile wheel block', () => {
+  it('draws the wedges with no percentile numbers and no median ring', () => {
+    const html = render(config(), PRO);
+    expect(html).toContain('btl-pw-slc');
+    expect(html).not.toContain('data-median');
+    expect(html).not.toContain('class="btl-pw-tip');
+  });
+
   it('shows the per 90 hero, its percentile and median to a Pro reader', () => {
     const html = render(config(), PRO);
     expect(html).toContain('2.62');

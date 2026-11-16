@@ -63,7 +63,7 @@ export function PlayerSeasonTrendBlock(props: GameBlockComponentProps<PlayerSeas
           : null,
         lastPoint?.valueCell ? (
           <span key="p90">
-            Per 90 <GatedValue cell={lastPoint.valueCell} width={28} />
+            <GatedValue cell={lastPoint.valueCell} width={28} /> per 90
           </span>
         ) : null,
       ].filter(Boolean),

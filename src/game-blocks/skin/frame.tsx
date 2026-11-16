@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useImageSave } from '#/components/use-image-save';
+import { BtlMark } from '#/football/lib/btl-logo';
 import { BtlWordmark, ProviderMark } from '#/football/lib/panel-footer';
 import type { GameBlockDensity, GameBlockLook } from '../types';
 import { useBlockLocked, usePlansHref } from '../values';
@@ -25,6 +26,7 @@ import {
 } from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
 import {
+  BlockActionsContext,
   DrawnLookContext,
   LayoutContext,
   useBlockLayout,
@@ -97,6 +99,12 @@ export interface BlockFrameProps {
   annotate?: { target?: string };
   /** Supporting rows beside the hero (left column on wide layouts). */
   aside?: ReactNode;
+  /**
+   * Editorial and annotated looks: a small headshot (or crest) beside the
+   * title, from `media`; the BTL mark when there is no picture. The poster
+   * has its cut-out instead.
+   */
+  titleFace?: boolean;
   /** The block's visual: a wheel, a chart, a table. */
   children?: ReactNode;
 }
@@ -158,6 +166,7 @@ export function BlockFrame(props: BlockFrameProps) {
     [look, density, narrow, capturing]
   );
   const onLookDrawn = useContext(DrawnLookContext);
+  const actions = useContext(BlockActionsContext);
   useEffect(() => {
     onLookDrawn?.(look);
   }, [onLookDrawn, look]);
@@ -220,7 +229,9 @@ export function BlockFrame(props: BlockFrameProps) {
         )}
         <LockedNote lockedNote={props.lockedNote} />
         <Colophon provider={props.provider} />
-        {density !== 'tile' ? <SaveAction visible={hover} busy={saving} onSave={onSave} /> : null}
+        {density !== 'tile' && actions === 'frame' ? (
+          <SaveAction visible={hover} busy={saving} onSave={onSave} />
+        ) : null}
       </div>
       {overlay}
     </LayoutContext.Provider>
@@ -383,6 +394,57 @@ function Columns({
   );
 }
 
+/**
+ * The small picture beside a title: the person's headshot (the block's
+ * image, else the mirrored one by id) or the crest, round; the BTL mark
+ * when none loads.
+ */
+function TitleFace({ media, size }: { media: BlockMedia | undefined; size: number }) {
+  const mediaBase = useMediaBase();
+  const src =
+    media?.kind === 'person'
+      ? (resolveMediaSrc(media.src, mediaBase) ??
+        (media.personId ? playerHeadshotUrl(mediaBase, media.personId) : undefined))
+      : media?.kind === 'crest'
+        ? resolveMediaSrc(media.src, mediaBase)
+        : undefined;
+  const loads = useImageLoads(src);
+  const box: CSSProperties = {
+    display: 'inline-block',
+    width: size,
+    height: size,
+    marginRight: Math.round(size * 0.3),
+    verticalAlign: 'middle',
+    position: 'relative',
+    top: -Math.round(size * 0.08),
+    flexShrink: 0,
+  };
+  if (src && loads === 'ok') {
+    return (
+      <img
+        src={src}
+        alt=""
+        data-title-face={media?.kind === 'crest' ? 'crest' : 'headshot'}
+        crossOrigin={src.startsWith('data:') ? undefined : 'anonymous'}
+        style={{
+          ...box,
+          borderRadius: media?.kind === 'crest' ? 0 : '50%',
+          objectFit: media?.kind === 'crest' ? 'contain' : 'cover',
+          background: media?.kind === 'crest' ? 'transparent' : 'var(--btl-block-track)',
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      data-title-face="mark"
+      style={{ ...box, padding: Math.round(size * 0.12), boxSizing: 'border-box' }}
+    >
+      <BtlMark style={{ width: '100%', height: '100%', display: 'block' }} />
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Editorial: a newspaper stat panel. No rule or box above, a bold run-in name
 // with the context after it, the figure on the words' baseline, the visual
@@ -397,6 +459,7 @@ function EditorialBody(p: BlockFrameProps) {
   const text = (
     <div>
       <p style={{ margin: 0, fontFamily: skin.fontSerif, fontSize: size, lineHeight: 1.05 }}>
+        {p.titleFace ? <TitleFace media={p.media} size={Math.round(size * 1.15)} /> : null}
         <strong style={{ fontWeight: 700 }}>{p.titleSlot ?? p.title}</strong>{' '}
         <span
           style={{
@@ -562,6 +625,7 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
             color: 'var(--btl-block-ink-1)',
           }}
         >
+          {p.titleFace ? <TitleFace media={p.media} size={small ? 24 : narrow ? 26 : 28} /> : null}
           {p.titleSlot ?? p.title}
         </h3>
         <p
@@ -726,6 +790,27 @@ export function usePairArtStatus(media: BlockMedia | undefined): 'working' | 'ok
   const photoB = useImageLoads(preB === 'none' ? photo(1) : undefined);
   if (!ids[0] || !ids[1]) return 'none';
   return pairArtStatus({ pre: preA, photo: photoA }, { pre: preB, photo: photoB });
+}
+
+/**
+ * Whether one player can have a poster cut-out, before any halftone is
+ * computed: a pre-rendered halftone or a headshot. A crest does not count.
+ * The season card reads it to draw its wheel when there is none.
+ */
+export function usePersonArtStatus(media: BlockMedia | undefined): 'working' | 'ok' | 'none' {
+  const mediaBase = useMediaBase();
+  const id = media?.kind === 'person' ? media.personId : undefined;
+  const src = media?.kind === 'person' ? media.src : undefined;
+  const pre = useImageLoads(id ? playerHalftoneUrl(mediaBase, id) : undefined);
+  const photo = useImageLoads(
+    pre === 'none'
+      ? (resolveMediaSrc(src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined))
+      : undefined
+  );
+  if (!id && !src) return 'none';
+  if (pre === 'ok') return 'ok';
+  if (pre === 'working') return 'working';
+  return photo;
 }
 
 // The duel: two cut-outs facing each other across the poster wedges, the
