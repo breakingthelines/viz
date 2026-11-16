@@ -104,17 +104,25 @@ function useFaceSources(): OrbitFaceSources {
 function StripActions({
   player,
   anchors,
+  centre,
 }: {
   player: OrbitPlayer;
   anchors: readonly OrbitPlayer[];
+  /** The player the orbit is centred on now: the dropdown's first choice. */
+  centre?: string;
 }) {
   const font = useBodyFont();
-  const [pick, setPick] = useState(0);
   const page = playerPagePath(player);
   const options = anchors
     .filter((a) => a.id !== player.id)
-    .map((a) => ({ href: playerComparePath(player, a), label: orbitSurname(a.name) }))
-    .filter((o): o is { href: string; label: string } => !!o.href);
+    .map((a) => ({ id: a.id, href: playerComparePath(player, a), label: orbitSurname(a.name) }))
+    .filter((o): o is { id: string; href: string; label: string } => !!o.href);
+  const [pick, setPick] = useState(() =>
+    Math.max(
+      0,
+      options.findIndex((o) => o.id === centre)
+    )
+  );
   const text: CSSProperties = { fontFamily: font, fontSize: 13, color: 'var(--btl-block-ink-1)' };
   const link: CSSProperties = { ...text, textDecoration: 'none' };
   const chosen = options[Math.min(pick, options.length - 1)];
@@ -382,7 +390,15 @@ function OrbitVisual({ orbits, interactive }: { orbits: OrbitData[]; interactive
       orbitSurname(pair[0].anchor.name),
       orbitSurname(pair[1].anchor.name),
     ] as const;
-    const actions = (p: OrbitPlayer) => <StripActions player={p} anchors={anchors} />;
+    // The dropdown starts on the player the orbit is centred on.
+    const actions = (p: OrbitPlayer, _main?: boolean, centre?: OrbitPlayer) => (
+      <StripActions
+        key={`${p.id}:${centre?.id ?? anchors[0]!.id}`}
+        player={p}
+        anchors={anchors}
+        centre={centre?.id ?? anchors[0]!.id}
+      />
+    );
     if (acrossPools(pair)) {
       return (
         <SimilarityOrbitPair

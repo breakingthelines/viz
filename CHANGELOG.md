@@ -16,6 +16,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   - The single orbit's three closest show as names with clubs, with no
     heading (the list keeps "Closest to Kylian Mbappé" as its accessible
     name).
+  - The strip's "Compare with" dropdown starts on the player the orbit is
+    centred on now (the first-named, or whoever a swap centred).
+    `SimilarityOrbitCombined`'s `renderActions` gets that player as a third
+    argument.
 
 ## [0.34.0]
 
