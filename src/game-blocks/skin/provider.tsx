@@ -39,6 +39,11 @@ export interface BlockLayout {
   density: GameBlockDensity;
   /** True below the two-column width (phone, chat, tile). */
   narrow: boolean;
+  /**
+   * True while Save image captures the block: a block with motion or
+   * taps draws its still picture for the file.
+   */
+  capturing?: boolean;
 }
 
 export const LayoutContext = createContext<BlockLayout>({

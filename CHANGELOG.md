@@ -5,17 +5,29 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.32.0]
 
-### Added: similarity orbit block (types and palette entry)
+### Added: similarity orbit game block
 
-- **`player-similarity-orbit`** in the registry, labelled "Similarity orbit"
-  in the Player submenu, with `PlayerSimilarityOrbitDataJson`,
-  `GameBlockOrbitJson`, `GameBlockOrbitMemberJson` and
-  `GameBlockArchetypeRowJson` (protos#314). One orbit, or a pair when the
-  spec names a comparison. No component yet: until the shared orbit lands
-  here, the block draws the "Update to see this block" frame.
-- `game_block_pb.ts` synced from protos#314.
+- **`player-similarity-orbit`** (Player › Similarity orbit, protos 0.227.0):
+  one player's orbit ("who is he like?"), or, when the spec names a
+  comparison, both players' orbits side by side with the Compare page's
+  verdict, "Both / Only" archetype rows and "Alike in · Differ on" line.
+  Drawn with the shared `SimilarityOrbit` and `SimilarityOrbitPair`; no text
+  on the orbit. The context line is the pool and season ("Strikers, top five
+  leagues, 2026/27").
+- Interactive in an article and in chat (drift, names on hover, a tap opens
+  the strip with "Player page" and "vs <surname>" links to the comparison
+  page); still in a picker tile and in a saved image.
+- `toOrbitData`, `orbitContext`, and the link helpers `playerPagePath`,
+  `playerComparePath`, `playerRouteId`, `identitySlug` and `orbitSurname`
+  (platform's route and slug rules).
+- Types: `PlayerSimilarityOrbitDataJson`, `GameBlockOrbitJson`,
+  `GameBlockOrbitMemberJson`, `GameBlockArchetypeRowJson`;
+  `game_block_pb.ts` synced from protos 0.227.0.
+- `BlockLayout.capturing`: true while Save image captures a block, so a
+  block with motion or taps draws its still picture for the file.
+
 ## [0.31.0]
 
 ### Added: similarity orbits
