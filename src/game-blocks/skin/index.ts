@@ -1,6 +1,6 @@
 // The block skin: the only place game blocks make visual decisions. Blocks
 // import from here; a replacement skin replaces this folder.
-export { BlockFrame, NARROW_BELOW } from './frame';
+export { BlockFrame, NARROW_BELOW, usePairArtStatus } from './frame';
 export type { BlockFrameProps, BlockHero, BlockMedia } from './frame';
 export {
   DEFAULT_MEDIA_BASE,

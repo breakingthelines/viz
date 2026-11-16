@@ -15,7 +15,14 @@ import type { GameBlockDensity, GameBlockLook } from '../types';
 import { useBlockLocked, usePlansHref } from '../values';
 import { Crayon, GrainDefs, arc, head, ring, seedOf, type Pt } from './crayon';
 import { playerHalftoneUrl, playerHeadshotUrl, resolveMediaSrc, useMediaBase } from './assets';
-import { pickPosterArt, useHalftone, useImageLoads, type PosterArt } from './halftone';
+import {
+  pairArtStatus,
+  pickPairArt,
+  pickPosterArt,
+  useHalftone,
+  useImageLoads,
+  type PosterArt,
+} from './halftone';
 import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
 import {
   DrawnLookContext,
@@ -42,6 +49,12 @@ export interface BlockMedia {
    * address from it, and the headshot's when `src` is empty.
    */
   personId?: string;
+  /**
+   * The second player's id, for a pair of players (a comparison). With both
+   * ids the poster draws the two cut-outs facing each other, and never a
+   * crest; without either cut-out it draws the editorial look.
+   */
+  pairPersonId?: string;
 }
 
 export interface BlockHero {
@@ -180,7 +193,9 @@ export function BlockFrame(props: BlockFrameProps) {
         onBlur={() => setHover(false)}
       >
         <GrainDefs crayon={ids.crayon} paper={ids.paper} />
-        {look === 'poster' ? (
+        {look === 'poster' && art.status === 'ready' && art.kind === 'pair' ? (
+          <PairPosterBody {...props} art={art} paperId={ids.paper} />
+        ) : look === 'poster' ? (
           <PosterBody {...props} art={art} paperId={ids.paper} />
         ) : look === 'annotated' ? (
           <AnnotatedBody {...props} crayonId={ids.crayon} width={width} />
@@ -594,15 +609,25 @@ function devicePixelRatio(): number {
   return typeof window === 'undefined' ? 2 : Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 }
 
-function usePosterArt(
-  media: BlockMedia | undefined,
-  narrow: boolean,
-  density: GameBlockDensity | undefined,
-  skin: BlockSkinTokens
-): PosterArt {
+interface CutOptions {
+  narrow: boolean;
+  density: GameBlockDensity | undefined;
+  skin: BlockSkinTokens;
+}
+
+/**
+ * One player's cut-out: the pre-rendered halftone from the CDN, else one
+ * computed here from the headshot. Never a crest.
+ */
+function usePersonCut(
+  id: string | undefined,
+  src: string | undefined,
+  { narrow, density, skin }: CutOptions
+): {
+  pre: { src: string | undefined; status: 'working' | 'ok' | 'none' };
+  cut: ReturnType<typeof useHalftone>;
+} {
   const mediaBase = useMediaBase();
-  const person = media?.kind === 'person' ? media : undefined;
-  const id = person?.personId;
   // The pre-rendered halftone is drawn in the default inks; a skin that
   // changes them keeps computing its own.
   const defaultInks =
@@ -611,8 +636,7 @@ function usePosterArt(
   const pre = id && defaultInks ? playerHalftoneUrl(mediaBase, id) : undefined;
   const preLoads = useImageLoads(pre);
   const photo =
-    resolveMediaSrc(person?.src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined);
-  const crest = resolveMediaSrc(person ? person.crestSrc : media?.src, mediaBase);
+    resolveMediaSrc(src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined);
   // Only compute a halftone here once the CDN has none.
   const cut = useHalftone(pre && preLoads !== 'none' ? undefined : photo, {
     scale: 4,
@@ -621,12 +645,204 @@ function usePosterArt(
     paper: skin.halftonePaper,
     targetPx: Math.round(cutOutHeight(density, narrow) * devicePixelRatio()),
   });
+  const cutState: ReturnType<typeof useHalftone> =
+    pre && preLoads === 'working' ? { status: 'working', url: null } : cut;
+  return { pre: { src: pre, status: preLoads }, cut: cutState };
+}
+
+const NO_CREST = { src: undefined, status: 'none' } as const;
+
+function usePosterArt(
+  media: BlockMedia | undefined,
+  narrow: boolean,
+  density: GameBlockDensity | undefined,
+  skin: BlockSkinTokens
+): PosterArt {
+  const mediaBase = useMediaBase();
+  const players = media?.kind === 'pair' && !!media.personId && !!media.pairPersonId;
+  const person = media?.kind === 'person' ? media : undefined;
+  const opts = { narrow, density, skin };
+  // Hooks run in the same order for every kind: the first cut-out, the
+  // second (a pair of players only) and the crest.
+  const first = usePersonCut(
+    person?.personId ?? (players ? media!.personId : undefined),
+    person ? person.src : players ? media!.src : undefined,
+    opts
+  );
+  const second = usePersonCut(
+    players ? media!.pairPersonId : undefined,
+    players ? media!.pairSrc : undefined,
+    opts
+  );
+  // A pair of players never falls back to a crest: the headshot is not one.
+  const crest = players
+    ? undefined
+    : resolveMediaSrc(person ? person.crestSrc : media?.src, mediaBase);
   const crestLoads = useImageLoads(crest);
-  const cutState = pre && preLoads === 'working' ? { status: 'working' as const, url: null } : cut;
-  return pickPosterArt({ src: pre, status: preLoads }, cutState, {
-    src: crest,
-    status: crestLoads,
-  });
+  if (!media) return { status: 'none' };
+  if (players) {
+    return pickPairArt(
+      pickPosterArt(first.pre, first.cut, NO_CREST),
+      pickPosterArt(second.pre, second.cut, NO_CREST)
+    );
+  }
+  const cut = person ? first.cut : { status: 'none' as const, url: null };
+  const pre = person ? first.pre : NO_CREST;
+  return pickPosterArt(pre, cut, { src: crest, status: crestLoads });
+}
+
+/**
+ * Whether two players can have a poster, before any halftone is computed:
+ * each has a pre-rendered halftone or a headshot. A comparison reads it to
+ * draw its duel, or its wheel when either player has no picture.
+ */
+export function usePairArtStatus(media: BlockMedia | undefined): 'working' | 'ok' | 'none' {
+  const mediaBase = useMediaBase();
+  const ids = media?.kind === 'pair' ? [media.personId, media.pairPersonId] : [];
+  const srcs = media?.kind === 'pair' ? [media.src, media.pairSrc] : [];
+  const pre = (i: number) => (ids[i] ? playerHalftoneUrl(mediaBase, ids[i]!) : undefined);
+  const photo = (i: number) =>
+    resolveMediaSrc(srcs[i], mediaBase) ??
+    (ids[i] ? playerHeadshotUrl(mediaBase, ids[i]!) : undefined);
+  const preA = useImageLoads(pre(0));
+  const preB = useImageLoads(pre(1));
+  const photoA = useImageLoads(preA === 'none' ? photo(0) : undefined);
+  const photoB = useImageLoads(preB === 'none' ? photo(1) : undefined);
+  if (!ids[0] || !ids[1]) return 'none';
+  return pairArtStatus({ pre: preA, photo: photoA }, { pre: preB, photo: photoB });
+}
+
+// The duel: two cut-outs facing each other across the poster wedges, the
+// title centred above them, the block's figures under the poster.
+function pairWedges(s: BlockSkinTokens, H: number): [string, string][] {
+  return [
+    [s.posterOrange, `0,0 100,0 100,${H} 0,${H}`],
+    [s.posterBlue, `52,0 100,0 100,${H} 40,${H}`],
+    [s.posterMaroon, `49,0 55,0 43,${H} 37,${H}`],
+    [s.posterPink, `0,${H * 0.62} 22,${H} 0,${H}`],
+    [s.posterMustard, `100,0 100,${H * 0.3} 82,0`],
+  ];
+}
+
+function PairPosterBody(
+  p: BlockFrameProps & {
+    art: { status: 'ready'; kind: 'pair'; src: string; pairSrc: string };
+    paperId: string;
+  }
+) {
+  const narrow = useBlockLayout().narrow;
+  const skin = useBlockSkin();
+  const small = p.density !== 'article';
+  const height = small ? (narrow ? 236 : 260) : narrow ? 260 : 300;
+  const cut = height * (narrow ? 0.74 : 0.78);
+  const side = narrow ? -6 : 18;
+  const img = (src: string, right: boolean) => (
+    <img
+      src={src}
+      alt=""
+      data-poster-media="halftone"
+      crossOrigin={src.startsWith('data:') ? undefined : 'anonymous'}
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        [right ? 'right' : 'left']: side,
+        height: cut,
+        width: cut,
+        objectFit: 'cover',
+        transform: right ? 'scaleX(-1)' : undefined,
+      }}
+    />
+  );
+  return (
+    <div data-poster-pair="">
+      <div
+        style={{
+          position: 'relative',
+          height,
+          overflow: 'hidden',
+          borderRadius: 'var(--btl-block-radius)',
+          clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 ${narrow ? 88 : 86}%)`,
+        }}
+      >
+        <svg
+          viewBox={`0 0 100 ${height}`}
+          preserveAspectRatio="none"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          aria-hidden
+          focusable="false"
+        >
+          {pairWedges(skin, height).map(([fill, pts], i) => (
+            <polygon key={i} points={pts} fill={fill} />
+          ))}
+        </svg>
+        {img(p.art.src, false)}
+        {img(p.art.pairSrc, true)}
+        <svg
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            mixBlendMode: 'multiply',
+            opacity: 0.35,
+          }}
+          aria-hidden
+          focusable="false"
+        >
+          <rect width="100%" height="100%" filter={`url(#${p.paperId})`} />
+        </svg>
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: narrow ? 16 : 22,
+            textAlign: 'center',
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontFamily: skin.fontSans,
+              fontWeight: 700,
+              fontSize: narrow ? 22 : 28,
+              lineHeight: 1.08,
+              letterSpacing: '-0.02em',
+              color: 'var(--btl-block-ink-1)',
+            }}
+          >
+            {p.titleSlot ?? p.title}
+          </h3>
+          <p
+            style={{
+              margin: '6px 0 0',
+              fontFamily: skin.fontSans,
+              fontSize: 13,
+              lineHeight: 1.35,
+              color: 'var(--btl-block-ink-1)',
+              opacity: 0.88,
+            }}
+          >
+            {p.context}
+          </p>
+          {p.subheading ? (
+            <p
+              style={{
+                margin: '6px 0 0',
+                fontFamily: skin.fontSans,
+                fontSize: 14,
+                lineHeight: 1.35,
+                color: 'var(--btl-block-ink-1)',
+              }}
+            >
+              {p.subheading}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {p.children ? <div style={{ marginTop: narrow ? 6 : 4 }}>{p.children}</div> : null}
+    </div>
+  );
 }
 
 function wedges(s: BlockSkinTokens, W: number, H: number): [string, string][] {

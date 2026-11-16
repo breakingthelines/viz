@@ -5,6 +5,38 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0]
+
+### Added: comparison views
+
+- **`player-comparison` views** (`options.view`): `wheel` (default, one
+  wheel with the second player as outlines), `differ` (the annotated look on
+  the widest gap in each family, the crayon ringing the widest), `bars` (the
+  Stats tab's side by side bars on the eight widest gaps), `strip` (three
+  stats across), `two_wheels` (each player on his own wheel) and `duel` (the
+  poster with both cut-outs and three figures). `scales` and `rows` stay.
+  `comparisonView`, `widestGaps` and `COMPARISON_VIEWS` are exported.
+- **Pair poster.** `BlockMedia.pairPersonId` with `personId` draws two
+  players' cut-outs facing each other (`pickPairArt`, `usePairArtStatus`).
+  The duel needs both pictures; without them a comparison draws its wheel.
+- **`PercentileWheel.tone`**: `comparison` ramps the wedges to white, for a
+  second player's wheel.
+- **`ComparisonBarsRow.left.display` / `right.display`** draw a node (a
+  gated cell) in place of the formatted value.
+
+### Changed
+
+- A comparison's context line is the scope its figures cover ("Bundesliga
+  2026/27", "All competitions 2026/27"), not the two clubs.
+- The default comparison view is the wheel. Stored blocks with no view now
+  draw the wheel; pass `view: 'scales'` for the old rows with a hero.
+
+### Fixed
+
+- A comparison asked for as a poster drew the first player's headshot where
+  a crest goes and left the second player out. It now draws the duel, or
+  the wheel when either player has no picture, and never a crest.
+
 ## [0.29.1]
 
 ### Fixed: `SeasonTrend` keeps "not ranked" without ordinals

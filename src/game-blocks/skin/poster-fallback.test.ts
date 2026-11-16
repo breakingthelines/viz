@@ -2,7 +2,7 @@ import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { BlockFrame, type BlockMedia } from './frame';
-import { canvasScale, pickPosterArt } from './halftone';
+import { canvasScale, pairArtStatus, pickPairArt, pickPosterArt } from './halftone';
 import { playerHalftoneUrl, playerHeadshotUrl, resolveMediaSrc } from './assets';
 
 function poster(media?: BlockMedia) {
@@ -133,6 +133,50 @@ describe('poster images by convention', () => {
 
   it('stays a poster for a player with only an id', () => {
     const html = poster({ kind: 'person', personId: 'btl_football_player_p4b7614c5' });
+    expect(html).toContain('data-game-block-look="poster"');
+  });
+});
+
+describe('pair poster', () => {
+  const cut = { status: 'ready', kind: 'halftone', src: 'a.png' } as const;
+  const crest = { status: 'ready', kind: 'crest', src: 'crest.png' } as const;
+
+  it('needs both cut-outs and never takes a crest in place of one', () => {
+    expect(pickPairArt(cut, { ...cut, src: 'b.png' })).toEqual({
+      status: 'ready',
+      kind: 'pair',
+      src: 'a.png',
+      pairSrc: 'b.png',
+    });
+    expect(pickPairArt(cut, { status: 'none' })).toEqual({ status: 'none' });
+    expect(pickPairArt(cut, crest)).toEqual({ status: 'none' });
+    expect(pickPairArt(cut, { status: 'working' })).toEqual({ status: 'working' });
+  });
+
+  it('is possible only when each player has a halftone or a headshot', () => {
+    expect(pairArtStatus({ pre: 'ok', photo: 'none' }, { pre: 'none', photo: 'ok' })).toBe('ok');
+    expect(pairArtStatus({ pre: 'ok', photo: 'none' }, { pre: 'none', photo: 'none' })).toBe(
+      'none'
+    );
+    expect(pairArtStatus({ pre: 'working', photo: 'none' }, { pre: 'ok', photo: 'none' })).toBe(
+      'working'
+    );
+  });
+
+  it('draws a pair of players in the poster look while their art loads, with no crest', () => {
+    const html = poster({
+      kind: 'pair',
+      src: 'a.png',
+      pairSrc: 'b.png',
+      personId: 'p1',
+      pairPersonId: 'p2',
+    });
+    expect(html).toContain('data-game-block-look="poster"');
+    expect(html).not.toContain('data-poster-media="crest"');
+  });
+
+  it('keeps a pair of crests (a match) as it was', () => {
+    const html = poster({ kind: 'pair', src: 'home.png', pairSrc: 'away.png' });
     expect(html).toContain('data-game-block-look="poster"');
   });
 });

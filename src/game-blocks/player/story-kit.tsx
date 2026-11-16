@@ -98,6 +98,11 @@ export function PlayerExample({ id, ...args }: ExampleArgs & { id: PlayerExample
             ? BROKEN_IMAGE
             : undefined,
     },
+    // A comparison's second player gets a picture too, so its duel can draw.
+    comparison:
+      c.comparison && args.media === 'headshot'
+        ? { ...c.comparison, imageUrl: syntheticHeadshot() }
+        : c.comparison,
   };
   const view = <GameBlockView config={config} density={args.density} onLookDrawn={setDrawn} />;
   if (args.reader === 'pending')
@@ -206,3 +211,15 @@ export const marksChecks: Play = async ({ canvasElement }) => {
     timeout: 4000,
   });
 };
+
+/** A comparison drew this view (`data-comparison-view`). */
+export const comparisonViewChecks =
+  (view: string): Play =>
+  async ({ canvasElement }) => {
+    await waitFor(
+      () => expect(canvasElement.querySelector(`[data-comparison-view="${view}"]`)).not.toBeNull(),
+      { timeout: 4000 }
+    );
+    await expect(canvasElement.querySelector('[aria-label="Breaking The Lines"]')).not.toBeNull();
+    await expect(canvasElement.querySelector('[data-poster-media="crest"]')).toBeNull();
+  };
