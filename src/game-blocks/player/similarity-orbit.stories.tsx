@@ -79,7 +79,8 @@ const pairChecks: Play = async (ctx) => {
   const text = ctx.canvasElement.textContent ?? '';
   await expect(text).toContain('Different profiles');
   await expect(text).toContain('Only Mbappé:');
-  await expect(text).toContain('Alike in Shooting');
+  await expect(text).toContain('Similar:Shooting');
+  await expect(text).toContain('Different:Dribbling, Creating');
 };
 
 export const Single680: Story = { play: frameChecks };

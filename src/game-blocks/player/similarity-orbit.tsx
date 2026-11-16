@@ -27,8 +27,8 @@ import { baseFrame } from './shared';
  * dots around his headshot, closer meaning more alike, his three closest as
  * faces ("who is he like?"); or, when the spec names a comparison, both
  * players' orbits side by side, each the other's lit dot, with the Compare
- * page's verdict, "Both / Only" archetype rows and "Alike in · Differ on"
- * line. Ranks only: the orbit has no text and no numbers on it; exact places
+ * page's verdict and its rows: "Both" and "Only <surname>" archetypes, then
+ * "Similar" and "Different" metric families, each only when it names one. Ranks only: the orbit has no text and no numbers on it; exact places
  * are in its accessible labels and the detail strip.
  *
  * Drawn with the shared `SimilarityOrbit` and `SimilarityOrbitPair`.
@@ -160,44 +160,6 @@ function ArchetypeRows({ rows }: { rows: { label: string; archetypes: string[] }
   );
 }
 
-function FamilyLine({ alike, differ }: { alike: string[]; differ: string[] }) {
-  const font = useBodyFont();
-  if (alike.length === 0 && differ.length === 0) return null;
-  return (
-    <p
-      data-slot="orbit-block-families"
-      style={{
-        margin: '8px 0 0',
-        fontFamily: font,
-        fontSize: 13.5,
-        lineHeight: 1.6,
-        color: 'var(--btl-block-ink-3)',
-      }}
-    >
-      {alike.length > 0 ? <span>Alike in {alike.join(', ')}</span> : null}
-      {alike.length > 0 && differ.length > 0 ? <span aria-hidden="true"> · </span> : null}
-      {differ.length > 0 ? (
-        <span>
-          {alike.length > 0 ? (
-            <span
-              style={{
-                position: 'absolute',
-                width: 1,
-                height: 1,
-                overflow: 'hidden',
-                clipPath: 'inset(50%)',
-              }}
-            >
-              .{' '}
-            </span>
-          ) : null}
-          Differ on {differ.join(', ')}
-        </span>
-      ) : null}
-    </p>
-  );
-}
-
 function OrbitVisual({
   data,
   interactive,
@@ -256,14 +218,18 @@ export function PlayerSimilarityOrbitBlock(
 ) {
   const data = props.config.data ?? {};
   const pair = (data.orbits ?? []).length >= 2;
-  const rows = (data.archetypeRows ?? [])
-    .filter((r) => r.label && (r.archetypes ?? []).length > 0)
-    .map((r) => ({ label: r.label!, archetypes: r.archetypes! }));
+  const rows = [
+    ...(data.archetypeRows ?? []).map((r) => ({
+      label: r.label ?? '',
+      archetypes: r.archetypes ?? [],
+    })),
+    { label: 'Similar', archetypes: data.alikeFamilies ?? [] },
+    { label: 'Different', archetypes: data.differFamilies ?? [] },
+  ].filter((r) => r.label && r.archetypes.length > 0);
   const aside: ReactNode = pair ? (
     <>
       {data.verdict ? <Verdict text={data.verdict} /> : null}
       <ArchetypeRows rows={rows} />
-      <FamilyLine alike={data.alikeFamilies ?? []} differ={data.differFamilies ?? []} />
     </>
   ) : null;
   const frame = baseFrame(props, pair ? 'similarity-orbits' : 'similarity-orbit');

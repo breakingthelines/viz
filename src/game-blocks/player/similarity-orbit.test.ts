@@ -58,8 +58,10 @@ describe('similarity orbit block', () => {
     expect(html).toContain('Only Mbappé:');
     expect(html).toContain('Only Haaland:');
     expect(html).toContain('Runner in behind');
-    expect(html).toContain('Alike in Shooting');
-    expect(html).toContain('Differ on Dribbling, Creating');
+    expect(html).toMatch(/Similar:<\/dt><dd[^>]*>Shooting</);
+    expect(html).toMatch(/Different:<\/dt><dd[^>]*>Dribbling, Creating</);
+    expect(html).not.toContain('Alike in');
+    expect(html).not.toContain('Differ on');
     expect(html).toContain(
       'Erling Haaland is joint 85th closest of the 157 other strikers to Kylian Mbappé. Closest: Donyell Malen.'
     );
