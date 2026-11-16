@@ -28,6 +28,7 @@ export type GameBlockTypeId =
   | 'player-honours'
   | 'player-absences'
   | 'player-details'
+  | 'player-similarity-orbit'
   | 'team-season-totals'
   | 'team-form'
   | 'team-goal-timing'

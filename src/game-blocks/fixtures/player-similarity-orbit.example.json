@@ -1,0 +1,1653 @@
+{
+  "_note": "EXAMPLE FIGURES ONLY. Plausible, not real: the ranks are made up. Shape of a BuildGameBlocks response (protos 0.227.0 toJson).",
+  "snapshotId": "",
+  "spec": {
+    "type": "GAME_BLOCK_TYPE_PLAYER_SIMILARITY_ORBIT",
+    "subject": {
+      "id": "btl_football_player_p4b7614c5",
+      "type": "SUBJECT_TYPE_PLAYER",
+      "label": "Kylian Mbappé"
+    },
+    "seasonId": "2026",
+    "competitionId": "140",
+    "look": "GAME_BLOCK_LOOK_EDITORIAL"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "id": "btl_football_player_p4b7614c5",
+    "type": "SUBJECT_TYPE_PLAYER",
+    "name": "Kylian Mbappé",
+    "subtitle": "Real Madrid",
+    "url": "/game/football/player/p4b7614c5/kylian-mbappe"
+  },
+  "seasonLabel": "2026/27",
+  "competitionLabel": "La Liga",
+  "contextLine": "Kylian Mbappé, Real Madrid, 2026/27",
+  "defaultTitle": "Kylian Mbappé",
+  "provider": "API-Football",
+  "asOf": "2026-11-16T09:00:00Z",
+  "baseline": "Strikers, top five leagues",
+  "playerSimilarityOrbit": {
+    "orbits": [
+      {
+        "anchor": {
+          "id": "btl_football_player_p4b7614c5",
+          "name": "Kylian Mbappé",
+          "url": "/game/football/player/p4b7614c5/kylian-mbappe"
+        },
+        "poolPhrase": "strikers",
+        "members": [
+          {
+            "player": {
+              "id": "btl_football_player_pex101",
+              "name": "Donyell Malen",
+              "url": "/game/football/player/pex101/donyell-malen"
+            },
+            "team": {
+              "name": "Aston Villa"
+            },
+            "rank": 1
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex102",
+              "name": "Jonathan David",
+              "url": "/game/football/player/pex102/jonathan-david"
+            },
+            "team": {
+              "name": "Juventus"
+            },
+            "rank": 2
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex103",
+              "name": "Ollie Watkins",
+              "url": "/game/football/player/pex103/ollie-watkins"
+            },
+            "team": {
+              "name": "Aston Villa"
+            },
+            "rank": 3
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex104",
+              "name": "Victor Osimhen"
+            },
+            "team": {
+              "name": "Galatasaray"
+            },
+            "rank": 4
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex105",
+              "name": "Lois Openda"
+            },
+            "team": {
+              "name": "Juventus"
+            },
+            "rank": 5
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex106",
+              "name": "Marcus Thuram"
+            },
+            "team": {
+              "name": "Inter"
+            },
+            "rank": 6
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex107",
+              "name": "Alexander Isak"
+            },
+            "team": {
+              "name": "Liverpool"
+            },
+            "rank": 7
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex108",
+              "name": "Serhou Guirassy"
+            },
+            "team": {
+              "name": "Borussia Dortmund"
+            },
+            "rank": 8
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex109",
+              "name": "Hugo Ekitiké"
+            },
+            "team": {
+              "name": "Liverpool"
+            },
+            "rank": 9
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex110",
+              "name": "Bradley Barcola"
+            },
+            "team": {
+              "name": "Paris Saint-Germain"
+            },
+            "rank": 10
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex210",
+              "name": "Striker 11"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 11
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex211",
+              "name": "Striker 12"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 12
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex212",
+              "name": "Striker 13"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 13
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex213",
+              "name": "Striker 14"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 14
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex214",
+              "name": "Striker 15"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 15
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex215",
+              "name": "Striker 16"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 16
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex216",
+              "name": "Striker 17"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 17
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex217",
+              "name": "Striker 18"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 18
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex218",
+              "name": "Striker 19"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 19
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex219",
+              "name": "Striker 20"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 20
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex220",
+              "name": "Striker 21"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 21
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex221",
+              "name": "Striker 22"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 22
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex222",
+              "name": "Striker 23"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 23
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex223",
+              "name": "Striker 24"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 24
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex224",
+              "name": "Striker 25"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 25
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex225",
+              "name": "Striker 26"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 26
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex226",
+              "name": "Striker 27"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 27
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex227",
+              "name": "Striker 28"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 28
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex228",
+              "name": "Striker 29"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 29
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex229",
+              "name": "Striker 30"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 30
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex230",
+              "name": "Striker 31"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 31
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex231",
+              "name": "Striker 32"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 32
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex232",
+              "name": "Striker 33"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 33
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex233",
+              "name": "Striker 34"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 34
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex234",
+              "name": "Striker 35"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 35
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex235",
+              "name": "Striker 36"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 36
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex236",
+              "name": "Striker 37"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 37
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex237",
+              "name": "Striker 38"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 38
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex238",
+              "name": "Striker 39"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 39
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex239",
+              "name": "Striker 40"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 40
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex240",
+              "name": "Striker 41"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 41
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex241",
+              "name": "Striker 42"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 42
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex242",
+              "name": "Striker 43"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 43
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex243",
+              "name": "Striker 44"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 44
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex244",
+              "name": "Striker 45"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 45
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex245",
+              "name": "Striker 46"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 46
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex246",
+              "name": "Striker 47"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 47
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex247",
+              "name": "Striker 48"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 48
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex248",
+              "name": "Striker 49"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 49
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex249",
+              "name": "Striker 50"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 50
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex250",
+              "name": "Striker 51"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 51
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex251",
+              "name": "Striker 52"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 52
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex252",
+              "name": "Striker 53"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 53
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex253",
+              "name": "Striker 54"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 54
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex254",
+              "name": "Striker 55"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 55
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex255",
+              "name": "Striker 56"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 56
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex256",
+              "name": "Striker 57"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 57
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex257",
+              "name": "Striker 58"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 58
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex258",
+              "name": "Striker 59"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 59
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex259",
+              "name": "Striker 60"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 60
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex260",
+              "name": "Striker 61"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 61
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex261",
+              "name": "Striker 62"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 62
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex262",
+              "name": "Striker 63"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 63
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex263",
+              "name": "Striker 64"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 64
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex264",
+              "name": "Striker 65"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 65
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex265",
+              "name": "Striker 66"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 66
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex266",
+              "name": "Striker 67"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 67
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex267",
+              "name": "Striker 68"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 68
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex268",
+              "name": "Striker 69"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 69
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex269",
+              "name": "Striker 70"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 70
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex270",
+              "name": "Striker 71"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 71
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex271",
+              "name": "Striker 72"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 72
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex272",
+              "name": "Striker 73"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 73
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex273",
+              "name": "Striker 74"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 74
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex274",
+              "name": "Striker 75"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 75
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex275",
+              "name": "Striker 76"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 76
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex276",
+              "name": "Striker 77"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 77
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex277",
+              "name": "Striker 78"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 78
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex278",
+              "name": "Striker 79"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 79
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex279",
+              "name": "Striker 80"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 80
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex280",
+              "name": "Striker 81"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 81
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex281",
+              "name": "Striker 82"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 82
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex282",
+              "name": "Striker 83"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 83
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex283",
+              "name": "Striker 84"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 84
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex284",
+              "name": "Striker 85"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 85
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex285",
+              "name": "Striker 86"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 86
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex286",
+              "name": "Striker 87"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 87
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex287",
+              "name": "Striker 88"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 88
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex288",
+              "name": "Striker 89"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 89
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex289",
+              "name": "Striker 90"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 90
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex290",
+              "name": "Striker 91"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 91
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex291",
+              "name": "Striker 92"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 92
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex292",
+              "name": "Striker 93"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 93
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex293",
+              "name": "Striker 94"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 94
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex294",
+              "name": "Striker 95"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 95
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex295",
+              "name": "Striker 96"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 96
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex296",
+              "name": "Striker 97"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 97
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex297",
+              "name": "Striker 98"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 98
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex298",
+              "name": "Striker 99"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 99
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex299",
+              "name": "Striker 100"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 100
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex300",
+              "name": "Striker 101"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 101
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex301",
+              "name": "Striker 102"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 102
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex302",
+              "name": "Striker 103"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 103
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex303",
+              "name": "Striker 104"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 104
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex304",
+              "name": "Striker 105"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 105
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex305",
+              "name": "Striker 106"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 106
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex306",
+              "name": "Striker 107"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 107
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex307",
+              "name": "Striker 108"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 108
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex308",
+              "name": "Striker 109"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 109
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex309",
+              "name": "Striker 110"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 110
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex310",
+              "name": "Striker 111"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 111
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex311",
+              "name": "Striker 112"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 112
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex312",
+              "name": "Striker 113"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 113
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex313",
+              "name": "Striker 114"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 114
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex314",
+              "name": "Striker 115"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 115
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex315",
+              "name": "Striker 116"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 116
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex316",
+              "name": "Striker 117"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 117
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex317",
+              "name": "Striker 118"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 118
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex318",
+              "name": "Striker 119"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 119
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex319",
+              "name": "Striker 120"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 120
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex320",
+              "name": "Striker 121"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 121
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex321",
+              "name": "Striker 122"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 122
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex322",
+              "name": "Striker 123"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 123
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex323",
+              "name": "Striker 124"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 124
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex324",
+              "name": "Striker 125"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 125
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex325",
+              "name": "Striker 126"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 126
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex326",
+              "name": "Striker 127"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 127
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex327",
+              "name": "Striker 128"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 128
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex328",
+              "name": "Striker 129"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 129
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex329",
+              "name": "Striker 130"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 130
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex330",
+              "name": "Striker 131"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 131
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex331",
+              "name": "Striker 132"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 132
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex332",
+              "name": "Striker 133"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 133
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex333",
+              "name": "Striker 134"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 134
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex334",
+              "name": "Striker 135"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 135
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex335",
+              "name": "Striker 136"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 136
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex336",
+              "name": "Striker 137"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 137
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex337",
+              "name": "Striker 138"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 138
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex338",
+              "name": "Striker 139"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 139
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex339",
+              "name": "Striker 140"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 140
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex340",
+              "name": "Striker 141"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 141
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex341",
+              "name": "Striker 142"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 142
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex342",
+              "name": "Striker 143"
+            },
+            "team": {
+              "name": "Torino"
+            },
+            "rank": 143
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex343",
+              "name": "Striker 144"
+            },
+            "team": {
+              "name": "Wolfsburg"
+            },
+            "rank": 144
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex344",
+              "name": "Striker 145"
+            },
+            "team": {
+              "name": "Nice"
+            },
+            "rank": 145
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex345",
+              "name": "Striker 146"
+            },
+            "team": {
+              "name": "Fulham"
+            },
+            "rank": 146
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex346",
+              "name": "Striker 147"
+            },
+            "team": {
+              "name": "Valencia"
+            },
+            "rank": 147
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex347",
+              "name": "Striker 148"
+            },
+            "team": {
+              "name": "Genoa"
+            },
+            "rank": 148
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex348",
+              "name": "Striker 149"
+            },
+            "team": {
+              "name": "Freiburg"
+            },
+            "rank": 149
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex349",
+              "name": "Striker 150"
+            },
+            "team": {
+              "name": "Rennes"
+            },
+            "rank": 150
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex350",
+              "name": "Striker 151"
+            },
+            "team": {
+              "name": "Lens"
+            },
+            "rank": 151
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex351",
+              "name": "Striker 152"
+            },
+            "team": {
+              "name": "Lille"
+            },
+            "rank": 152
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex352",
+              "name": "Striker 153"
+            },
+            "team": {
+              "name": "Sevilla"
+            },
+            "rank": 153
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex353",
+              "name": "Striker 154"
+            },
+            "team": {
+              "name": "Bologna"
+            },
+            "rank": 154
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex354",
+              "name": "Striker 155"
+            },
+            "team": {
+              "name": "Brentford"
+            },
+            "rank": 155
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex355",
+              "name": "Striker 156"
+            },
+            "team": {
+              "name": "Mainz"
+            },
+            "rank": 156
+          },
+          {
+            "player": {
+              "id": "btl_football_player_pex356",
+              "name": "Striker 157"
+            },
+            "team": {
+              "name": "Getafe"
+            },
+            "rank": 157
+          }
+        ]
+      }
+    ]
+  },
+  "text": {
+    "caption": "Kylian Mbappé",
+    "columns": ["Closest to Kylian Mbappé", "Club"],
+    "rows": [
+      {
+        "cells": ["Donyell Malen", "Aston Villa"]
+      },
+      {
+        "cells": ["Jonathan David", "Juventus"]
+      },
+      {
+        "cells": ["Ollie Watkins", "Aston Villa"]
+      },
+      {
+        "cells": ["Victor Osimhen", "Galatasaray"]
+      },
+      {
+        "cells": ["Lois Openda", "Juventus"]
+      },
+      {
+        "cells": ["Marcus Thuram", "Inter"]
+      },
+      {
+        "cells": ["Alexander Isak", "Liverpool"]
+      },
+      {
+        "cells": ["Serhou Guirassy", "Borussia Dortmund"]
+      },
+      {
+        "cells": ["Hugo Ekitiké", "Liverpool"]
+      },
+      {
+        "cells": ["Bradley Barcola", "Paris Saint-Germain"]
+      }
+    ]
+  }
+}
