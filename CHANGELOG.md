@@ -22,6 +22,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   separators. The block's links read "Player page" and "Compare with
   <surname>". The region keeps "Name, Club" as its accessible name.
 
+## [0.32.1]
+
+### Fixed
+
+- The orbits' drift runs only on the layout on screen. A pair renders one
+  layout per breakpoint and hides the other, and both were animating (644
+  animations on a Compare page instead of about 320). A resize re-runs it
+  for the layout that is then shown.
+
 ## [0.32.0]
 
 ### Added: similarity orbit game block

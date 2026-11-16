@@ -132,10 +132,32 @@ function useDrift(
   key: string
 ) {
   const anims = useRef<Animation[]>([]);
+  // A breakpoint change shows the other layout: animate that one instead.
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!moving || typeof window === 'undefined') return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setWidth(window.innerWidth), 200);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [moving]);
   useEffect(() => {
     const node = root.current;
     if (!moving || !node) return;
-    const els = node.querySelectorAll<HTMLElement | SVGElement>('[data-orbit-drift]');
+    const view = node.ownerDocument.defaultView;
+    // Only the layout on screen: another breakpoint's is display: none.
+    const shown = [...node.querySelectorAll<HTMLElement>('[data-orbit-layout]')].filter(
+      (l) => !view || view.getComputedStyle(l).display !== 'none'
+    );
+    const els = shown.flatMap((l) => [
+      ...l.querySelectorAll<HTMLElement | SVGElement>('[data-orbit-drift]'),
+    ]);
     const list: Animation[] = [];
     els.forEach((el) => {
       if (typeof el.animate !== 'function') return;
@@ -164,13 +186,13 @@ function useDrift(
       for (const a of list) a.cancel();
       anims.current = [];
     };
-  }, [root, moving, key]);
+  }, [root, moving, key, width]);
   useEffect(() => {
     for (const a of anims.current) {
       if (still) a.pause();
       else a.play();
     }
-  }, [still, moving, key]);
+  }, [still, moving, key, width]);
 }
 
 function driftAttr(id: string, n: number, scale: OrbitScale, unit: 'svg' | 'html'): string {
@@ -499,6 +521,7 @@ function ScaleView({
 
   return (
     <div
+      data-orbit-layout={size}
       className={className}
       style={{ marginTop: pct(layout.overflow.top), marginBottom: pct(layout.overflow.bottom) }}
     >
