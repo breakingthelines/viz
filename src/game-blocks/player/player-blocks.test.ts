@@ -9,7 +9,12 @@ import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';
 import { GameBlockView } from '../view';
 import { absenceDates } from './absences';
-import { isTotalsComparison, pickComparisonHighlight } from './comparison';
+import {
+  comparisonView,
+  isTotalsComparison,
+  pickComparisonHighlight,
+  widestGaps,
+} from './comparison';
 import comparisonTotals from '../fixtures/player-comparison-totals.example.json';
 import type { GameBlockJson } from '../types';
 import { oldestFirst } from './form';
@@ -18,6 +23,7 @@ import { teamRankLabel } from './season-totals';
 import { changeLabel } from './season-trend';
 import { shortDate, surname, thousands } from './shared';
 import { askedLook } from '../fixtures/look';
+import { ramp } from '../../brand/colour';
 
 type Reader = 'pro' | 'free' | 'pending';
 
@@ -173,20 +179,24 @@ describe('Match log', () => {
 });
 
 describe('Comparison', () => {
+  const scales = { options: { view: 'scales', highlight: 'key' } };
+  const view = (v: string, extra: Partial<GameBlockConfig> = {}) =>
+    render('player-comparison', 'pro', { ...extra, options: { view: v } });
+
   it('heroes the subject percentile beside the second player and shows per 90 to Pro', () => {
-    const html = render('player-comparison');
+    const html = render('player-comparison', 'pro', scales);
     expect(html).toContain('Bukayo Saka v Phil Foden');
     expect(html).toContain('94th');
     expect(html).toContain('Foden 85th');
     expect(html).toContain('2.62');
     expect(html).toContain('2.11');
     expect(html).toContain('vs Premier League wingers');
-    expect(html).toContain('Arsenal and Manchester City, 2025/26');
+    expect(html).toContain('Premier League 2025/26');
     expect(html).toContain('data-scale-comparator');
   });
 
   it('keeps the public percentiles and locks per 90 for a free reader', () => {
-    const html = render('player-comparison', 'free');
+    const html = render('player-comparison', 'free', scales);
     expect(html).toContain('94th');
     expect(html).not.toContain('2.62');
     expect(html).toContain('Per 90 figures are for Pro readers.');
@@ -199,9 +209,81 @@ describe('Comparison', () => {
   });
 
   it('has a rows view', () => {
-    const html = render('player-comparison', 'pro', { options: { view: 'rows' } });
+    const html = view('rows');
     expect(html).toContain('Per 90');
     expect(html).toContain('2.62');
+  });
+
+  it('draws one wheel with both players by default, scoped to the competition', () => {
+    expect(comparisonView(undefined)).toBe('wheel');
+    expect(comparisonView('nonsense')).toBe('wheel');
+    const html = render('player-comparison');
+    expect(html).toContain('data-comparison-view="wheel"');
+    expect(html).toContain('data-overlay="Phil Foden"');
+    expect(html).toContain('Premier League 2025/26');
+    expect(html).not.toContain('Arsenal and Manchester City');
+  });
+
+  it('picks the widest gap per family, and shows both players when it can', () => {
+    const m = (config('player-comparison').data as { metrics: Parameters<typeof widestGaps>[0] })
+      .metrics;
+    expect(widestGaps(m, 4).map((x) => x.key)).toEqual(['fd', 'ast', 'npg']);
+    // All three lean to Saka; Foden's one lead (shots) takes the last place.
+    expect(widestGaps(m, 3).map((x) => x.key)).toEqual(['fd', 'ast', 'shots']);
+  });
+
+  it('draws the differ view in the annotated look, ringing the widest gap', () => {
+    const html = view('differ');
+    expect(html).toContain('data-game-block-look="annotated"');
+    expect(html).toContain('data-comparison-view="differ"');
+    expect(html).toContain('fouls won percentile');
+    expect(html).toContain('Foden 41st');
+    expect(html.indexOf('data-k="fd"')).toBeLessThan(html.indexOf('data-k="ast"'));
+  });
+
+  it('draws side by side bars with the per 90 cells', () => {
+    const html = view('bars');
+    expect(html).toContain('data-comparison-view="bars"');
+    expect(html).toContain('Bukayo Saka');
+    expect(html).toContain('Phil Foden');
+    expect(html).toContain('2.62');
+    expect(html).toContain('94th');
+  });
+
+  it('draws three stats across in the strip', () => {
+    const html = view('strip');
+    expect(html).toContain('data-comparison-view="strip"');
+    expect(html.match(/data-scale-state=/g)?.length).toBe(3);
+    expect(html).toContain('p90');
+  });
+
+  it('draws two wheels, the second in white', () => {
+    const html = view('two_wheels');
+    expect(html).toContain('data-comparison-view="two_wheels"');
+    expect(html.match(/aria-label="[^"]*, percentiles"/g)?.length).toBe(2);
+    // Saka's 94th key passes ramps to red, Foden's 85th to white.
+    expect(html).toContain(`fill="${ramp(94, 'subject')}"`);
+    expect(html).toContain(`fill="${ramp(85, 'comparison')}"`);
+  });
+
+  it('draws the duel as a poster when both players have pictures', () => {
+    for (const html of [view('duel'), render('player-comparison', 'pro', { look: 'poster' })]) {
+      expect(html).toContain('data-game-block-look="poster"');
+      expect(html).toContain('data-comparison-view="duel"');
+    }
+  });
+
+  it('falls back to the wheel without both pictures, never a headshot as a crest', () => {
+    const c = config('player-comparison');
+    const html = view('duel', { comparison: { ...c.comparison!, id: '', imageUrl: undefined } });
+    expect(html).toContain('data-comparison-view="wheel"');
+    expect(html).not.toContain('data-poster-media');
+    const asked = render('player-comparison', 'pro', {
+      look: 'poster',
+      comparison: { ...c.comparison!, id: '' },
+    });
+    expect(asked).toContain('data-comparison-view="wheel"');
+    expect(asked).not.toContain('data-poster-media="crest"');
   });
 });
 
@@ -229,8 +311,7 @@ describe('Comparison of season totals', () => {
     expect(html).toContain('Minutes');
     expect(html).toContain('2,210');
     expect(html).toContain('0.96');
-    expect(html).toContain('Real Madrid and Inter Miami, 2026/27 and 2026');
-    expect(html).toContain('All competitions');
+    expect(html).toContain('All competitions 2026/27 and 2026');
     expect(html).not.toContain('percentile');
   });
 

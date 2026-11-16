@@ -228,6 +228,7 @@ export function useImageLoads(src: string | undefined): 'working' | 'ok' | 'none
 export type PosterArt =
   | { status: 'working' }
   | { status: 'ready'; kind: 'halftone' | 'crest'; src: string }
+  | { status: 'ready'; kind: 'pair'; src: string; pairSrc: string }
   | { status: 'none' };
 
 type Loads = { src: string | undefined; status: 'working' | 'ok' | 'none' };
@@ -250,4 +251,34 @@ export function pickPosterArt(
   if (crest.src && crest.status === 'ok') return { status: 'ready', kind: 'crest', src: crest.src };
   if (crest.src && crest.status === 'working') return { status: 'working' };
   return { status: 'none' };
+}
+
+/**
+ * Two players' poster art: both cut-outs, or nothing. One missing cut-out is
+ * never made up with a crest or a raw headshot; the frame then draws the
+ * editorial look and a comparison draws its wheel.
+ */
+export function pickPairArt(first: PosterArt, second: PosterArt): PosterArt {
+  if (first.status === 'none' || second.status === 'none') return { status: 'none' };
+  if (first.status === 'working' || second.status === 'working') return { status: 'working' };
+  if (first.kind !== 'halftone' || second.kind !== 'halftone') return { status: 'none' };
+  return { status: 'ready', kind: 'pair', src: first.src, pairSrc: second.src };
+}
+
+/**
+ * Whether two players can have a poster: each has a pre-rendered halftone or
+ * a headshot to cut out. `working` until both settle. Read by a comparison to
+ * pick its duel or its wheel before the frame computes any halftone.
+ */
+export function pairArtStatus(
+  first: { pre: 'working' | 'ok' | 'none'; photo: 'working' | 'ok' | 'none' },
+  second: { pre: 'working' | 'ok' | 'none'; photo: 'working' | 'ok' | 'none' }
+): 'working' | 'ok' | 'none' {
+  const one = (p: typeof first) =>
+    p.pre === 'ok' ? 'ok' : p.pre === 'working' ? 'working' : p.photo;
+  const a = one(first);
+  const b = one(second);
+  if (a === 'none' || b === 'none') return 'none';
+  if (a === 'working' || b === 'working') return 'working';
+  return 'ok';
 }

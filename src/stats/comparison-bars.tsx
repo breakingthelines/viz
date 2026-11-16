@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import { ramp } from '../brand/colour';
 import { formatMetricValue, formatPercentile } from './format';
 
@@ -31,8 +31,12 @@ export interface ComparisonBarsRow {
   key: string;
   label: string;
   group: string;
-  left: { value: number | null; percentile: number | null };
-  right: { value: number | null; percentile: number | null };
+  /**
+   * `display`, when set, is drawn in place of the formatted value: a game
+   * block passes its gated cell, which resolves per viewer.
+   */
+  left: { value: number | null; percentile: number | null; display?: ReactNode };
+  right: { value: number | null; percentile: number | null; display?: ReactNode };
   unit: 'per90' | 'percent';
 }
 
@@ -70,6 +74,7 @@ function nameWithSeason(side: { name: string; seasonLabel?: string }): string {
 
 interface SideValueProps {
   value: number | null;
+  display?: ReactNode;
   percentile: number | null;
   unit: 'per90' | 'percent';
   side: 'subject' | 'comparison';
@@ -78,7 +83,7 @@ interface SideValueProps {
   align: 'left' | 'right';
 }
 
-function SideValue({ value, percentile, unit, side, stronger, align }: SideValueProps) {
+function SideValue({ value, display, percentile, unit, side, stronger, align }: SideValueProps) {
   // The value text is flat, not ramped (mock: `.hv b{color:#fff}`,
   // `.hr.win-l .hv.l b{color:#eb0000}`, `.hr.win-r .hv.r b{color:#fff}`):
   // only the left/subject side ever turns red, and only when it is the
@@ -103,7 +108,7 @@ function SideValue({ value, percentile, unit, side, stronger, align }: SideValue
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        {formatMetricValue(value, unit)}
+        {display ?? formatMetricValue(value, unit)}
       </b>
       <span style={{ fontSize: 11.5, color: MUTED, fontVariantNumeric: 'tabular-nums' }}>
         {formatPercentile(percentile)}
@@ -231,6 +236,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
               <div key={row.key} className="btl-cb-row">
                 <SideValue
                   value={row.left.value}
+                  display={row.left.display}
                   percentile={leftP}
                   unit={row.unit}
                   side="subject"
@@ -247,6 +253,7 @@ export function ComparisonBars({ left, right, rows }: ComparisonBarsProps) {
                 <SideBar percentile={rightP} side="comparison" fillFrom="left" />
                 <SideValue
                   value={row.right.value}
+                  display={row.right.display}
                   percentile={rightP}
                   unit={row.unit}
                   side="comparison"

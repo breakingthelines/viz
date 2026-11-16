@@ -93,6 +93,12 @@ export interface PercentileWheelProps {
    * switches to the phone sizes at 760 px and below.
    */
   labels?: 'auto' | 'long' | 'short';
+  /**
+   * The colour the wedges ramp to: `subject` (BTL red, default) or
+   * `comparison` (white), for a second player's wheel drawn beside the
+   * first. Numbers inside a light wedge turn dark.
+   */
+  tone?: 'subject' | 'comparison';
   /** Panel colour behind the wheel: the centre disc and the number halos use it. */
   surface?: string;
   /**
@@ -144,6 +150,8 @@ const WHITE = '#ffffff';
 const LIGHT = '#d9d6d6';
 const MUTED = '#a29e9e';
 const MARK_RED = '#E20613';
+/** From this percentile a white-toned wedge is light enough to need dark numbers. */
+const LIGHT_WEDGE = 45;
 const TRACK = 'rgba(255,255,255,0.035)';
 const DASHED = 'rgba(255,255,255,0.3)';
 const MEDIAN = 'rgba(255,255,255,0.28)';
@@ -283,6 +291,7 @@ export function PercentileWheel({
   surface = '#151515',
   announce = true,
   tipSize = DEFAULT_TIP_SIZE,
+  tone = 'subject',
 }: PercentileWheelProps) {
   const interactive = variant === 'web';
   const mode = variant === 'social' ? 'long' : labels;
@@ -423,7 +432,7 @@ export function PercentileWheel({
             data-state={m.state}
             style={style}
             d={wedgePath(INNER_RADIUS, radiusFor(p), s.a0, s.a1)}
-            fill={ramp(p, 'subject')}
+            fill={ramp(p, tone)}
           />
         );
       })}
@@ -472,7 +481,7 @@ export function PercentileWheel({
               textAnchor="middle"
               fontSize={L.tipSize}
               fontWeight={700}
-              fill={WHITE}
+              fill={tone === 'comparison' && t.inside && t.p >= LIGHT_WEDGE ? surface : WHITE}
               stroke={t.inside ? undefined : surface}
               strokeWidth={t.inside ? undefined : 4}
               paintOrder={t.inside ? undefined : 'stroke'}
