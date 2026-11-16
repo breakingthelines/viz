@@ -87,7 +87,9 @@ export type GameBlockSpec = Message<"btl.game.v1.types.GameBlockSpec"> & {
    * The type's other choices, keyed by GameBlockOptionGroup.key: "metrics"
    * and "seasons" (season trend), "sort" (league team stats), "metric",
    * "group" and "per90" (player rankings), "category" (leaders), "matchday",
-   * "from", "to" and "mode" (fixtures), "scope" (player season totals), "window" (team transfers), "filter"
+   * "from", "to" and "mode" (fixtures), "scope" (player season totals:
+   * "league", the default, or "all", his club competitions against the top
+   * five leagues), "window" (team transfers), "filter"
    * (timeline), "from_round" (bracket). A list value is comma separated. An
    * unknown key is ignored; a missing one takes the type's default.
    *
