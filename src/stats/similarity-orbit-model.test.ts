@@ -14,6 +14,7 @@ import {
   orbitLayout,
   pairOrbitLabel,
   placesLine,
+  poolSize,
   rankPhrase,
   singleOrbitLabel,
   type OrbitData,
@@ -200,5 +201,43 @@ describe('orbit ranks and labels', () => {
     expect(linkedDot('haaland', 0, both, 0)).toBe('haaland');
     expect(linkedDot('m3', 0, both, 1)).toBe('m3');
     expect(linkedDot(null, 0, both, 1)).toBeNull();
+  });
+});
+
+describe('a pair across two pools', () => {
+  // Haaland's 157 fellow strikers, and Ødegaard, an attacking midfielder,
+  // placed against him at 43rd (42 strikers score higher, three level).
+  function haaland(): OrbitData {
+    const members: OrbitData['members'] = [];
+    for (let i = 0; i < 157; i++) {
+      const rank = i < 42 ? i + 1 : i < 45 ? 43 : i + 1;
+      members.push({ id: `s${i}`, name: `Striker ${i}`, rank });
+    }
+    members.splice(42, 0, { id: 'odegaard', name: 'Martin Ødegaard', rank: 43, outsidePool: true });
+    members[0] = { ...members[0]!, name: 'Alexander Isak' };
+    return {
+      anchor: { id: 'haaland', name: 'Erling Haaland' },
+      plural: 'strikers',
+      poolLabel: 'Strikers',
+      members,
+    };
+  }
+
+  it("the pool leaves the outsider out of its size and everyone else's place", () => {
+    const o = haaland();
+    expect(o.members).toHaveLength(158);
+    expect(poolSize(o)).toBe(157);
+    // The striker after him is 43rd, not 44th.
+    expect(rankPhrase(o, 43, 'Haaland')).toBe('43rd closest to Haaland');
+    expect(rankPhrase(o, 0, 'Haaland')).toBe('Closest to Haaland');
+  });
+
+  it('the outsider reads where he would sit among the pool', () => {
+    const o = haaland();
+    expect(rankPhrase(o, 42, 'Haaland')).toBe('43rd closest to Haaland among strikers');
+    expect(pairOrbitLabel(o, { id: 'odegaard', name: 'Martin Ødegaard' })).toBe(
+      'Martin Ødegaard, from outside this pool, would be 43rd closest of the 157 other strikers to Erling Haaland. Closest: Alexander Isak.'
+    );
+    expect(singleOrbitLabel(o)).toContain('the 157 other strikers');
   });
 });

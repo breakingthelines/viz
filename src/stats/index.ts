@@ -63,6 +63,7 @@ export {
   placeFaces,
   placeLines,
   placesLine,
+  poolSize,
   rankPhrase,
   singleOrbitLabel,
 } from './similarity-orbit-model';
