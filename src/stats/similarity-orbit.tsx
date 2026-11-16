@@ -1425,8 +1425,11 @@ export interface SimilarityOrbitCombinedProps {
   interactive?: boolean;
   motion?: boolean;
   faceSources?: OrbitFaceSources;
-  /** The strip's actions; `main` when he is one of the two players. */
-  renderActions?: (player: OrbitPlayer, main: boolean) => ReactNode;
+  /**
+   * The strip's actions; `main` when he is one of the two players, `centre`
+   * the player the orbit is centred on now.
+   */
+  renderActions?: (player: OrbitPlayer, main: boolean, centre: OrbitPlayer) => ReactNode;
   slot?: string;
 }
 
@@ -1587,7 +1590,7 @@ export function SimilarityOrbitCombined({
           lines={selected ? placeLines(orbits, shortNames, selected) : []}
           quietPlaces
           onClose={() => s.close(true)}
-          actions={picked && renderActions ? renderActions(picked, main) : undefined}
+          actions={picked && renderActions ? renderActions(picked, main, d.anchor) : undefined}
         />
       ) : null}
     </div>

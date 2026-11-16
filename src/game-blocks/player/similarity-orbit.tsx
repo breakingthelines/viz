@@ -37,8 +37,9 @@ import { baseFrame } from './shared';
  * - two pools (a striker v an attacking midfielder): both players' orbits
  *   side by side, each captioned with its pool (`SimilarityOrbitPair`).
  *
- * Beside a pair: the verdict, then Roles ("Both", each player's own
- * archetypes) and Areas ("Similar", "Different"). No text on the orbit; the
+ * Beside a pair: the verdict, then rows on one label column with no
+ * headings: "Both" and each player's own archetypes, a quiet gap, then
+ * "Similar" and "Different". No text on the orbit; the
  * places are in its accessible name and the detail strip, whose actions are
  * "Player page" and "Compare with". Interactive in an article and in
  * Regista; the first-named player's orbit, still, in a picker tile and in a
@@ -103,17 +104,25 @@ function useFaceSources(): OrbitFaceSources {
 function StripActions({
   player,
   anchors,
+  centre,
 }: {
   player: OrbitPlayer;
   anchors: readonly OrbitPlayer[];
+  /** The player the orbit is centred on now: the dropdown's first choice. */
+  centre?: string;
 }) {
   const font = useBodyFont();
-  const [pick, setPick] = useState(0);
   const page = playerPagePath(player);
   const options = anchors
     .filter((a) => a.id !== player.id)
-    .map((a) => ({ href: playerComparePath(player, a), label: orbitSurname(a.name) }))
-    .filter((o): o is { href: string; label: string } => !!o.href);
+    .map((a) => ({ id: a.id, href: playerComparePath(player, a), label: orbitSurname(a.name) }))
+    .filter((o): o is { id: string; href: string; label: string } => !!o.href);
+  const [pick, setPick] = useState(() =>
+    Math.max(
+      0,
+      options.findIndex((o) => o.id === centre)
+    )
+  );
   const text: CSSProperties = { fontFamily: font, fontSize: 13, color: 'var(--btl-block-ink-1)' };
   const link: CSSProperties = { ...text, textDecoration: 'none' };
   const chosen = options[Math.min(pick, options.length - 1)];
@@ -249,68 +258,67 @@ interface TextRow {
   values: string[];
 }
 
-/** One group: a quiet heading, then label and value rows on one label column. */
-function Group({ heading, rows, slot }: { heading: string; rows: TextRow[]; slot: string }) {
+/**
+ * The pair's rows on one label column, no headings: the role rows ("Both",
+ * each player), one quiet gap, then the area rows ("Similar", "Different").
+ */
+function PairRows({ roles, areas }: { roles: TextRow[]; areas: TextRow[] }) {
   const skin = useBlockSkin();
   const { look } = useBlockLayout();
   const value = look === 'editorial' ? skin.fontSerif : skin.fontSans;
-  if (rows.length === 0) return null;
-  return (
-    <section data-slot={slot} style={{ minWidth: 0 }}>
-      <h4
+  if (roles.length === 0 && areas.length === 0) return null;
+  const row = (r: TextRow, gapBefore: boolean) => (
+    <div key={r.label} style={{ display: 'contents' }}>
+      <dt
         style={{
-          margin: '0 0 6px',
           fontFamily: skin.fontSans,
           fontSize: 13,
-          fontWeight: 600,
-          color: 'var(--btl-block-ink-2)',
+          color: 'var(--btl-block-ink-3)',
+          marginTop: gapBefore ? 12 : 0,
         }}
       >
-        {heading}
-      </h4>
-      <dl
+        {r.label}:
+      </dt>
+      <dd
         style={{
           margin: 0,
-          display: 'grid',
-          gridTemplateColumns: 'max-content minmax(0, 1fr)',
-          columnGap: 12,
-          rowGap: 5,
-          alignItems: 'baseline',
+          marginTop: gapBefore ? 12 : 0,
+          fontFamily: value,
+          fontSize: 16,
+          lineHeight: 1.3,
+          color: 'var(--btl-block-ink-1)',
         }}
       >
-        {rows.map((r) => (
-          <div key={r.label} style={{ display: 'contents' }}>
-            <dt
-              style={{ fontFamily: skin.fontSans, fontSize: 13, color: 'var(--btl-block-ink-3)' }}
-            >
-              {r.label}:
-            </dt>
-            <dd
-              style={{
-                margin: 0,
-                fontFamily: value,
-                fontSize: 16,
-                lineHeight: 1.3,
-                color: 'var(--btl-block-ink-1)',
-              }}
-            >
-              {r.values.join(', ')}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
+        {r.values.join(', ')}
+      </dd>
+    </div>
+  );
+  return (
+    <dl
+      data-slot="orbit-block-rows"
+      style={{
+        margin: 0,
+        display: 'grid',
+        gridTemplateColumns: 'max-content minmax(0, 1fr)',
+        columnGap: 12,
+        rowGap: 5,
+        alignItems: 'baseline',
+      }}
+    >
+      {roles.map((r) => row(r, false))}
+      {areas.map((r, i) => row(r, i === 0 && roles.length > 0))}
+    </dl>
   );
 }
 
-/** Roles: "Both" and each player's own archetypes, named without "Only". */
+/** The role rows: "Both" and each player's own archetypes, named without "Only". */
 export function roleRows(data: PlayerSimilarityOrbitDataJson): TextRow[] {
   return (data.archetypeRows ?? [])
     .map((r) => ({ label: (r.label ?? '').replace(/^Only\s+/, ''), values: r.archetypes ?? [] }))
     .filter((r) => r.label && r.values.length > 0);
 }
 
-/** Areas: "Similar" and "Different" metric families. */
+/** The area rows: "Similar" and "Different" metric families. */
 export function areaRows(data: PlayerSimilarityOrbitDataJson): TextRow[] {
   return [
     { label: 'Similar', values: data.alikeFamilies ?? [] },
@@ -323,13 +331,12 @@ function PairText({ data }: { data: PlayerSimilarityOrbitDataJson }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {verdict ? <Verdict text={verdict} /> : null}
-      <Group heading="Roles" rows={roleRows(data)} slot="orbit-block-roles" />
-      <Group heading="Areas" rows={areaRows(data)} slot="orbit-block-areas" />
+      <PairRows roles={roleRows(data)} areas={areaRows(data)} />
     </div>
   );
 }
 
-/** The single orbit's three closest: name, then club. */
+/** The single orbit's three closest, no heading: name, then club. */
 function ClosestList({ orbit }: { orbit: OrbitData }) {
   const skin = useBlockSkin();
   const { look } = useBlockLayout();
@@ -337,18 +344,7 @@ function ClosestList({ orbit }: { orbit: OrbitData }) {
   const top = orbit.members.filter((m) => !m.outsidePool).slice(0, 3);
   if (top.length === 0) return null;
   return (
-    <section data-slot="orbit-block-closest">
-      <h4
-        style={{
-          margin: '0 0 6px',
-          fontFamily: skin.fontSans,
-          fontSize: 13,
-          fontWeight: 600,
-          color: 'var(--btl-block-ink-2)',
-        }}
-      >
-        Closest to {orbitSurname(orbit.anchor.name)}
-      </h4>
+    <section data-slot="orbit-block-closest" aria-label={`Closest to ${orbit.anchor.name}`}>
       <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', rowGap: 6 }}>
         {top.map((m) => (
           <li key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -394,7 +390,15 @@ function OrbitVisual({ orbits, interactive }: { orbits: OrbitData[]; interactive
       orbitSurname(pair[0].anchor.name),
       orbitSurname(pair[1].anchor.name),
     ] as const;
-    const actions = (p: OrbitPlayer) => <StripActions player={p} anchors={anchors} />;
+    // The dropdown starts on the player the orbit is centred on.
+    const actions = (p: OrbitPlayer, _main?: boolean, centre?: OrbitPlayer) => (
+      <StripActions
+        key={`${p.id}:${centre?.id ?? anchors[0]!.id}`}
+        player={p}
+        anchors={anchors}
+        centre={centre?.id ?? anchors[0]!.id}
+      />
+    );
     if (acrossPools(pair)) {
       return (
         <SimilarityOrbitPair

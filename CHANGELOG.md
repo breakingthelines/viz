@@ -5,6 +5,22 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.1]
+
+### Changed
+
+- **Orbit block labels**, as agreed for the Compare page:
+  - A pair's rows stand alone, with no "Roles" or "Areas" headings: "Both:",
+    "Mbappé:", "Haaland:", then one quiet gap, then "Similar:" and
+    "Different:", all on one label column.
+  - The single orbit's three closest show as names with clubs, with no
+    heading (the list keeps "Closest to Kylian Mbappé" as its accessible
+    name).
+  - The strip's "Compare with" dropdown starts on the player the orbit is
+    centred on now (the first-named, or whoever a swap centred).
+    `SimilarityOrbitCombined`'s `renderActions` gets that player as a third
+    argument.
+
 ## [0.34.0]
 
 ### Added: one orbit for a pair in one pool
