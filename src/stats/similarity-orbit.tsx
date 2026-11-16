@@ -1088,6 +1088,8 @@ export interface SimilarityOrbitPairProps {
   renderActions?: (player: OrbitPlayer, main: boolean) => ReactNode;
   /** Each orbit cell's width style; two halves with a gap by default. */
   cellStyle?: CSSProperties;
+  /** Each orbit cell's class (its width by breakpoint); replaces the default width. */
+  cellClassName?: string;
   /** The class on the row of orbits (its gap by breakpoint); 12 px without one. */
   rowClassName?: string;
   slot?: string;
@@ -1103,6 +1105,7 @@ export function SimilarityOrbitPair({
   faceSources = defaultSources,
   renderActions,
   cellStyle,
+  cellClassName,
   rowClassName,
   slot = 'similarity-orbits',
 }: SimilarityOrbitPairProps) {
@@ -1141,7 +1144,14 @@ export function SimilarityOrbitPair({
             linkedDot(s.hover?.id ?? null, s.hover?.orbit ?? 0, orbits, o),
           ].filter((x): x is string => !!x);
           return (
-            <div key={o} style={cellStyle ?? { width: 'calc(50% - 6px)', maxWidth: 380 }}>
+            <div
+              key={o}
+              className={cellClassName}
+              style={
+                cellStyle ??
+                (cellClassName ? { minWidth: 0 } : { width: 'calc(50% - 6px)', maxWidth: 380 })
+              }
+            >
               <OrbitField
                 slot={`${slot}-orbit`}
                 data={d}
