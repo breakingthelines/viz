@@ -61,6 +61,7 @@ export {
   orbitLayout,
   pairOrbitLabel,
   placeFaces,
+  placeLines,
   placesLine,
   rankPhrase,
   singleOrbitLabel,

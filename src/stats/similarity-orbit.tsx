@@ -23,6 +23,7 @@ import {
   nearestDot,
   orbitLayout,
   pairOrbitLabel,
+  placeLines,
   placesLine,
   rankPhrase,
   singleOrbitLabel,
@@ -728,6 +729,14 @@ export interface OrbitDetailStripProps {
   title: string;
   /** Where he sits. */
   line: string;
+  /**
+   * The layout with a line each: name, his club (quieter), then one line per
+   * place. When set they replace `title` and `line` on screen; `title` stays
+   * the region's name.
+   */
+  name?: string;
+  club?: string;
+  lines?: readonly string[];
   actions?: ReactNode;
   onClose: () => void;
   focusRef: RefObject<HTMLDivElement | null>;
@@ -747,6 +756,9 @@ export function OrbitDetailStrip({
   sources,
   title,
   line,
+  name,
+  club,
+  lines,
   actions,
   onClose,
   focusRef,
@@ -813,9 +825,17 @@ export function OrbitDetailStrip({
                     color: '#ffffff',
                   }}
                 >
-                  {title}
+                  {name ?? title}
                 </span>
-                {line ? <span style={{ fontSize: 12.5, color: MUTED }}>{line}</span> : null}
+                {name !== undefined ? (
+                  club ? (
+                    <span data-slot={`${slot}-club`} style={{ fontSize: 12.5, color: MUTED }}>
+                      {club}
+                    </span>
+                  ) : null
+                ) : line ? (
+                  <span style={{ fontSize: 12.5, color: MUTED }}>{line}</span>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -842,6 +862,22 @@ export function OrbitDetailStrip({
                 </svg>
               </button>
             </div>
+            {name !== undefined && lines && lines.length > 0 ? (
+              <div
+                data-slot={`${slot}-places`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  fontSize: 13,
+                  color: LABEL,
+                }}
+              >
+                {lines.map((l) => (
+                  <span key={l}>{l}</span>
+                ))}
+              </div>
+            ) : null}
             {actions ? (
               <div
                 style={{
@@ -1047,6 +1083,9 @@ export function SimilarityOrbit({
           sources={member ? faceSources(member) : []}
           title={member ? [member.name, member.club].filter(Boolean).join(', ') : ''}
           line={member ? rankPhrase(orbit, index, anchorShort ?? orbit.anchor.name) : ''}
+          name={member?.name ?? ''}
+          club={member?.club}
+          lines={member ? [rankPhrase(orbit, index, anchorShort ?? orbit.anchor.name)] : []}
           onClose={() => s.close(true)}
           actions={member && renderActions ? renderActions(member) : undefined}
         />
@@ -1210,6 +1249,9 @@ export function SimilarityOrbitPair({
           sources={picked ? faceSources(picked) : []}
           title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
           line={pick ? placesLine(orbits, shortNames, pick.id) : ''}
+          name={picked?.name ?? ''}
+          club={picked?.club}
+          lines={pick ? placeLines(orbits, shortNames, pick.id) : []}
           onClose={() => s.close(true)}
           actions={picked && renderActions ? renderActions(picked, main) : undefined}
         />

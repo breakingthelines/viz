@@ -5,6 +5,23 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.2]
+
+### Changed
+
+- **Similarity orbit pair:** the family line ("Alike in … · Differ on …")
+  becomes two rows under "Both / Only <surname>", in the same form:
+  "Similar: Shooting" and "Different: Dribbling, Creating". Each row shows
+  only when it names a family.
+- **Pair verdict** reads "Very similar profiles", "Similar profiles",
+  "Different profiles" or "Very different profiles" (`orbitVerdict`), stored
+  blocks included, so it never reads as a row.
+- **Detail strip** (`OrbitDetailStrip` `name`, `club`, `lines`; `placeLines`):
+  his name, his club on its own quieter line, one line per place ("Closest
+  to Mbappé", "3rd closest to Haaland"), then the links with spacing and no
+  separators. The block's links read "Player page" and "Compare with
+  <surname>". The region keeps "Name, Club" as its accessible name.
+
 ## [0.32.1]
 
 ### Fixed

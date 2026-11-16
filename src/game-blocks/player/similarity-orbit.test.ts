@@ -13,7 +13,7 @@ import {
   playerRouteId,
 } from './orbit-links';
 import type { PlayerSimilarityOrbitDataJson } from './data';
-import { orbitContext, toOrbitData } from './similarity-orbit';
+import { orbitContext, orbitVerdict, toOrbitData } from './similarity-orbit';
 
 function config(json: GameBlockJson): GameBlockConfig<PlayerSimilarityOrbitDataJson> {
   const res = toGameBlockConfig(json);
@@ -58,8 +58,10 @@ describe('similarity orbit block', () => {
     expect(html).toContain('Only Mbappé:');
     expect(html).toContain('Only Haaland:');
     expect(html).toContain('Runner in behind');
-    expect(html).toContain('Alike in Shooting');
-    expect(html).toContain('Differ on Dribbling, Creating');
+    expect(html).toMatch(/Similar:<\/dt><dd[^>]*>Shooting</);
+    expect(html).toMatch(/Different:<\/dt><dd[^>]*>Dribbling, Creating</);
+    expect(html).not.toContain('Alike in');
+    expect(html).not.toContain('Differ on');
     expect(html).toContain(
       'Erling Haaland is joint 85th closest of the 157 other strikers to Kylian Mbappé. Closest: Donyell Malen.'
     );
@@ -70,6 +72,15 @@ describe('similarity orbit block', () => {
     expect(render(SINGLE, 'article')).toContain('role="group"');
     expect(render(PAIR, 'chat')).toContain('role="group"');
     expect(render(PAIR, 'tile')).not.toContain('role="group"');
+  });
+
+  it('says the verdict in its "profiles" form, stored blocks included', () => {
+    expect(orbitVerdict('Similar')).toBe('Similar profiles');
+    expect(orbitVerdict('Very similar')).toBe('Very similar profiles');
+    expect(orbitVerdict('Very different')).toBe('Very different profiles');
+    expect(orbitVerdict('Different profiles')).toBe('Different profiles');
+    expect(orbitVerdict('Very similar profiles')).toBe('Very similar profiles');
+    expect(orbitVerdict(undefined)).toBe('');
   });
 
   it('reads its context from the pool and the season', () => {

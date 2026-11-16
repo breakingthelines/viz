@@ -27,13 +27,13 @@ import { baseFrame } from './shared';
  * dots around his headshot, closer meaning more alike, his three closest as
  * faces ("who is he like?"); or, when the spec names a comparison, both
  * players' orbits side by side, each the other's lit dot, with the Compare
- * page's verdict, "Both / Only" archetype rows and "Alike in · Differ on"
- * line. Ranks only: the orbit has no text and no numbers on it; exact places
+ * page's verdict and its rows: "Both" and "Only <surname>" archetypes, then
+ * "Similar" and "Different" metric families, each only when it names one. Ranks only: the orbit has no text and no numbers on it; exact places
  * are in its accessible labels and the detail strip.
  *
  * Drawn with the shared `SimilarityOrbit` and `SimilarityOrbitPair`.
  * Interactive (drift, names on hover, a tap opens the detail strip with his
- * page and "vs" links to the comparison page) in an article and in Regista;
+ * page and "Compare with" links to the comparison page) in an article and in Regista;
  * still in a picker tile and in a saved image.
  */
 
@@ -81,25 +81,27 @@ function useFaceSources(): OrbitFaceSources {
 
 function StripLinks({ links }: { links: { href: string; label: string }[] }) {
   const font = useBodyFont();
-  if (links.length === 0) return null;
   return (
-    <span style={{ fontFamily: font, fontSize: 13.5 }}>
-      {links.map((l, i) => (
-        <span key={l.href}>
-          {i > 0 ? <span aria-hidden="true"> · </span> : null}
-          <a
-            href={l.href}
-            style={{ color: 'var(--btl-block-ink-1)', fontWeight: 600, textDecoration: 'none' }}
-          >
-            {l.label}
-          </a>
-        </span>
+    <>
+      {links.map((l) => (
+        <a
+          key={l.href}
+          href={l.href}
+          style={{
+            fontFamily: font,
+            fontSize: 13.5,
+            color: 'var(--btl-block-ink-1)',
+            textDecoration: 'none',
+          }}
+        >
+          {l.label}
+        </a>
       ))}
-    </span>
+    </>
   );
 }
 
-/** A tapped player's links: his page, then "vs" each centre player he is not. */
+/** A tapped player's links: his page, then "Compare with" each centre player he is not. */
 function stripLinks(player: OrbitPlayer, anchors: readonly OrbitPlayer[]) {
   const out: { href: string; label: string }[] = [];
   const page = playerPagePath(player);
@@ -107,9 +109,22 @@ function stripLinks(player: OrbitPlayer, anchors: readonly OrbitPlayer[]) {
   for (const a of anchors) {
     if (a.id === player.id) continue;
     const href = playerComparePath(player, a);
-    if (href) out.push({ href, label: `vs ${orbitSurname(a.name)}` });
+    if (href) out.push({ href, label: `Compare with ${orbitSurname(a.name)}` });
   }
   return out;
+}
+
+/**
+ * The pair's verdict as the block shows it: "Very similar profiles",
+ * "Similar profiles", "Different profiles", "Very different profiles", so it
+ * never reads as the "Similar:" and "Different:" rows. Blocks stored before
+ * game-service wrote the "profiles" form still say "Similar" or "Very
+ * different"; they read the same way here.
+ */
+export function orbitVerdict(verdict: string | undefined): string {
+  const v = (verdict ?? '').trim();
+  if (!v) return '';
+  return /profiles$/i.test(v) ? v : `${v} profiles`;
 }
 
 function Verdict({ text }: { text: string }) {
@@ -157,44 +172,6 @@ function ArchetypeRows({ rows }: { rows: { label: string; archetypes: string[] }
         </div>
       ))}
     </dl>
-  );
-}
-
-function FamilyLine({ alike, differ }: { alike: string[]; differ: string[] }) {
-  const font = useBodyFont();
-  if (alike.length === 0 && differ.length === 0) return null;
-  return (
-    <p
-      data-slot="orbit-block-families"
-      style={{
-        margin: '8px 0 0',
-        fontFamily: font,
-        fontSize: 13.5,
-        lineHeight: 1.6,
-        color: 'var(--btl-block-ink-3)',
-      }}
-    >
-      {alike.length > 0 ? <span>Alike in {alike.join(', ')}</span> : null}
-      {alike.length > 0 && differ.length > 0 ? <span aria-hidden="true"> · </span> : null}
-      {differ.length > 0 ? (
-        <span>
-          {alike.length > 0 ? (
-            <span
-              style={{
-                position: 'absolute',
-                width: 1,
-                height: 1,
-                overflow: 'hidden',
-                clipPath: 'inset(50%)',
-              }}
-            >
-              .{' '}
-            </span>
-          ) : null}
-          Differ on {differ.join(', ')}
-        </span>
-      ) : null}
-    </p>
   );
 }
 
@@ -256,14 +233,18 @@ export function PlayerSimilarityOrbitBlock(
 ) {
   const data = props.config.data ?? {};
   const pair = (data.orbits ?? []).length >= 2;
-  const rows = (data.archetypeRows ?? [])
-    .filter((r) => r.label && (r.archetypes ?? []).length > 0)
-    .map((r) => ({ label: r.label!, archetypes: r.archetypes! }));
+  const rows = [
+    ...(data.archetypeRows ?? []).map((r) => ({
+      label: r.label ?? '',
+      archetypes: r.archetypes ?? [],
+    })),
+    { label: 'Similar', archetypes: data.alikeFamilies ?? [] },
+    { label: 'Different', archetypes: data.differFamilies ?? [] },
+  ].filter((r) => r.label && r.archetypes.length > 0);
   const aside: ReactNode = pair ? (
     <>
-      {data.verdict ? <Verdict text={data.verdict} /> : null}
+      {orbitVerdict(data.verdict) ? <Verdict text={orbitVerdict(data.verdict)} /> : null}
       <ArchetypeRows rows={rows} />
-      <FamilyLine alike={data.alikeFamilies ?? []} differ={data.differFamilies ?? []} />
     </>
   ) : null;
   const frame = baseFrame(props, pair ? 'similarity-orbits' : 'similarity-orbit');

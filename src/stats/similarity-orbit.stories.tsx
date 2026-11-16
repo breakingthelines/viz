@@ -108,8 +108,14 @@ export const VerifyTapOpensStrip: Story = {
     ) as HTMLElement;
     await userEvent.click(face);
     const strip = canvasElement.querySelector('[data-slot="similarity-orbits-detail"]')!;
-    await expect(strip.textContent).toContain('Carl Closest, Near United');
-    await expect(strip.textContent).toContain('Closest to Primera · Closest to Segunda');
+    await expect(
+      strip.querySelector('[data-slot="similarity-orbits-detail-club"]')?.textContent
+    ).toBe('Near United');
+    const places = [
+      ...strip.querySelectorAll('[data-slot="similarity-orbits-detail-places"] span'),
+    ].map((e) => e.textContent);
+    await expect(places).toEqual(['Closest to Primera', 'Closest to Segunda']);
+    await expect(strip).toHaveAttribute('aria-label', 'Carl Closest, Near United');
     await expect(strip.querySelectorAll('a')).toHaveLength(2);
     // The same face again closes it.
     await userEvent.click(face);
