@@ -169,6 +169,12 @@ describe('Season totals', () => {
     expect(all).toContain('Arsenal, all competitions 2025/26');
   });
 
+  it('puts a small picture beside the title in editorial, the BTL mark with none', () => {
+    const c = config('player-season-totals', { look: 'editorial' });
+    const html = renderToStaticMarkup(h(GameBlockView, { config: c }));
+    expect(html).toContain('data-title-face');
+  });
+
   it('defaults to the poster', () => {
     const json = { ...PLAYER_EXAMPLES['player-season-totals'] };
     json.spec = { ...json.spec, look: undefined };

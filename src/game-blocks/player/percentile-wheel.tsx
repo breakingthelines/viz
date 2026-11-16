@@ -168,6 +168,7 @@ export function PlayerPercentileWheelBlock({
         labels="short"
         surface={skin.surface}
         announce={false}
+        marks={false}
       />
     ) : null;
 
@@ -193,6 +194,7 @@ export function PlayerPercentileWheelBlock({
       density={density}
       exportName={`btl-${subject.name}-percentiles`}
       annotate={top?.key ? { target: `path.btl-pw-slc[data-k="${top.key}"]` } : undefined}
+      titleFace
       aside={aside}
     >
       {visual}

@@ -27,10 +27,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   draws the wheel whatever the look. A crest alone no longer makes a season poster.
 - **`PercentileWheel` `marks`**: `false` draws the wedges and labels with
   no percentile numbers and no dashed median ring. The season card's wheel
-  passes it.
+  and the Percentile wheel block pass it (owner: the season card's wheel
+  style for every player wheel block).
 - `PlayerSeasonTotalsDataJson.groupPhrase` and `.wheel` (protos#321).
   `src/generated/game` carries the new fields.
 - The wheel's and the season trend's locked hero read "1.02 per 90".
+
+### Added: a face beside the name
+
+- **`BlockFrame` `titleFace`**: in the editorial and annotated looks, a
+  small round headshot (or the crest) beside the title, from `media`; the
+  BTL mark when there is no picture (owner: player and team blocks show the
+  headshot or crest with the name). The season card's editorial and wheel
+  looks and the Percentile wheel block pass it; the poster keeps its
+  cut-out.
 
 ### Added: one set of actions per surface
 

@@ -11,7 +11,6 @@ import {
   useBodyFont,
   usePersonArtStatus,
   type BlockHero,
-  type BlockMedia,
 } from '../skin/index';
 import type { GameBlockLook } from '../types';
 import { useGatedCell } from '../values';
@@ -214,7 +213,7 @@ export function PlayerSeasonTotalsBlock(
     const familyLabel = new Map(families.map((f) => [f.key ?? '', f.label ?? f.key ?? '']));
     const focus = top?.key ? WHEEL_KEY[top.key] : undefined;
     return (
-      <BlockFrame {...frame} look="editorial" hero={hero}>
+      <BlockFrame {...frame} look="editorial" hero={hero} titleFace>
         <div data-season-fallback="wheel">
           <PercentileWheel
             metrics={wheelMetrics.map((m) => toStatMetric(m, familyLabel))}
@@ -235,11 +234,16 @@ export function PlayerSeasonTotalsBlock(
 
   // A poster with no cut-out and no wheel draws editorial, not a crest.
   const look: GameBlockLook = asked === 'poster' && art === 'none' ? 'editorial' : asked;
-  const media: BlockMedia | undefined = look === 'poster' ? frame.media : undefined;
   const bars: ReactNode =
     rest.length > 0 ? <SeasonBars stats={rest} group={data.groupPhrase} /> : null;
   return (
-    <BlockFrame {...frame} look={look} media={media} hero={hero}>
+    <BlockFrame
+      {...frame}
+      look={look}
+      media={frame.media}
+      titleFace={look !== 'poster'}
+      hero={hero}
+    >
       {bars}
     </BlockFrame>
   );
