@@ -27,7 +27,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Plain data (`OrbitData`: anchor, plural, members closest first with
   `rank`, `name`, `club`, `url`, `imageUrl`), so game-service's
   `SimilarityOrbit` and the game block's `GameBlockOrbit` both map onto it.
-  Ties are equal ranks and read "joint". The geometry, labels and drift are
+  Ties are equal ranks: the accessible labels read "joint", the strip reads
+  the plain position in the members' order. The geometry, labels and drift are
   exported from `similarity-orbit-model.ts`.
 
 ## [0.30.0]

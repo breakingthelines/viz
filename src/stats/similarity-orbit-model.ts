@@ -56,13 +56,16 @@ export function isJoint(data: OrbitData, index: number): boolean {
   return data.members.some((o, i) => i !== index && o.rank === m.rank);
 }
 
-/** "Closest to Mbappé", "Joint 85th closest to Mbappé", "12th closest to Mbappé". */
+/**
+ * The strip's place: "Closest to Mbappé", "49th closest to Haaland". Ties
+ * are broken by the members' order (the player page's order, then the id;
+ * owner, 2026-11-16), so the strip never reads "joint". The accessible
+ * labels do.
+ */
 export function rankPhrase(data: OrbitData, index: number, anchorShort: string): string {
-  const m = data.members[index];
-  if (!m) return '';
-  const joint = isJoint(data, index);
-  if (m.rank === 1) return `${joint ? 'Joint closest' : 'Closest'} to ${anchorShort}`;
-  return `${joint ? 'Joint ' : ''}${ordinal(m.rank)} closest to ${anchorShort}`;
+  if (!data.members[index]) return '';
+  if (index === 0) return `Closest to ${anchorShort}`;
+  return `${ordinal(index + 1)} closest to ${anchorShort}`;
 }
 
 /**

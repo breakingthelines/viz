@@ -152,16 +152,18 @@ describe('orbit ranks and labels', () => {
   );
   const haaland = { id: 'haaland', name: 'Erling Haaland' };
 
-  it('equal ranks are joint, and count as not closer', () => {
+  it('equal ranks are joint for screen readers; the strip reads the plain position', () => {
     const i = memberIndex(mbappe, 'haaland');
     expect(mbappe.members[i]!.rank).toBe(85);
     expect(isJoint(mbappe, i)).toBe(true);
     expect(isJoint(mbappe, 0)).toBe(false);
-    expect(rankPhrase(mbappe, i, 'Mbappé')).toBe('Joint 85th closest to Mbappé');
+    expect(rankPhrase(mbappe, i, 'Mbappé')).toBe('85th closest to Mbappé');
+    expect(rankPhrase(mbappe, i + 1, 'Mbappé')).toBe('86th closest to Mbappé');
     expect(rankPhrase(mbappe, 0, 'Mbappé')).toBe('Closest to Mbappé');
     expect(rankPhrase(mbappe, 11, 'Mbappé')).toBe('12th closest to Mbappé');
     const tiedTop = orbit('x', 5, 'strikers', [[0, 1]]);
-    expect(rankPhrase(tiedTop, 1, 'X')).toBe('Joint closest to X');
+    expect(rankPhrase(tiedTop, 0, 'X')).toBe('Closest to X');
+    expect(rankPhrase(tiedTop, 1, 'X')).toBe('2nd closest to X');
   });
 
   it('names each orbit for screen readers', () => {
@@ -188,7 +190,7 @@ describe('orbit ranks and labels', () => {
     expect(placesLine(both, ['Mbappé', 'Haaland'], 'malen')).toBe(
       'Closest to Mbappé · 49th closest to Haaland'
     );
-    expect(placesLine(both, ['Mbappé', 'Haaland'], 'haaland')).toBe('Joint 85th closest to Mbappé');
+    expect(placesLine(both, ['Mbappé', 'Haaland'], 'haaland')).toBe('85th closest to Mbappé');
   });
 
   it('a pick of one centre rings the other centre in the other orbit', () => {
