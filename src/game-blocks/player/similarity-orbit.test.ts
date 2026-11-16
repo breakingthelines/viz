@@ -46,19 +46,21 @@ describe('similarity orbit block', () => {
     const html = render(SINGLE, 'tile');
     expect(html).toContain('data-slot="orbit-block-single"');
     expect(html).toContain('role="img"');
-    expect(html).toContain('Closest to Mbappé');
+    expect(html).toContain('aria-label="Closest to Kylian Mbappé"');
+    expect(html).not.toContain('>Closest to Mbappé<');
     expect(html).toMatch(/Donyell Malen<\/span><span[^>]*>Aston Villa</);
     expect(html).not.toContain('orbit-block-verdict');
     expect(html).not.toContain('Strikers, top five leagues');
   });
 
-  it('draws a same-pool pair as one orbit, with the verdict, Roles and Areas', () => {
+  it('draws a same-pool pair as one orbit, with the verdict and the rows, no headings', () => {
     const html = render(PAIR, 'tile');
     expect(html).toContain('data-slot="orbit-block-combined"');
     expect(html).not.toContain('data-slot="orbit-block-pair"');
     expect(html).toContain('>Different profiles<');
-    expect(html).toContain('>Roles<');
-    expect(html).toContain('>Areas<');
+    expect(html).not.toContain('>Roles<');
+    expect(html).not.toContain('>Areas<');
+    expect(html).toContain('data-slot="orbit-block-rows"');
     expect(html).toMatch(/Both:<\/dt>/);
     expect(html).toMatch(/Mbappé:<\/dt><dd[^>]*>Inside forward, Runner in behind</);
     expect(html).toMatch(/Haaland:<\/dt><dd[^>]*>Target man</);
@@ -96,7 +98,7 @@ describe('similarity orbit block', () => {
     expect(orbitVerdict(undefined)).toBe('');
   });
 
-  it('names Roles without "Only" and keeps Areas to the families it has', () => {
+  it('names role rows without "Only" and keeps area rows to the families it has', () => {
     const d = config(PAIR).data;
     expect(roleRows(d).map((r) => r.label)).toEqual(['Both', 'Mbappé', 'Haaland']);
     expect(areaRows({ alikeFamilies: ['Shooting'] })).toEqual([
