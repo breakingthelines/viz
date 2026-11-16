@@ -18,6 +18,10 @@ import type {
   PlayerCareerData,
   PlayerComparisonData,
   PlayerDetailsData,
+  GameBlockArchetypeRow,
+  GameBlockOrbit,
+  GameBlockOrbitMember,
+  PlayerSimilarityOrbitData,
   PlayerFormData,
   PlayerHonoursData,
   PlayerMatchLogData,
@@ -47,6 +51,10 @@ import type {
   PlayerCareerDataJson,
   PlayerComparisonDataJson,
   PlayerDetailsDataJson,
+  GameBlockArchetypeRowJson,
+  GameBlockOrbitJson,
+  GameBlockOrbitMemberJson,
+  PlayerSimilarityOrbitDataJson,
   PlayerFormDataJson,
   PlayerHonoursDataJson,
   PlayerMatchLogDataJson,
@@ -94,5 +102,11 @@ describe('player data types mirror the protos', () => {
     expectTypeOf<keyof PlayerHonoursDataJson>().toEqualTypeOf<Fields<PlayerHonoursData>>();
     expectTypeOf<keyof PlayerAbsencesDataJson>().toEqualTypeOf<Fields<PlayerAbsencesData>>();
     expectTypeOf<keyof PlayerDetailsDataJson>().toEqualTypeOf<Fields<PlayerDetailsData>>();
+    expectTypeOf<keyof GameBlockOrbitMemberJson>().toEqualTypeOf<Fields<GameBlockOrbitMember>>();
+    expectTypeOf<keyof GameBlockOrbitJson>().toEqualTypeOf<Fields<GameBlockOrbit>>();
+    expectTypeOf<keyof GameBlockArchetypeRowJson>().toEqualTypeOf<Fields<GameBlockArchetypeRow>>();
+    expectTypeOf<keyof PlayerSimilarityOrbitDataJson>().toEqualTypeOf<
+      Fields<PlayerSimilarityOrbitData>
+    >();
   });
 });

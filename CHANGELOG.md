@@ -5,6 +5,18 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added: similarity orbit block (types and palette entry)
+
+- **`player-similarity-orbit`** in the registry, labelled "Similarity orbit"
+  in the Player submenu, with `PlayerSimilarityOrbitDataJson`,
+  `GameBlockOrbitJson`, `GameBlockOrbitMemberJson` and
+  `GameBlockArchetypeRowJson` (protos#314). One orbit, or a pair when the
+  spec names a comparison. No component yet: until the shared orbit lands
+  here, the block draws the "Update to see this block" frame.
+- `game_block_pb.ts` synced from protos#314.
+
 ## [0.30.0]
 
 ### Added: comparison views
