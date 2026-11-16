@@ -13,6 +13,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   becomes two rows under "Both / Only <surname>", in the same form:
   "Similar: Shooting" and "Different: Dribbling, Creating". Each row shows
   only when it names a family.
+- **Pair verdict** reads "Very similar profiles", "Similar profiles",
+  "Different profiles" or "Very different profiles" (`orbitVerdict`), stored
+  blocks included, so it never reads as a row.
+- **Detail strip** (`OrbitDetailStrip` `name`, `club`, `lines`; `placeLines`):
+  his name, his club on its own quieter line, one line per place ("Closest
+  to Mbappé", "3rd closest to Haaland"), then the links with spacing and no
+  separators. The block's links read "Player page" and "Compare with
+  <surname>". The region keeps "Name, Club" as its accessible name.
 
 ## [0.32.0]
 

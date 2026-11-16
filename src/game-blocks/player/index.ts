@@ -48,7 +48,7 @@ export {
   PlayerSimilarityOrbitBlock,
   PlayerTransfersBlock,
 };
-export { orbitContext, toOrbitData } from './similarity-orbit';
+export { orbitContext, orbitVerdict, toOrbitData } from './similarity-orbit';
 export {
   identitySlug,
   orbitSurname,

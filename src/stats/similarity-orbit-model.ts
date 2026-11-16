@@ -109,13 +109,21 @@ export function placesLine(
   shortNames: readonly string[],
   id: string
 ): string {
+  return placeLines(orbits, shortNames, id).join(' · ');
+}
+
+/** His place in each orbit he is in, one phrase per orbit: the strip's lines. */
+export function placeLines(
+  orbits: readonly OrbitData[],
+  shortNames: readonly string[],
+  id: string
+): string[] {
   return orbits
     .map((o, k) => {
       const i = memberIndex(o, id);
       return i >= 0 ? rankPhrase(o, i, shortNames[k] ?? o.anchor.name) : '';
     })
-    .filter(Boolean)
-    .join(' · ');
+    .filter(Boolean);
 }
 
 /**

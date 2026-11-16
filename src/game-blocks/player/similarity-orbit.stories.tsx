@@ -132,7 +132,16 @@ export const VerifyTapOpensStrip: Story = {
       if (!el) throw new Error('no strip');
       return el;
     });
-    await expect(strip.textContent).toContain('Donyell Malen, Aston Villa');
+    await expect(strip).toHaveAttribute('role', 'region');
+    await expect(strip).toHaveAttribute('aria-label', 'Donyell Malen, Aston Villa');
+    await expect(
+      strip.querySelector('[data-slot="orbit-block-pair-detail-club"]')?.textContent
+    ).toBe('Aston Villa');
+    const places = [
+      ...strip.querySelectorAll('[data-slot="orbit-block-pair-detail-places"] span'),
+    ].map((e) => e.textContent);
+    await expect(places).toEqual(['Closest to Mbappé', '8th closest to Haaland']);
+    await expect(strip.textContent).not.toContain(' · ');
     const links = [...strip.querySelectorAll('a')].map((a) => [
       a.textContent,
       a.getAttribute('href'),
@@ -142,11 +151,11 @@ export const VerifyTapOpensStrip: Story = {
       '/game/football/player/pex101/donyell-malen',
     ]);
     await expect(links).toContainEqual([
-      'vs Mbappé',
+      'Compare with Mbappé',
       '/game/football/compare/p4b7614c5-vs-pex101/kylian-mbappe-vs-donyell-malen',
     ]);
     await expect(links).toContainEqual([
-      'vs Haaland',
+      'Compare with Haaland',
       '/game/football/compare/paf9e90f4-vs-pex101/erling-haaland-vs-donyell-malen',
     ]);
   },
