@@ -9,6 +9,9 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
@@ -19,8 +22,12 @@ jobs:
         with:
           bun-version: 1.4.0
 
+      # bunfig.toml reads $GITHUB_TOKEN for the @breakingthelines scope: the
+      # design-system dev dependency (MatchStrip) comes from GitHub Packages.
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
