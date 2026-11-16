@@ -5,6 +5,14 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.1]
+
+### Fixed: `SeasonTrend` keeps "not ranked" without ordinals
+
+- With `ordinals={false}`, a season with a value but no ranking still reads
+  "1.84 per 90, not ranked" in its tooltip and the hidden table; only the
+  percentile ordinal is dropped.
+
 ## [0.29.0]
 
 ### Added: `ordinals` on the percentile charts
