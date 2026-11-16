@@ -1,7 +1,8 @@
 /**
  * `@breakingthelines/viz/stats` — the player-profile stat charts (spec §4.1):
  * `PercentileWheel`, `ComparisonBars`, `PercentileRows`, `ArchetypeList`,
- * `FormChart`, `SeasonTrend`, `LeagueLadder`, `SimilarList`, `StyleMap`.
+ * `FormChart`, `SeasonTrend`, `LeagueLadder`, `SimilarList`, `StyleMap`,
+ * `SimilarityOrbit` and `SimilarityOrbitPair`.
  *
  * PF-V2 ships `PercentileWheel`. PF-V3 ships `ComparisonBars`,
  * `PercentileRows`, `ArchetypeList` and `SimilarList`, plus the shared
@@ -28,6 +29,51 @@ export type { ArchetypeListProps, ArchetypeListItem } from './archetype-list';
 
 export { SimilarList } from './similar-list';
 export type { SimilarListProps, SimilarListItem } from './similar-list';
+
+export {
+  ORBIT_RED,
+  ORBIT_WHITE,
+  OrbitDetailStrip,
+  PAIR_SCALES,
+  SimilarityOrbit,
+  SimilarityOrbitPair,
+  pairOrbitFaces,
+  singleOrbitFaces,
+  useOrbitMotion,
+} from './similarity-orbit';
+export type {
+  OrbitDetailStripProps,
+  OrbitFaceRole,
+  OrbitFaceSources,
+  OrbitScaleChoice,
+  SimilarityOrbitPairProps,
+  SimilarityOrbitProps,
+} from './similarity-orbit';
+export {
+  ORBIT_COMPACT,
+  ORBIT_REGULAR,
+  ORBIT_SINGLE,
+  driftFor,
+  isJoint,
+  linkedDot,
+  memberIndex,
+  orbitDots,
+  orbitLayout,
+  pairOrbitLabel,
+  placeFaces,
+  placesLine,
+  rankPhrase,
+  singleOrbitLabel,
+} from './similarity-orbit-model';
+export type {
+  DotPlace,
+  FacePlace,
+  OrbitData,
+  OrbitLayout,
+  OrbitMember,
+  OrbitPlayer,
+  OrbitScale,
+} from './similarity-orbit-model';
 
 export { FormChart, formOpponentCode } from './form-chart';
 export type {
