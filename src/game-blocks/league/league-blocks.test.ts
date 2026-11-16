@@ -128,6 +128,61 @@ describe('league blocks', () => {
     expect(html).not.toContain('data-block-locked-note');
   });
 
+  it('player rankings: several stats draw one board per stat, the club short', () => {
+    const c = config('league-player-rankings');
+    const board = (key: string, label: string, name: string, value: string) => ({
+      metricKey: key,
+      metricLabel: label,
+      per90: false,
+      gated: false,
+      rows: [
+        {
+          rank: 1,
+          player: { id: `p-${key}`, name },
+          team: { id: 't', name: 'Manchester City', shortName: 'Man City' },
+          value: { value: Number(value), display: value },
+        },
+      ],
+    });
+    const categories = [
+      board('goals', 'Goals', 'Erling Haaland', '9'),
+      board('ast', 'Assists', 'Declan Rice', '5'),
+      board('key', 'Key passes', 'Pascal Groß', '29'),
+      board('tkl', 'Tackles', 'Anan Khalaili', '29'),
+    ];
+    const data: LeaguePlayerRankingsDataJson = {
+      ...categories[0],
+      groupLabel: 'Outfield players',
+      categories,
+    };
+    const html = render(
+      {
+        ...c,
+        data: data as Record<string, unknown>,
+        gatedCells: [],
+        snapshotId: '',
+        lockedNote: undefined,
+      },
+      'free',
+      {}
+    );
+    const t = text(html);
+    expect(html.match(/data-ranking-category=/g)?.length).toBe(4);
+    for (const s of [
+      'Goals',
+      'Assists',
+      'Key passes',
+      'Tackles',
+      'Pascal Groß',
+      'Anan Khalaili',
+      'Man City',
+    ]) {
+      expect(t).toContain(s);
+    }
+    expect(copyProblems(html)).toEqual([]);
+    expect(html).not.toContain('data-cell-state');
+  });
+
   it('player rankings: locks exactly the cells the values say are locked', () => {
     const c = config('league-player-rankings');
     const cells = {

@@ -5,6 +5,22 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.1]
+
+### Added
+
+- **Player rankings draws several stats.** When the block carries
+  `categories` (protos v0.231.0: a general ask's leaders across goals,
+  assists, key passes and tackles, or a position's key stats), it draws one
+  small board per stat, two across from 480px and one under another below.
+  Each board is a section heading over a strong hairline, then five rows:
+  the name, the club in its short form and the value. Paid boards read
+  names, clubs and values from their cells. A one-stat ranking draws as
+  before.
+- `LeaguePlayerRankingsCategoryJson`, and `categories` on
+  `LeaguePlayerRankingsDataJson`.
+- The generated `game_block_pb.ts` is synced to protos v0.231.0.
+
 ## [0.35.0]
 
 ### Changed: the Player season card

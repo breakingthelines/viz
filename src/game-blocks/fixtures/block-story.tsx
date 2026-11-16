@@ -186,3 +186,69 @@ export function lockedChecks(id: GameBlockTypeId) {
     }
   };
 }
+
+/**
+ * The player rankings block with several stats (`categories`), public
+ * values: the leaders across goals, assists, key passes and tackles.
+ * EXAMPLE FIGURES ONLY.
+ */
+export function rankingCategoriesStory(width = 680) {
+  const board = (key: string, label: string, rows: [string, string, string, string, number][]) => ({
+    metricKey: key,
+    metricLabel: label,
+    per90: false,
+    gated: false,
+    rows: rows.map(([name, club, short, value], i) => ({
+      rank: i + 1,
+      player: { id: `p-${key}-${i}`, name },
+      team: { id: `t-${club}`, name: club, shortName: short },
+      value: { value: Number(value), display: value },
+    })),
+  });
+  const categories = [
+    board('goals', 'Goals', [
+      ['Erling Haaland', 'Manchester City', 'Man City', '9', 0],
+      ['Alexander Isak', 'Liverpool', 'Liverpool', '7', 0],
+      ['Nicolas Jackson', 'Aston Villa', 'Villa', '6', 0],
+      ['Thierno Barry', 'Everton', 'Everton', '6', 0],
+      ['João Pedro', 'Chelsea', 'Chelsea', '5', 0],
+    ]),
+    board('ast', 'Assists', [
+      ['Declan Rice', 'Arsenal', 'Arsenal', '5', 0],
+      ['John McGinn', 'Aston Villa', 'Villa', '4', 0],
+      ['Evanilson', 'Bournemouth', "B'mouth", '4', 0],
+      ['Pascal Groß', 'Brighton & Hove Albion', 'Brighton', '4', 0],
+      ['Johan Manzambi', 'Aston Villa', 'Villa', '3', 0],
+    ]),
+    board('key', 'Key passes', [
+      ['Pascal Groß', 'Brighton & Hove Albion', 'Brighton', '29', 0],
+      ['Morgan Gibbs-White', 'Nottingham Forest', 'Forest', '24', 0],
+      ['Alex Iwobi', 'Fulham', 'Fulham', '24', 0],
+      ['Florian Wirtz', 'Liverpool', 'Liverpool', '23', 0],
+      ['Bruno Fernandes', 'Manchester United', 'Man United', '23', 0],
+    ]),
+    board('tkl', 'Tackles', [
+      ['Anan Khalaili', 'Crystal Palace', 'Palace', '29', 0],
+      ['Mamadou Sangaré', 'Brentford', 'Brentford', '28', 0],
+      ['Jérémy Jacquet', 'Liverpool', 'Liverpool', '28', 0],
+      ['Boubacar Kamara', 'Aston Villa', 'Villa', '28', 0],
+      ['Tyrick Mitchell', 'Crystal Palace', 'Palace', '27', 0],
+    ]),
+  ];
+  return function RankingCategories() {
+    const c = exampleConfig('league-player-rankings');
+    const config: GameBlockConfig = {
+      ...c,
+      data: { ...categories[0], groupLabel: 'Outfield players', categories },
+      gatedCells: [],
+      lockedNote: undefined,
+    };
+    return (
+      <Page width={width}>
+        <GameBlockValuesProvider initial={{ [config.snapshotId]: {} }}>
+          <GameBlockView config={config} />
+        </GameBlockValuesProvider>
+      </Page>
+    );
+  };
+}
