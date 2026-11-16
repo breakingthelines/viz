@@ -5,6 +5,14 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.3]
+
+### Changed
+
+- **`player-similarity-orbit` is labelled "Orbit"** in the registry, so the
+  palette, the picker and every host name it that way. The type id and data
+  are unchanged.
+
 ## [0.32.2]
 
 ### Changed

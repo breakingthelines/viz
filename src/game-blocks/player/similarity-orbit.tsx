@@ -23,7 +23,7 @@ import { orbitSurname, playerComparePath, playerPagePath } from './orbit-links';
 import { baseFrame } from './shared';
 
 /**
- * Player › Similarity orbit. One player's top five league position group as
+ * Player › Orbit. One player's top five league position group as
  * dots around his headshot, closer meaning more alike, his three closest as
  * faces ("who is he like?"); or, when the spec names a comparison, both
  * players' orbits side by side, each the other's lit dot, with the Compare

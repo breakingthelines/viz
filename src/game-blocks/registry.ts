@@ -175,7 +175,7 @@ const ENTRIES: Omit<GameBlockRegistryEntry, 'component'>[] = [
     id: 'player-similarity-orbit',
     protoType: 'GAME_BLOCK_TYPE_PLAYER_SIMILARITY_ORBIT',
     dataKey: 'playerSimilarityOrbit',
-    label: 'Similarity orbit',
+    label: 'Orbit',
     submenu: 'player',
     subjectKinds: ['player'],
     node: 'game-block',

@@ -9,7 +9,7 @@ import type { GameBlockOrbitJson, PlayerSimilarityOrbitDataJson } from './data';
 import { Page } from './story-kit';
 
 /**
- * Player › Similarity orbit, one player and a pair, in an article, in chat and
+ * Player › Orbit, one player and a pair, in an article, in chat and
  * as a still picker tile. EXAMPLE FIGURES ONLY: the ranks are made up, and
  * the faces are drawn busts, not people.
  */
@@ -52,7 +52,7 @@ function OrbitExample({ pair, look, width, density }: OrbitArgs) {
 }
 
 const meta = {
-  title: 'Game blocks/Player/Similarity orbit',
+  title: 'Game blocks/Player/Orbit',
   component: OrbitExample,
   parameters: { layout: 'fullscreen' },
   args: { pair: false, look: 'editorial', width: 680, density: 'article' },
