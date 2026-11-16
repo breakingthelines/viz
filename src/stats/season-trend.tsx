@@ -39,7 +39,8 @@ export interface SeasonTrendProps {
   /**
    * The percentile ordinal in each point's tooltip and the hidden table
    * ("0.83 per 90, 94th percentile"). `false` reads the value alone
-   * ("0.83 per 90"). Defaults to `true`.
+   * ("0.83 per 90"); a season with no ranking still reads "not ranked".
+   * Defaults to `true`.
    */
   ordinals?: boolean;
 }
@@ -92,7 +93,7 @@ export function seasonTrendRuns(points: readonly SeasonTrendPoint[]): number[][]
   return runs;
 }
 
-/** "0.83 per 90, 94th percentile" / "58%, not ranked"; without ordinals, "0.83 per 90". */
+/** "0.83 per 90, 94th percentile" / "58%, not ranked"; without ordinals, "0.83 per 90" (a season with no ranking still reads "not ranked"). */
 export function seasonTrendReading(
   point: SeasonTrendPoint,
   unit: SeasonTrendRow['unit'],
@@ -101,10 +102,9 @@ export function seasonTrendReading(
   if (point.value === null) return 'No data';
   const value = formatMetricValue(point.value, unit);
   const shown = unit === 'per90' ? `${value} per 90` : value;
-  if (!ordinals) return shown;
-  return point.percentile === null || !Number.isFinite(point.percentile)
-    ? `${shown}, not ranked`
-    : `${shown}, ${ordinal(Math.round(point.percentile))} percentile`;
+  if (point.percentile === null || !Number.isFinite(point.percentile))
+    return `${shown}, not ranked`;
+  return ordinals ? `${shown}, ${ordinal(Math.round(point.percentile))} percentile` : shown;
 }
 
 /**

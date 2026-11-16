@@ -61,5 +61,8 @@ describe('ordinals', () => {
     );
     expect(seasonTrendReading({ value: 0.83, percentile: 94 }, 'per90', false)).toBe('0.83 per 90');
     expect(seasonTrendReading({ value: null, percentile: null }, 'per90', false)).toBe('No data');
+    expect(seasonTrendReading({ value: 1.84, percentile: null }, 'per90', false)).toBe(
+      '1.84 per 90, not ranked'
+    );
   });
 });
