@@ -395,3 +395,28 @@ export function driftKeyframes(d: Drift, unit: (v: number) => string): Keyframe[
     { ...t(d.rx, 0), offset: 1 },
   ];
 }
+
+/**
+ * A combined pair's accessible name, both directions whichever orbit is
+ * drawn: "Haaland is Mbappé's 85th closest of the 157 other strikers.
+ * Mbappé is Haaland's 67th closest."
+ */
+export function combinedOrbitLabel(
+  orbits: readonly [OrbitData, OrbitData],
+  shortNames: readonly [string, string]
+): string {
+  const place = (o: OrbitData, id: string) => {
+    const m = o.members[memberIndex(o, id)];
+    if (!m) return '';
+    return m.rank === 1 ? 'closest' : `${ordinal(m.rank)} closest`;
+  };
+  const [a, b] = orbits;
+  const ab = place(a, b.anchor.id);
+  const ba = place(b, a.anchor.id);
+  const pool = `the ${poolSize(a)} other ${a.plural || 'players'}`;
+  const first = ab
+    ? `${shortNames[1]} is ${shortNames[0]}'s ${ab} of ${pool}.`
+    : `${shortNames[0]} among ${pool}.`;
+  const second = ba ? ` ${shortNames[0]} is ${shortNames[1]}'s ${ba}.` : '';
+  return first + second;
+}

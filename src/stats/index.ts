@@ -36,6 +36,7 @@ export {
   OrbitDetailStrip,
   PAIR_SCALES,
   SimilarityOrbit,
+  SimilarityOrbitCombined,
   SimilarityOrbitPair,
   pairOrbitFaces,
   singleOrbitFaces,
@@ -46,6 +47,7 @@ export type {
   OrbitFaceRole,
   OrbitFaceSources,
   OrbitScaleChoice,
+  SimilarityOrbitCombinedProps,
   SimilarityOrbitPairProps,
   SimilarityOrbitProps,
 } from './similarity-orbit';
@@ -59,6 +61,7 @@ export {
   memberIndex,
   orbitDots,
   orbitLayout,
+  combinedOrbitLabel,
   pairOrbitLabel,
   placeFaces,
   placeLines,

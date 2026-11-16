@@ -5,6 +5,40 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0]
+
+### Added: one orbit for a pair in one pool
+
+- **`SimilarityOrbitCombined`** (`@breakingthelines/viz/stats`): two
+  players in the same pool drawn as one orbit.
+  - It is centred on the first-named player (red). The second is his dot at
+    his rank, with his face on a stronger stem and the disc lit to his
+    radius. Crayon loops sit on both faces.
+  - A tap on the second player's face, or the quiet name switch under the
+    orbit ("Mbappé · Haaland"), re-centres it on him (white). The swap is a
+    short morph, instant under reduced motion. Again swaps back.
+  - The accessible name gives both directions: "Haaland is Mbappé's 85th
+    closest of the 157 other strikers. Mbappé is Haaland's 67th closest."
+  - Off (`interactive={false}`, Save image) it draws the first-named
+    player's orbit only, with no switch or strip.
+- `combinedOrbitLabel`. Opt-in additions to the shared field and strip:
+  `onFace`, `loops`, `stemWeight` and `OrbitDetailStrip.quietPlaces`.
+  `SimilarityOrbit` and `SimilarityOrbitPair` are unchanged.
+
+### Changed: the Orbit block
+
+- A pair in one pool draws with `SimilarityOrbitCombined`. A pair across two
+  pools keeps `SimilarityOrbitPair` with its pool captions.
+- No scope line.
+- Beside the orbit: the verdict, then Roles ("Both:", "<Mbappé>:",
+  "<Haaland>:", no "Only") and Areas ("Similar:", "Different:"). Each group
+  has one quiet heading and one label column, with no ruled rows.
+- The single orbit names its three closest beside it ("Closest to Mbappé":
+  name, club).
+- Strip actions: "Player page", then "Compare with [Mbappé ▾] Show" (the
+  Stats tab's menu select and bordered button), or a plain "Compare with
+  Mbappé" when there is one choice.
+
 ## [0.33.1]
 
 ### Changed

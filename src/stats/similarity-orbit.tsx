@@ -16,6 +16,7 @@ import {
   ORBIT_COMPACT,
   ORBIT_REGULAR,
   ORBIT_SINGLE,
+  combinedOrbitLabel,
   driftFor,
   driftKeyframes,
   linkedDot,
@@ -358,6 +359,12 @@ interface FieldProps {
   onSelect: (id: string | null, keyboard: boolean) => void;
   /** Selects the centre player; without it the centre face is decoration. */
   onAnchor?: () => void;
+  /** A tap on a member's face; without it a face selects as its dot does. */
+  onFace?: (id: string) => void;
+  /** Crayon loops round these players' faces (members or the centre). */
+  loops?: readonly { id: string; color: string }[];
+  /** Stem weight, as a multiple of the default. */
+  stemWeight?: number;
   sources: OrbitFaceSources;
   slot: string;
 }
@@ -587,7 +594,7 @@ function ScaleView({
                     x2={face.stem[2]}
                     y2={face.stem[3]}
                     stroke={role?.ink ?? ORBIT_WHITE}
-                    strokeWidth={big ? 1.25 : 1}
+                    strokeWidth={(big ? 1.25 : 1) * (p.stemWeight ?? 1)}
                     strokeOpacity={role?.dim ? 0.55 : 1}
                   />
                 ) : null}
@@ -663,7 +670,9 @@ function ScaleView({
                 label={m.name}
                 onClick={
                   interactive
-                    ? () => p.onSelect(m.id === p.selected ? null : m.id, false)
+                    ? p.onFace
+                      ? () => p.onFace!(m.id)
+                      : () => p.onSelect(m.id === p.selected ? null : m.id, false)
                     : undefined
                 }
               />
@@ -689,6 +698,19 @@ function ScaleView({
             onClick={interactive ? p.onAnchor : undefined}
           />
         </span>
+        {p.loops && p.loops.length > 0 ? (
+          <CrayonLoops
+            loops={p.loops}
+            at={(id) => {
+              if (id === data.anchor.id) return { x: cx, y: cy, size: scale.face };
+              const f = faces.find((x) => data.members[x.index]?.id === id);
+              return f ? { x: f.x, y: f.y, size: f.size } : null;
+            }}
+            size={size}
+            big={big}
+            slot={p.slot}
+          />
+        ) : null}
         {interactive && hoverDot && hoverName ? (
           <span
             data-slot={`${p.slot}-name`}
@@ -720,6 +742,77 @@ function ScaleView({
   );
 }
 
+/**
+ * Hand-drawn loops round faces (the annotated crayon): an ellipse a little
+ * wider than the face, drawn once round with a short overrun and a rough
+ * edge. Decoration only.
+ */
+function CrayonLoops({
+  loops,
+  at,
+  size,
+  big,
+  slot,
+}: {
+  loops: readonly { id: string; color: string }[];
+  at: (id: string) => { x: number; y: number; size: number } | null;
+  size: number;
+  big: boolean;
+  slot: string;
+}) {
+  const filter = `${slot}-crayon`.replace(/[^a-zA-Z0-9_-]/g, '');
+  return (
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      aria-hidden="true"
+      data-slot={`${slot}-loops`}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'visible',
+        pointerEvents: 'none',
+        zIndex: 3,
+      }}
+    >
+      <defs>
+        <filter id={filter}>
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={4} />
+          <feDisplacementMap in="SourceGraphic" scale={1.6} />
+        </filter>
+      </defs>
+      {loops.map((lp) => {
+        const f = at(lp.id);
+        if (!f) return null;
+        const r = f.size / 2 + (big ? 7 : 5);
+        const pts: string[] = [];
+        for (let k = 0; k <= 46; k++) {
+          const t = (k / 40) * Math.PI * 2 - 0.9;
+          const wob = 1 + 0.06 * Math.sin(k * 1.7) + (k > 40 ? 0.1 : 0);
+          pts.push(
+            `${(f.x + r * 1.08 * wob * Math.cos(t)).toFixed(1)},${(f.y + r * 0.96 * wob * Math.sin(t)).toFixed(1)}`
+          );
+        }
+        return (
+          <polyline
+            key={lp.id}
+            data-player={lp.id}
+            points={pts.join(' ')}
+            fill="none"
+            stroke={lp.color}
+            strokeWidth={big ? 2.4 : 1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.85}
+            filter={`url(#${filter})`}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 /* ── the detail strip ───────────────────────────────────────────────────── */
 
 export interface OrbitDetailStripProps {
@@ -744,6 +837,11 @@ export interface OrbitDetailStripProps {
   ring?: string;
   /** Expand smoothly; off under reduced motion. */
   animate: boolean;
+  /**
+   * The quieter place lines: smaller and muted, tucked under the club on
+   * the name's text edge. The combined orbit's layout.
+   */
+  quietPlaces?: boolean;
 }
 
 /**
@@ -765,6 +863,7 @@ export function OrbitDetailStrip({
   slot,
   ring = ORBIT_WHITE,
   animate,
+  quietPlaces = false,
 }: OrbitDetailStripProps) {
   return (
     <div
@@ -865,13 +964,26 @@ export function OrbitDetailStrip({
             {name !== undefined && lines && lines.length > 0 ? (
               <div
                 data-slot={`${slot}-places`}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  fontSize: 13,
-                  color: LABEL,
-                }}
+                style={
+                  quietPlaces
+                    ? {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0,
+                        marginTop: -6,
+                        paddingLeft: 48,
+                        fontSize: 12,
+                        lineHeight: 1.45,
+                        color: MUTED,
+                      }
+                    : {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        fontSize: 13,
+                        color: LABEL,
+                      }
+                }
               >
                 {lines.map((l) => (
                   <span key={l}>{l}</span>
@@ -1277,6 +1389,203 @@ export function SimilarityOrbitPair({
           name={picked?.name ?? ''}
           club={picked?.club}
           lines={pick ? placeLines(orbits, shortNames, pick.id) : []}
+          onClose={() => s.close(true)}
+          actions={picked && renderActions ? renderActions(picked, main) : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/* ── a pair in one orbit ────────────────────────────────────────────────── */
+
+/** The crayon on the two compared faces. */
+const LOOP_INK = 'rgb(250, 128, 114)';
+
+/** Whether the viewer asked for reduced motion (false on the server). */
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+export interface SimilarityOrbitCombinedProps {
+  /** The first-named player's orbit, then the second's: each the other's anchor, one pool. */
+  orbits: readonly [OrbitData, OrbitData];
+  /** Short names for the switch, the strip and the label ("Mbappé", "Haaland"). */
+  shortNames: readonly [string, string];
+  /** Layouts by breakpoint; one 380-unit layout by default. */
+  scales?: readonly OrbitScaleChoice[];
+  /**
+   * Taps, hover names, keyboard, the swap and the strip. Default true. Off,
+   * it draws the first-named player's orbit only.
+   */
+  interactive?: boolean;
+  motion?: boolean;
+  faceSources?: OrbitFaceSources;
+  /** The strip's actions; `main` when he is one of the two players. */
+  renderActions?: (player: OrbitPlayer, main: boolean) => ReactNode;
+  slot?: string;
+}
+
+/**
+ * Two players in one pool, in one orbit: centred on the first (red), the
+ * second is his dot at his rank with his face on a stem and the disc lit to
+ * his radius; crayon loops on both faces. A tap on the second player's face,
+ * or the name switch under the orbit, re-centres it on him (white), where
+ * the first is the dot; again swaps back. The accessible name gives both
+ * directions whichever is drawn.
+ */
+export function SimilarityOrbitCombined({
+  orbits,
+  shortNames,
+  scales = [{ scale: ORBIT_REGULAR }],
+  interactive = true,
+  motion = true,
+  faceSources = defaultSources,
+  renderActions,
+  slot = 'similarity-orbit-combined',
+}: SimilarityOrbitCombinedProps) {
+  const [centre, setCentre] = useState<0 | 1>(0);
+  const shown: 0 | 1 = interactive ? centre : 0;
+  const s = useOrbitSelection(null);
+  const moving = useOrbitMotion(s.rootRef, motion && interactive);
+  useDrift(s.rootRef, moving, s.still, `${orbits[0].anchor.id}:${orbits[1].anchor.id}:${shown}`);
+  const morphRef = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const el = morphRef.current;
+    if (!el || typeof el.animate !== 'function' || prefersReducedMotion()) return;
+    el.animate(
+      [
+        { opacity: 0.2, transform: 'scale(0.94) rotate(-6deg)' },
+        { opacity: 1, transform: 'scale(1) rotate(0deg)' },
+      ],
+      { duration: 280, easing: EASE }
+    );
+  }, [shown]);
+
+  const inks = [ORBIT_RED, ORBIT_WHITE] as const;
+  const d = orbits[shown];
+  const other = orbits[(1 - shown) as 0 | 1].anchor;
+  const ink = inks[shown];
+  const otherInk = inks[1 - shown]!;
+  const otherIndex = memberIndex(d, other.id);
+  const selected = s.pick?.id ?? null;
+  const selIndex = selected ? memberIndex(d, selected) : -1;
+  const anchors = [orbits[0].anchor, orbits[1].anchor];
+  const picked: OrbitPlayer | undefined = selected
+    ? (anchors.find((a) => a.id === selected) ?? d.members.find((m) => m.id === selected))
+    : undefined;
+  const main = !!picked && anchors.some((a) => a.id === picked.id);
+
+  const swap = (to: 0 | 1) => {
+    if (to === centre) return;
+    s.close(false);
+    setCentre(to);
+  };
+
+  return (
+    <div
+      {...s.rootProps}
+      data-slot={slot}
+      data-orbit-still={s.still ? 'true' : 'false'}
+      data-orbit-centre={d.anchor.id}
+      style={{ display: 'flex', minWidth: 0, flexDirection: 'column', gap: 12 }}
+    >
+      <div ref={morphRef} key={shown}>
+        <OrbitField
+          slot={`${slot}-orbit`}
+          data={d}
+          label={combinedOrbitLabel(orbits, shortNames)}
+          ink={ink}
+          dim={DIM[ink]!}
+          field={ink}
+          scales={scales}
+          up={otherIndex >= 0 ? otherIndex : 0}
+          faces={pairOrbitFaces(d, other.id, ink, otherInk, selected)}
+          lit={selIndex >= 0 ? selIndex : otherIndex}
+          inkInside
+          ringed={selected ? [selected] : []}
+          selected={selected}
+          hover={s.hover?.id ?? null}
+          interactive={interactive}
+          moving={moving}
+          onHover={(id) => s.setHover(id ? { id, orbit: 0 } : null)}
+          onSelect={s.select(0)}
+          onFace={(id) => {
+            if (id === other.id) swap((1 - shown) as 0 | 1);
+            else s.select(0)(id, false);
+          }}
+          loops={[
+            { id: d.anchor.id, color: LOOP_INK },
+            { id: other.id, color: LOOP_INK },
+          ]}
+          stemWeight={1.8}
+          sources={faceSources}
+        />
+      </div>
+      {interactive ? (
+        <div
+          role="group"
+          aria-label="Centre the orbit on"
+          data-slot={`${slot}-switch`}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'baseline',
+            gap: 8,
+            fontSize: 13,
+          }}
+        >
+          {([0, 1] as const).map((o) => (
+            <span key={o} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+              {o === 1 ? (
+                <span aria-hidden="true" style={{ color: MUTED }}>
+                  ·
+                </span>
+              ) : null}
+              <button
+                type="button"
+                aria-pressed={shown === o}
+                data-slot={`${slot}-switch-option`}
+                onClick={() => swap(o)}
+                style={{
+                  cursor: shown === o ? 'default' : 'pointer',
+                  border: 0,
+                  padding: '2px 0',
+                  background: 'transparent',
+                  font: 'inherit',
+                  fontWeight: shown === o ? 600 : 400,
+                  color: shown === o ? (o === 0 ? ORBIT_RED : ORBIT_WHITE) : MUTED,
+                }}
+              >
+                {shortNames[o]}
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {interactive ? (
+        <OrbitDetailStrip
+          open={!!picked}
+          slot={`${slot}-detail`}
+          focusRef={s.stripRef}
+          animate={moving}
+          ring={selIndex >= 0 && selIndex < 3 ? ink : ORBIT_WHITE}
+          sources={picked ? faceSources(picked) : []}
+          title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
+          line={selected ? placesLine(orbits, shortNames, selected) : ''}
+          name={picked?.name ?? ''}
+          club={picked?.club}
+          lines={selected ? placeLines(orbits, shortNames, selected) : []}
+          quietPlaces
           onClose={() => s.close(true)}
           actions={picked && renderActions ? renderActions(picked, main) : undefined}
         />
