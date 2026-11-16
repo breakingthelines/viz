@@ -23,7 +23,7 @@ import { orbitSurname, playerComparePath, playerPagePath } from './orbit-links';
 import { baseFrame } from './shared';
 
 /**
- * Player › Similarity orbit. One player's top five league position group as
+ * Player › Orbit. One player's top five league position group as
  * dots around his headshot, closer meaning more alike, his three closest as
  * faces ("who is he like?"); or, when the spec names a comparison, both
  * players' orbits side by side, each the other's lit dot, with the Compare
@@ -48,6 +48,9 @@ export function toOrbitData(o: GameBlockOrbitJson): OrbitData {
       imageUrl: anchor.imageUrl || undefined,
     },
     plural: o.poolPhrase || 'players',
+    poolLabel: o.poolPhrase
+      ? o.poolPhrase.charAt(0).toUpperCase() + o.poolPhrase.slice(1)
+      : undefined,
     members: (o.members ?? [])
       .filter((m) => m.player?.id)
       .map((m) => ({
@@ -57,6 +60,7 @@ export function toOrbitData(o: GameBlockOrbitJson): OrbitData {
         url: m.player!.url || undefined,
         imageUrl: m.player!.imageUrl || undefined,
         rank: m.rank ?? 0,
+        ...(m.outsidePool ? { outsidePool: true } : {}),
       })),
   };
 }
@@ -222,9 +226,15 @@ function OrbitBody({ data }: { data: PlayerSimilarityOrbitDataJson }) {
   return <OrbitVisual data={data} interactive={density !== 'tile' && !capturing} />;
 }
 
-/** "Strikers, top five leagues, 2026/27": the pool and the season. */
-export function orbitContext(config: GameBlockConfig<unknown>): string {
-  const parts = [config.baseline, config.scope.seasonLabel].filter(Boolean);
+/**
+ * "Strikers, top five leagues, 2026/27": the pool and the season. A pair
+ * whose two pools differ (a striker v an attacking midfielder) reads "Top
+ * five leagues, 2026/27": each orbit then carries its own caption.
+ */
+export function orbitContext(config: GameBlockConfig<PlayerSimilarityOrbitDataJson>): string {
+  const pools = new Set((config.data?.orbits ?? []).map((o) => o.poolPhrase ?? ''));
+  const scope = pools.size > 1 ? 'Top five leagues' : config.baseline;
+  const parts = [scope, config.scope.seasonLabel].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : config.context;
 }
 

@@ -5,6 +5,20 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.1]
+
+### Changed
+
+- **`player-similarity-orbit` is labelled "Orbit"** in the registry, so the
+  palette, the picker and every host name it that way. The type id and data
+  are unchanged.
+- **A pair across two pools** (a striker v an attacking midfielder): the
+  block maps `outside_pool` to `OrbitMember.outsidePool` and each orbit's
+  pool to `OrbitData.poolLabel`, so the shared orbit (0.33.0) leaves the
+  outsider out of counts and places and captions the two pools. The scope
+  line then reads "Top five leagues, 2026/27". `game_block_pb.ts` synced
+  from protos 0.229.0.
+
 ## [0.33.0]
 
 ### Added: orbits across two pools
