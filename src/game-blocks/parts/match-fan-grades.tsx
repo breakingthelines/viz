@@ -30,13 +30,13 @@ export function topGraded(
 
 /**
  * One side as a list, best grade first: player, grade, votes, and the grade on
- * the scale (1 at the full end) with the team average as the tick.
+ * the scale (1 at the full end). No average tick.
  */
 export function GradeList({
   players,
-  average,
 }: {
   players: GameBlockPlayerGradeJson[];
+  /** @deprecated No longer drawn. */
   average?: number;
 }) {
   const graded = [...players].sort((a, b) => (a.grade ?? Infinity) - (b.grade ?? Infinity));
@@ -59,7 +59,6 @@ export function GradeList({
             <ScaleCell>
               <BlockScale
                 value={gradeToScale(p.grade)}
-                median={typeof average === 'number' ? gradeToScale(average) : undefined}
                 size="row"
                 label={gradeScaleLabel(p.grade)}
               />

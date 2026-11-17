@@ -2,7 +2,7 @@ import type { GameBlockComponentProps } from '../block-props';
 import { PlayerTrendChart } from '../parts/player-trend-chart';
 import { BlockFrame, BlockRows, GatedValue, type BlockHero } from '../skin/index';
 import type { GameBlockTrendMetricJson, PlayerSeasonTrendDataJson } from './data';
-import { groupLabel, lowerFirst, ordinal } from './percentile-wheel';
+import { groupLabel, lowerFirst } from './percentile-wheel';
 import { baseFrame, pctOf } from './shared';
 
 /**
@@ -54,20 +54,17 @@ export function PlayerSeasonTrendBlock(props: GameBlockComponentProps<PlayerSeas
   if (top && lastIdx >= 0) {
     const lastPoint = (top.points ?? []).find((p) => p.seasonId === ids[lastIdx]);
     const change = changeLabel(topPoints);
-    hero = {
-      figure: ordinal(topPoints[lastIdx] as number),
-      label: `${lowerFirst(top.label ?? '')} percentile, ${seasons[lastIdx]?.label ?? ''}`,
-      baseline: [
-        change && firstIdx >= 0 && firstIdx !== lastIdx
-          ? `${change} since ${seasons[firstIdx]?.label ?? ''}`
-          : null,
-        lastPoint?.valueCell ? (
-          <span key="p90">
-            <GatedValue cell={lastPoint.valueCell} width={28} /> per 90
-          </span>
-        ) : null,
-      ].filter(Boolean),
-    };
+    hero = lastPoint?.valueCell
+      ? {
+          figure: <GatedValue cell={lastPoint.valueCell} width={40} />,
+          label: `${lowerFirst(top.label ?? '')} per 90, ${seasons[lastIdx]?.label ?? ''}`,
+          baseline: [
+            change && firstIdx >= 0 && firstIdx !== lastIdx
+              ? `${change} since ${seasons[firstIdx]?.label ?? ''}`
+              : null,
+          ].filter(Boolean),
+        }
+      : undefined;
   }
 
   const groups = [...new Set(seasons.map((s) => s.groupPhrase).filter(Boolean))];
@@ -79,7 +76,10 @@ export function PlayerSeasonTrendBlock(props: GameBlockComponentProps<PlayerSeas
         rows={metrics.map((m) => ({
           key: m.key ?? '',
           label: m.label ?? '',
-          cells: alignPoints(m, ids).map((p) => (p === null ? '–' : ordinal(p))),
+          cells: ids.map((id) => {
+            const cell = (m.points ?? []).find((p) => p.seasonId === id)?.valueCell;
+            return cell ? <GatedValue cell={cell} /> : '–';
+          }),
         }))}
       />
     ) : (
