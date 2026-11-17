@@ -15,7 +15,15 @@ import type { GameBlockRefJson } from './team-league-match-common';
  *   "Second yellow";
  * - drops duplicate events and self-assists, and any assist on an own goal;
  * - drops a scorer-less goal in the minute of a VAR check when the goals
- *   would otherwise outrun the final score (a goal ruled out).
+ *   would otherwise outrun the final score (a goal ruled out);
+ * - takes penalty shootout kicks out of the rows, the running score, the
+ *   strip and the stoppage reach, and lists them apart in `shootout`.
+ *
+ * The stored feed does not mark a shootout kick: game-service writes it as
+ * a penalty goal or a missed penalty, and API-Football stamps the kicks
+ * 120+1' to 120+8'. A kick is an event whose detail names the shootout, or,
+ * in a match with a shootout score, one of the penalty events from 120' on,
+ * counted back from the last until the scored ones make the shootout score.
  */
 
 export type TimelineKind = 'goal' | 'pen' | 'og' | 'red' | 'penmiss';
@@ -38,8 +46,20 @@ export interface TimelineRow {
   score?: [number, number];
 }
 
+export interface ShootoutKick {
+  side: TimelineSide;
+  player?: GameBlockRefJson;
+  scored: boolean;
+  /** The kick's place in the shootout: 1 for the first. */
+  order: number;
+  /** The shootout score after this kick, home first. */
+  score: [number, number];
+}
+
 export interface TimelineModel {
   rows: TimelineRow[];
+  /** The penalty shootout, kick by kick. Empty without one. */
+  shootout: ShootoutKick[];
   /** Stoppage time reached in each half, in minutes (from every event). */
   reach: [number, number];
   /** Whether the game went to extra time. */
@@ -76,9 +96,11 @@ export function timelineModel(data: MatchTimelineDataJson): TimelineModel {
       .flatMap((n) => [n, clubName(n)])
   );
   const isClub = (ref: GameBlockRefJson | undefined) => !ref?.name || clubs.has(ref.name);
-  const events = (data.events ?? [])
+  const sorted = (data.events ?? [])
     .map((e, i) => ({ e, i, ...parseMinute(e.minute) }))
     .sort((x, y) => x.base - y.base || x.added - y.added || x.i - y.i);
+  const kicks = shootoutKicks(sorted, match);
+  const events = sorted.filter((x) => !kicks.has(x));
   const reach: [number, number] = [0, 0];
   let extraTime = false;
   for (const { base, added } of events) {
@@ -132,7 +154,54 @@ export function timelineModel(data: MatchTimelineDataJson): TimelineModel {
     else a++;
     r.score = [h, a];
   }
-  return { rows, reach, extraTime };
+  const shootout: ShootoutKick[] = [];
+  let sh = 0;
+  let sa = 0;
+  for (const x of sorted) {
+    if (!kicks.has(x)) continue;
+    const e = x.e;
+    const side: TimelineSide = e.side === 'GAME_BLOCK_SIDE_AWAY' ? 'away' : 'home';
+    const scored = e.kind === 'KIND_PENALTY_GOAL';
+    if (scored && side === 'home') sh++;
+    else if (scored) sa++;
+    shootout.push({
+      side,
+      player: isClub(e.player) ? undefined : e.player,
+      scored,
+      order: shootout.length + 1,
+      score: [sh, sa],
+    });
+  }
+  return { rows, shootout, reach, extraTime };
+}
+
+type SortedEvent = { e: GameBlockMatchEventJson; i: number; base: number; added: number };
+
+const KICKS = new Set(['KIND_PENALTY_GOAL', 'KIND_MISSED_PENALTY']);
+
+/** The shootout kicks among the sorted events (see the model's notes). */
+function shootoutKicks(
+  sorted: SortedEvent[],
+  match: MatchTimelineDataJson['match']
+): Set<SortedEvent> {
+  const flagged = sorted.filter((x) => /shoot-?out/i.test(x.e.detail ?? ''));
+  if (flagged.length > 0) return new Set(flagged);
+  const ph = match?.home?.penalties;
+  const pa = match?.away?.penalties;
+  if (typeof ph !== 'number' || typeof pa !== 'number') return new Set();
+  const out = new Set<SortedEvent>();
+  let scored = 0;
+  const candidates = sorted.filter((x) => KICKS.has(x.e.kind ?? '') && x.base >= 120);
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const x = candidates[i]!;
+    const goal = x.e.kind === 'KIND_PENALTY_GOAL';
+    // Once the scored kicks make the shootout score, only misses before them
+    // can still be kicks.
+    if (scored >= ph + pa && goal) break;
+    out.add(x);
+    if (goal) scored++;
+  }
+  return out;
 }
 
 function samePlayer(a: GameBlockRefJson | undefined, b: GameBlockRefJson | undefined): boolean {
@@ -165,6 +234,9 @@ export function howLine(r: TimelineRow): string {
       return 'Penalty missed';
   }
 }
+
+/** The heading over the shootout kicks. */
+export const SHOOTOUT_LABEL = 'Penalty shootout';
 
 export const PHASE_LABEL: Record<number, string> = {
   1: 'First half',

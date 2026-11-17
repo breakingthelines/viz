@@ -22,10 +22,12 @@ import { matchFrame } from '../parts/match-common';
 import { playerPagePath } from '../player/orbit-links';
 import {
   PHASE_LABEL,
+  SHOOTOUT_LABEL,
   howLine,
   isGoalRow,
   shortName,
   timelineModel,
+  type ShootoutKick,
   type TimelineModel,
   type TimelineRow,
 } from '../parts/timeline-model';
@@ -41,7 +43,9 @@ import type { MatchTimelineDataJson } from './types';
  * and 90+6' sit apart and in order. Each row: the minute, the side's crest,
  * the player's headshot, the name, how it came ("Assist Mazraoui",
  * "Penalty", "Own goal", "Second yellow") and the running score. No
- * substitutions, yellow cards or VAR checks.
+ * substitutions, yellow cards or VAR checks. A match decided on penalties
+ * ends with "Penalty shootout": each kick in order, Scored or Missed, and the
+ * running shootout score; kicks are never on the strip or in the score.
  */
 export function MatchTimelineBlock(props: GameBlockComponentProps<MatchTimelineDataJson>) {
   const data = props.config.data ?? {};
@@ -77,11 +81,13 @@ function TimelineBody({
   return (
     <>
       {look === 'poster' ? null : <SmallScore match={match} />}
-      {model.rows.length > 0 ? (
+      {model.rows.length > 0 || model.shootout.length > 0 ? (
         <>
-          <div style={{ marginTop: look === 'poster' ? 0 : scale.sectionGap }}>
-            <MiniStrip model={model} match={match} hl={hl} interactive={live} />
-          </div>
+          {model.rows.length > 0 ? (
+            <div style={{ marginTop: look === 'poster' ? 0 : scale.sectionGap }}>
+              <MiniStrip model={model} match={match} hl={hl} interactive={live} />
+            </div>
+          ) : null}
           <div style={{ marginTop: scale.sectionGap }}>
             <EventList model={model} match={match} hl={hl} interactive={live} />
           </div>
@@ -363,12 +369,46 @@ function EventList({
           </section>
         );
       })}
+      {model.shootout.length > 0 ? (
+        <section data-timeline-shootout="">
+          <SectionHeading>{SHOOTOUT_LABEL}</SectionHeading>
+          <Rows label={SHOOTOUT_LABEL}>
+            {model.shootout.map((k, i) => (
+              <EventRow
+                key={`kick-${k.order}`}
+                r={kickRow(k)}
+                kick={k}
+                match={match}
+                cols={cols}
+                last={i === model.shootout.length - 1}
+                active={false}
+                onActive={() => {}}
+                interactive={interactive}
+              />
+            ))}
+          </Rows>
+        </section>
+      ) : null}
     </div>
   );
 }
 
+/** A kick as a list row: the side and taker, with no minute or match score. */
+function kickRow(k: ShootoutKick): TimelineRow {
+  return {
+    kind: k.scored ? 'pen' : 'penmiss',
+    side: k.side,
+    minute: '',
+    base: 120,
+    added: 0,
+    phase: 4,
+    player: k.player,
+  };
+}
+
 function EventRow({
   r,
+  kick,
   match,
   cols,
   last,
@@ -377,6 +417,8 @@ function EventRow({
   interactive,
 }: {
   r: TimelineRow;
+  /** A shootout kick: its number leads, "Scored" or "Missed", the shootout score. */
+  kick?: ShootoutKick;
   match: GameBlockMatchJson | undefined;
   cols: string;
   last: boolean;
@@ -388,7 +430,8 @@ function EventRow({
   const skin = useBlockSkin();
   const scale = useBlockScale();
   const word = useWordStyle();
-  const how = howLine(r);
+  const how = kick ? (kick.scored ? 'Scored' : 'Missed') : howLine(r);
+  const score = kick ? kick.score : r.score;
   const team = match?.[r.side]?.team;
   const href =
     interactive && r.player?.id
@@ -404,10 +447,11 @@ function EventRow({
         background: active ? 'var(--btl-block-line)' : undefined,
         transition: 'background 120ms ease',
       }}
-      data-timeline-row={isGoalRow(r) ? '' : undefined}
+      data-timeline-row={!kick && isGoalRow(r) ? '' : undefined}
+      data-timeline-kick={kick ? (kick.scored ? 'scored' : 'missed') : undefined}
       data-timeline-active={active ? '' : undefined}
     >
-      <LabelCell>{r.minute}'</LabelCell>
+      <LabelCell>{kick ? String(kick.order) : `${r.minute}'`}</LabelCell>
       <CrestCell src={teamCrestSrc(team)} />
       <Headshot player={r.player} fallback={teamCrestSrc(team)} />
       <span
@@ -462,7 +506,7 @@ function EventRow({
           </span>
         ) : null}
       </span>
-      {r.score ? <NumCell>{`${r.score[0]}-${r.score[1]}`}</NumCell> : <span />}
+      {score ? <NumCell>{`${score[0]}-${score[1]}`}</NumCell> : <span />}
     </Row>
   );
   if (!interactive) return row;

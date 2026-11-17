@@ -27,7 +27,7 @@ export function scorerRuns(scorers: GameBlockScorerJson[], side: GameBlockSideJs
   const out = new Map<string, string[]>();
   for (const s of scorers) {
     if (s.side !== side) continue;
-    const name = s.player?.name ? surname(s.player.name) : (s.player?.shortName ?? '');
+    const name = s.player?.shortName || surname(s.player?.name);
     const key = `${name}${s.detail === 'og' ? ' og' : ''}`;
     const minute = `${s.minute ?? ''}'${s.detail === 'pen' ? ' pen' : ''}`;
     out.set(key, [...(out.get(key) ?? []), minute]);
