@@ -65,8 +65,10 @@ export interface BlockHero {
   figure: ReactNode;
   /** Its short label: "key passes per 90". */
   label: string;
-  /** Short figures after it: "94th", "Median 1.40". Never a sentence. */
+  /** @deprecated Not drawn: a genuine label and value pair goes in `FactRows`. */
   baseline?: ReactNode[];
+  /** One line right under the hero: the season card's rate, "1.02 per 90". */
+  under?: ReactNode;
 }
 
 export interface BlockFrameProps {
@@ -113,6 +115,11 @@ export interface BlockFrameProps {
   titleFace?: boolean;
   /** Wide editorial and annotated: title and hero on the left (280px), the body on the right. */
   split?: boolean;
+  /**
+   * The season card's approved poster: the taller art and the larger
+   * condensed figure. Other posters use the block style's sizes.
+   */
+  posterCard?: boolean;
   /** The block's visual: a wheel, a chart, a table. */
   children?: ReactNode;
 }
@@ -508,6 +515,7 @@ function StackBody({ p, sans }: { p: BlockFrameProps; sans: boolean }) {
       {p.hero ? (
         <div style={{ marginTop: 14 }}>
           <BlockFigure figure={p.hero.figure} label={p.hero.label} />
+          {p.hero.under ? <div style={{ marginTop: 14 }}>{p.hero.under}</div> : null}
         </div>
       ) : null}
     </>
@@ -948,10 +956,17 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
   const scale = useBlockScale();
   const small = p.density !== 'article';
   const hasFigure = !!p.hero;
-  // The season card's poster keeps its approved height; other posters are
-  // the block style's 300 (216 narrow).
-  const height = hasFigure ? posterHeight(p.density, narrow) : small || narrow ? 216 : 300;
-  const numberSize = small ? 96 : narrow ? 128 : 190;
+  // The season card's poster keeps its approved height and figure; other
+  // posters are the block style's 300 (216 narrow) with the figure at 1.55x
+  // the hero size.
+  const height = p.posterCard ? posterHeight(p.density, narrow) : small || narrow ? 216 : 300;
+  const numberSize = p.posterCard
+    ? small
+      ? 96
+      : narrow
+        ? 128
+        : 190
+    : Math.round(scale.hero * 1.55);
   const art = p.art;
   const W = 680;
   const cutH = height * (narrow ? 1.02 : 1.08);
@@ -1115,7 +1130,7 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
           </div>
         ) : null}
       </div>
-      {p.hero && p.aside && p.children && !narrow ? (
+      {p.posterCard && p.hero && p.children && !narrow ? (
         // The season card: the hero's words on the left, its bars on the right.
         <div
           style={{
@@ -1128,7 +1143,8 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
         >
           <div style={{ minWidth: 0, paddingLeft: 28 }}>
             <PosterHeroLabel label={p.hero.label} />
-            <div style={{ marginTop: 14 }}>{p.aside}</div>
+            {p.hero.under ? <div style={{ marginTop: 6 }}>{p.hero.under}</div> : null}
+            {p.aside ? <div style={{ marginTop: 14 }}>{p.aside}</div> : null}
           </div>
           <div style={{ minWidth: 0 }}>{p.children}</div>
         </div>
@@ -1166,6 +1182,7 @@ function PosterStack({ p }: { p: BlockFrameProps }) {
   return (
     <>
       {p.hero ? <PosterHeroLabel label={p.hero.label} marginTop={narrow ? 22 : 14} /> : null}
+      {p.hero?.under ? <div style={{ marginTop: 6 }}>{p.hero.under}</div> : null}
       {p.aside || p.children ? (
         <div style={{ marginTop: scale.titleGap }}>
           {p.aside ? <div data-block-aside="">{p.aside}</div> : null}

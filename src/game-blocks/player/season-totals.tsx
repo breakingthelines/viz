@@ -65,14 +65,26 @@ const WHEEL_KEY: Record<string, string> = {
 };
 
 /** "1.02 per 90", or "90%" for a rate. Never "Per 90 1.02". */
+/** The lead stat's rate under the hero: "1.02 per 90", bold in the body face. */
 function Per90({ cell }: { cell: string }) {
   const read = useGatedCell(cell);
+  const font = useBodyFont();
+  const { narrow } = useBlockLayout();
   const rate = read.state === 'value' && (read.display ?? '').endsWith('%');
   return (
-    <>
+    <span
+      data-season-rate=""
+      style={{
+        ...TABULAR,
+        fontFamily: font,
+        fontWeight: 700,
+        fontSize: narrow ? 19 : 22,
+        color: 'var(--btl-block-ink-1)',
+      }}
+    >
       <GatedValue cell={cell} width={28} />
       {rate ? null : ' per 90'}
-    </>
+    </span>
   );
 }
 
@@ -178,7 +190,7 @@ export function PlayerSeasonTotalsBlock(
       ? {
           figure,
           label: lowerFirst(top.label ?? ''),
-          baseline: top.per90Cell ? [<Per90 key="p90" cell={top.per90Cell} />] : [],
+          under: top.per90Cell ? <Per90 cell={top.per90Cell} /> : undefined,
         }
       : top.per90Cell
         ? {
@@ -240,6 +252,8 @@ export function PlayerSeasonTotalsBlock(
     <BlockFrame
       {...frame}
       look={look}
+      posterCard
+      split
       media={frame.media}
       titleFace={look !== 'poster'}
       hero={hero}
