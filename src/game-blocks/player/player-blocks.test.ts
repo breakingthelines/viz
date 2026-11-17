@@ -106,6 +106,7 @@ describe('Season totals', () => {
     const html = render('player-season-totals');
     expect(html).toContain('>14<');
     expect(html).toContain('league goals');
+    expect(html).toMatch(/0\.52(<!-- -->)? per 90/);
     expect(html).toContain('vs Premier League wingers<');
     expect(html).toContain('Successful dribbles');
     expect(html).toContain('data-scale-state="value"');
@@ -138,6 +139,7 @@ describe('Season totals', () => {
     for (const k of Object.keys(cells))
       if (k.endsWith('.percentile')) cells[k] = { state: 'locked' };
     const html = render('player-season-totals', 'free', {}, cells);
+    expect(html).toContain('0.52');
     expect(html).toContain('data-scale-state="locked"');
     expect(html).toContain('data-block-locked-note');
   });
@@ -219,19 +221,20 @@ describe('Comparison', () => {
   const view = (v: string, extra: Partial<GameBlockConfig> = {}) =>
     render('player-comparison', 'pro', { ...extra, options: { view: v } });
 
-  it('heroes the subject percentile beside the second player and shows per 90 to Pro', () => {
+  it('heroes the subject per 90 beside the second player, no ordinals', () => {
     const html = render('player-comparison', 'pro', scales);
     expect(html).toContain('Bukayo Saka v Phil Foden');
-    expect(html).toContain('94th');
+    expect(html).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
+    expect(html).toMatch(/key passes per\s90/);
     expect(html).toContain('2.62');
     expect(html).toContain('2.11');
     expect(html).toContain('vs Premier League wingers');
     expect(html).toContain('data-scale-comparator');
   });
 
-  it('keeps the public percentiles and locks per 90 for a free reader', () => {
+  it('keeps the public scales and locks per 90 for a free reader', () => {
     const html = render('player-comparison', 'free', scales);
-    expect(html).toContain('94th');
+    expect(html).toContain('data-scale-comparator');
     expect(html).not.toContain('2.62');
     expect(html).toContain('Per 90 figures are for Pro readers.');
   });
@@ -242,10 +245,11 @@ describe('Comparison', () => {
     expect(pickComparisonHighlight(m, undefined)?.key).toBe('fd');
   });
 
-  it('has a rows view', () => {
+  it('has a rows view of per 90 values, no ordinals', () => {
     const html = view('rows');
-    expect(html).toContain('Per 90');
+    expect(html).toContain('Saka p90');
     expect(html).toContain('2.62');
+    expect(html).not.toContain('94th');
   });
 
   it('draws one wheel with both players by default, scoped to the competition', () => {
@@ -269,7 +273,8 @@ describe('Comparison', () => {
     const html = view('differ');
     expect(html).toContain('data-game-block-look="annotated"');
     expect(html).toContain('data-comparison-view="differ"');
-    expect(html).toContain('fouls won percentile');
+    expect(html).toMatch(/fouls won per\s90/);
+    expect(html).not.toContain('Foden 41st');
     expect(html.indexOf('data-k="fd"')).toBeLessThan(html.indexOf('data-k="ast"'));
   });
 
@@ -381,16 +386,18 @@ describe('Archetypes', () => {
 });
 
 describe('Season trend', () => {
-  it('heroes the latest percentile and the change since the first season', () => {
+  it('heroes the latest per 90 value and the change since the first season', () => {
     const html = render('player-season-trend');
-    expect(html).toContain('94th');
+    expect(html).not.toContain('94th');
+    expect(html).toContain('2.62');
     expect(html).toContain('data-trend-chart');
     expect(html).toContain('vs Premier League wingers');
   });
 
-  it('locks per 90 for a free reader and keeps percentiles', () => {
+  it('locks per 90 for a free reader and keeps the chart', () => {
     const html = render('player-season-trend', 'free');
-    expect(html).toContain('94th');
+    expect(html).toContain('data-trend-chart');
+    expect(html).not.toContain('94th');
     expect(html).not.toContain('2.62');
     expect(html).toContain('Per 90 figures are for Pro readers.');
   });
