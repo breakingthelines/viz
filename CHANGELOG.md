@@ -5,6 +5,15 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.1]
+
+### Fixed
+
+- **Team form poster, narrow**: the pace label ("10.5 at 2.1 per game")
+  wraps instead of running past the block's edge, and the opponents under
+  the points line use their full short names at 10px instead of being cut
+  to seven letters.
+
 ## [0.38.0]
 
 ### Changed: player blocks in the block style

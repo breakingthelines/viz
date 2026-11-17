@@ -224,14 +224,17 @@ function PointsLine({
             key={m.gameId || i}
             style={{
               flex: 1,
+              minWidth: 0,
+              paddingLeft: 4,
               textAlign: 'right',
-              fontSize: 11,
+              fontSize: narrow ? 10 : 11,
               color: 'var(--btl-block-ink-4)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            {clubShort(m.opponent?.name).slice(0, narrow ? 7 : 14)}
+            {clubShort(m.opponent?.name)}
           </span>
         ))}
       </div>
@@ -244,8 +247,10 @@ function PointsLine({
       width: w - 10,
       top: y - 9,
       fontSize: 13,
+      lineHeight: 1.3,
       color: 'var(--btl-block-ink-1)',
-      whiteSpace: 'nowrap',
+      // A narrow block wraps "10.5 at 2.1 per game" rather than run past the edge.
+      whiteSpace: narrow ? 'normal' : 'nowrap',
     };
   }
 }
