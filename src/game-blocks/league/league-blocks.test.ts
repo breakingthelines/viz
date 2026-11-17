@@ -46,11 +46,10 @@ describe('league blocks', () => {
     expect(none).not.toContain('data-grid-subject');
   });
 
-  it('team stats: sorted rows, the highlighted team, the league median row', () => {
+  it('team stats: sorted rows and the highlighted team, no median row', () => {
     const html = render(config('league-team-stats'));
     const t = text(html);
-    expect(t).toContain('Median');
-    expect(t).toContain('15.8');
+    expect(t).not.toContain('Median');
     expect(t.indexOf('Man City')).toBeLessThan(t.indexOf('Arsenal'));
     expect(html.match(/data-grid-subject/g)?.length).toBe(1);
   });
@@ -64,13 +63,13 @@ describe('league blocks', () => {
     expect(html.match(/data-scale-state="value"/g)?.length).toBeGreaterThan(0);
   });
 
-  it('player rankings, Pro: names, values, percentiles and the median resolve', () => {
+  it('player rankings, Pro: names and values resolve; no ordinal, median or pool count', () => {
     const t = text(render(config('league-player-rankings')));
     expect(t).toContain('Bukayo Saka');
     expect(t).toContain('2.62');
-    expect(t).toContain('98th');
-    expect(t).toContain('Median 1.40');
-    expect(t).toContain('Key passes, 41 wingers');
+    expect(t).not.toContain('98th');
+    expect(t).not.toContain('Median');
+    expect(t).not.toContain('41 wingers');
   });
 
   it('player rankings, free: every gated cell locked, the note shown, nothing paid leaks', () => {
@@ -122,8 +121,8 @@ describe('league blocks', () => {
     );
     const t = text(html);
     expect(t).toContain('Erling Haaland');
-    expect(t).toContain('99th');
-    expect(t).toContain('Median 3');
+    expect(t).not.toContain('99th');
+    expect(t).not.toContain('Median');
     expect(html).not.toContain('data-cell-state');
     expect(html).not.toContain('data-block-locked-note');
   });
@@ -230,7 +229,7 @@ describe('league blocks', () => {
     expect(t).not.toContain('88.4');
     expect(html.match(/data-cell-state="locked"/g)?.length).toBe(20);
     expect(t).toContain('League strength figures are for Pro readers.');
-    expect(t).toContain('10 of 52 leagues');
+    expect(t).not.toContain('52 leagues');
     expect(t).not.toContain('Index from cross-league');
   });
 });

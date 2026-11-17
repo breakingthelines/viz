@@ -45,11 +45,11 @@ describe('team and manager blocks', () => {
     expect(t).toContain('Arsenal go top');
   });
 
-  it('season totals: the highlight as the hero with rank and median labels', () => {
+  it('season totals: the highlight as the hero, no ordinal or median', () => {
     const t = text(render(config('team-season-totals')));
     expect(t).toContain('9 goals conceded');
-    expect(t).toContain('1st of 20');
-    expect(t).toContain('Median 17');
+    expect(t).not.toContain('1st of 20');
+    expect(t).not.toContain('Median');
     expect(t).toContain('Premier League, 2025/26, 12 played');
     expect(t).toContain('Clean sheets');
   });
@@ -126,7 +126,7 @@ describe('team and manager blocks', () => {
     expect(t).toContain('54% career win rate');
     expect(t).toContain('Unai Emery');
     expect(html.match(/data-grid-subject/g)?.length).toBe(1);
-    expect(html).toContain('data-scale-median');
+    expect(html).not.toContain('data-scale-median');
     expect(tenureYears({ from: '2022-11' })).toBe('2022 to now');
     expect(tenureYears({ from: '2016-07', to: '2018-05' })).toBe('2016 to 2018');
   });

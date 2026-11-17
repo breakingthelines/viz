@@ -1,6 +1,6 @@
 import type { GameBlockComponentProps } from '../block-props';
 import { BlockFrame, type BlockHero } from '../skin/index';
-import { ordinal, scopeLine } from '../parts/team-league-match-common';
+import { scopeLine } from '../parts/team-league-match-common';
 import { pickTeamStat, TeamSeasonStatRows } from '../parts/team-season-stats';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { TeamSeasonTotalsDataJson } from './types';
@@ -15,8 +15,8 @@ function lowerFirst(label: string): string {
 
 /**
  * Team › Season totals: points, results, goals, xG and clean sheets, each
- * ranked in the league. The highlighted stat is the hero with its rank and the
- * league median as short labels.
+ * ranked in the league as a bar. The highlighted stat is the hero; no ordinal
+ * or median is drawn.
  */
 export function TeamSeasonTotalsBlock(props: GameBlockComponentProps<TeamSeasonTotalsDataJson>) {
   const { config } = props;
@@ -29,10 +29,6 @@ export function TeamSeasonTotalsBlock(props: GameBlockComponentProps<TeamSeasonT
     hero = {
       figure: top.value.display,
       label: lowerFirst(top.label ?? ''),
-      baseline: [
-        (top.leagueRank ?? 0) > 0 && n > 0 ? `${ordinal(top.leagueRank!)} of ${n}` : null,
-        top.leagueMedian?.display ? `Median ${top.leagueMedian.display}` : null,
-      ].filter(Boolean),
     };
   }
   const rest = stats.filter((s) => s !== top);
