@@ -8,7 +8,7 @@ import type { TeamHonoursDataJson } from './types';
 export function TeamHonoursBlock(props: GameBlockComponentProps<TeamHonoursDataJson>) {
   const honours = props.config.data?.honours ?? [];
   return (
-    <BlockFrame {...frameBase(props, { noun: 'honours' })}>
+    <BlockFrame {...frameBase(props, { noun: 'honours' })} annotate={{ target: '[data-num]' }}>
       {honours.length > 0 ? <HonoursRows honours={honours} /> : null}
     </BlockFrame>
   );

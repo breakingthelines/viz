@@ -5,6 +5,43 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0]
+
+### Changed: player blocks in the block style
+
+- **Percentile wheel**: the wheel, then every metric under "vs Premier
+  League strikers, per 90": its name, the per 90 value (bold from the 50th
+  percentile up) and a bar to the percentile, red from the 50th up. Side by
+  side on a wide block. `compact` stays the wheel alone.
+- **Comparison**: the `scales`, `rows` and `bars` views draw both players
+  from a shared centre under "Per 90, vs Premier League strikers" (or
+  "each vs own league and position"): the subject's value and red bar on the
+  left, the other's white bar and value on the right, the leader bold. The
+  season totals comparison draws totals (with minutes) and per 90 the same
+  way, to the larger value. The wheel, two wheels, differ, strip and duel
+  views are unchanged.
+- **Form**: "Average rating" and "Last match" as fact rows, then a column
+  per match (10, 6 narrow): rating, a bar on a 5 to 10 scale (red at or
+  above the average), opponent, score, "1G 1A"; the average dashed.
+- **Match log**: date, "v Chelsea" or "at Brentford", score, minutes
+  (wide), G, A and rating, eight at most.
+- **Season trend**: under "Per 90, vs Premier League strikers each season",
+  a column per season, each cell the per 90 value over a bar to the
+  percentile. Both views draw the table.
+- **Career**: club (years wide), Apps, Goals, Assists and a Total row.
+- **Transfers**: month, "Dortmund to Man City", fee.
+- **Absences**: start date, reason, "to 12 Nov, 3 games missed" or
+  "ongoing".
+- **Archetypes**: under "Fit vs Premier League strikers", each archetype
+  with a bar to its fit.
+- **Similar players** (list view): under "Most similar, <pool>", name, club
+  (wide), a bar and the similarity.
+- **Details**: genuine label and value pairs (Club, Position, Born with the
+  age, Nationality, Height, Foot, Contract) beside the title on a wide
+  block.
+- **Honours**: one row per competition with the seasons won and runner-up.
+- List blocks with no hero name their annotated loop's target.
+
 ## [0.37.0]
 
 ### Changed: the game block style (frame, tokens, shared rows)

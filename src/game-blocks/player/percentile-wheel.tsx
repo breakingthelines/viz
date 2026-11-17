@@ -2,7 +2,19 @@ import type { ReactNode } from 'react';
 import { PercentileWheel } from '../../stats/percentile-wheel';
 import type { MetricState, StatMetric } from '../../stats/stat-metric';
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, BlockRows, GatedValue, useBlockSkin, type BlockRow } from '../skin/index';
+import {
+  Bar,
+  BlockFrame,
+  GatedValue,
+  NumCell,
+  Row,
+  Rows,
+  Section,
+  StatCell,
+  useBlockLayout,
+  useBlockScale,
+  useBlockSkin,
+} from '../skin/index';
 import type { GameBlockMetricJson, MetricStateJson, PlayerPercentileWheelDataJson } from '../types';
 
 /**
@@ -82,33 +94,61 @@ export function toStatMetric(m: GameBlockMetricJson, family: Map<string, string>
   };
 }
 
-/** One metric as a row: its per 90 value only, no ordinal. */
-function rowOf(m: GameBlockMetricJson): BlockRow {
-  return {
-    key: m.key ?? '',
-    label: m.label ?? '',
-    cells: [m.valueCell ? <GatedValue cell={m.valueCell} /> : '–'],
-  };
+/**
+ * Every metric under the pool ("vs Premier League strikers, per 90"): its
+ * name, the per 90 value (bold from the 50th percentile up) and a bar to
+ * the percentile, red from the 50th up, ink 4 below. No ordinal is printed.
+ */
+function MetricRows({ metrics, group }: { metrics: GameBlockMetricJson[]; group: string | null }) {
+  const { narrow } = useBlockLayout();
+  const cols = `minmax(0, 1fr) 64px ${narrow ? 110 : 96}px`;
+  return (
+    <Section heading={group ? `${group}, per 90` : 'Per 90'}>
+      <div data-wheel-pool="">
+        <Rows label="Per 90">
+          {metrics.map((m, i) => {
+            const pct = hasPercentile(m) ? m.percentile : undefined;
+            const high = pct !== undefined && pct >= 50;
+            return (
+              <Row key={m.key || i} cols={cols} last={i === metrics.length - 1} data-k={m.key}>
+                <StatCell>{m.label}</StatCell>
+                <NumCell dim={!high}>
+                  {m.valueCell ? <GatedValue cell={m.valueCell} width={28} /> : '–'}
+                </NumCell>
+                {pct !== undefined ? <Bar frac={pct / 100} dim={!high} /> : <span />}
+              </Row>
+            );
+          })}
+        </Rows>
+      </div>
+    </Section>
+  );
 }
 
-/** The pool over the rows: "vs Premier League wingers, per 90". */
-function PoolHeading({ group }: { group: string | null }) {
-  const skin = useBlockSkin();
-  if (!group) return null;
+/** The wheel and its rows: side by side on a wide block, stacked on a narrow one. */
+function WheelAndRows({ wheel, rows }: { wheel: ReactNode; rows: ReactNode }) {
+  const { narrow } = useBlockLayout();
+  const scale = useBlockScale();
+  if (narrow || !rows) {
+    return (
+      <>
+        {wheel}
+        {rows ? <div style={{ marginTop: scale.sectionGap }}>{rows}</div> : null}
+      </>
+    );
+  }
   return (
-    <p
-      data-wheel-pool=""
+    <div
       style={{
-        margin: '0 0 2px',
-        paddingBottom: 8,
-        borderBottom: '1px solid var(--btl-block-line-strong)',
-        fontFamily: skin.fontSans,
-        fontSize: 13,
-        color: 'var(--btl-block-ink-3)',
+        display: 'grid',
+        gridTemplateColumns: '300px minmax(0, 1fr)',
+        columnGap: 40,
+        alignItems: 'start',
       }}
     >
-      {group}, per 90
-    </p>
+      <div style={{ minWidth: 0, paddingTop: 24 }}>{wheel}</div>
+      <div style={{ minWidth: 0 }}>{rows}</div>
+    </div>
   );
 }
 
@@ -130,21 +170,11 @@ export function PlayerPercentileWheelBlock({
   // `compact` (card sets): the wheel alone. `wheel` (the default) and
   // `wheel_rows`: the wheel, then every metric's per 90 value under the pool
   // (the approved design). `rows`: the rows alone. No lead stat in any view.
-  const rowsUnder = view === 'wheel' || view === 'wheel_rows';
-  const aside: ReactNode = rowsUnder ? (
-    <div>
-      <PoolHeading group={group} />
-      <BlockRows columns={[]} rows={metrics.map(rowOf)} />
-    </div>
-  ) : null;
-
-  const visual =
-    view === 'rows' ? (
-      <div>
-        <PoolHeading group={group} />
-        <BlockRows columns={[]} rows={metrics.map(rowOf)} />
-      </div>
-    ) : metrics.length > 0 ? (
+  const rowsUnder = view === 'wheel' || view === 'wheel_rows' || view === 'rows';
+  const rows =
+    rowsUnder && metrics.length > 0 ? <MetricRows metrics={metrics} group={group} /> : null;
+  const wheel =
+    view !== 'rows' && metrics.length > 0 ? (
       <PercentileWheel
         metrics={metrics.map((m) => toStatMetric(m, familyLabel))}
         groupOrder={families.map((f) => f.label ?? f.key ?? '')}
@@ -159,8 +189,6 @@ export function PlayerPercentileWheelBlock({
       />
     ) : null;
 
-  const contextParts = [config.subject.subtitle, config.scope.seasonLabel].filter(Boolean);
-  const context = contextParts.length > 0 ? contextParts.join(', ') : config.context;
   const subject = config.subject;
 
   return (
@@ -168,7 +196,6 @@ export function PlayerPercentileWheelBlock({
       look={look}
       title={config.title || subject.name}
       titleSlot={titleSlot}
-      context={context}
       subheading={config.subheading}
       media={{
         kind: 'person',
@@ -179,11 +206,11 @@ export function PlayerPercentileWheelBlock({
       lockedNote={config.lockedNote}
       density={density}
       exportName={`btl-${subject.name}-percentiles`}
-      annotate={top?.key ? { target: `path.btl-pw-slc[data-k="${top.key}"]` } : undefined}
-      titleFace
-      aside={aside}
+      annotate={
+        top?.key ? { target: `[data-wheel-pool] [data-k="${top.key}"] [data-num]` } : undefined
+      }
     >
-      {visual}
+      <WheelAndRows wheel={wheel} rows={rows} />
     </BlockFrame>
   );
 }

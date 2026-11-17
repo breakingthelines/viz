@@ -31,7 +31,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const F = 'W 2-1';
+const F = 'v Chelsea';
 
 export const Editorial680: Story = { play: proChecks(F) };
 export const Editorial390: Story = { args: { width: 390 }, play: proChecks(F) };
