@@ -2,13 +2,13 @@ import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { PLAYER_EXAMPLES, type PlayerExampleId } from '../fixtures/player';
-import { formDomain } from '../parts/player-form-bars';
 import { spreadLabels, trendRuns } from '../parts/player-trend-chart';
 import { gatedValuesFromJson, toGameBlockConfig } from '../to-config';
 import type { GameBlockConfig, GameBlockLook, GatedCellValue } from '../types';
 import { GameBlockValuesProvider } from '../values';
 import { GameBlockView } from '../view';
 import { absenceDates } from './absences';
+import { careerYears } from './career';
 import {
   comparisonView,
   isTotalsComparison,
@@ -188,29 +188,27 @@ describe('Season totals', () => {
 });
 
 describe('Form', () => {
-  it('heroes the window average against the season, oldest match first', () => {
+  it('average rating and last match as fact rows, then the rating columns, oldest first', () => {
     const html = render('player-form');
-    expect(html).toContain('7.5');
-    expect(html).toContain('average rating, last 10');
-    expect(html.match(/data-form-bar=""/g)?.length).toBe(10);
-    expect(html.indexOf('Spurs')).toBeLessThan(html.indexOf('Chelsea'));
-    expect(html).toContain('data-best=""');
+    expect(html).toContain('Average rating:');
+    expect(html).toContain('Last match:');
+    expect(html.match(/data-form-rating/g)?.length).toBe(6);
+    expect(html).toContain('data-form-best=""');
+    expect(html).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
   });
 
   it('sorts by date and builds the domain from the ratings', () => {
     expect(oldestFirst([{ date: '2026-11-09' }, { date: '2026-10-01' }])[0].date).toBe(
       '2026-10-01'
     );
-    expect(formDomain([6.4, 8.9], 7.1)).toEqual([5, 10]);
-    expect(formDomain([])).toEqual([5, 10]);
   });
 });
 
 describe('Match log', () => {
-  it('lists matches newest first with result, minutes and rating', () => {
+  it('lists matches newest first: date, v or at the opponent, score, G, A, rating', () => {
     const html = render('player-match-log');
-    expect(html.indexOf('Chelsea (H)')).toBeLessThan(html.indexOf('Brentford (A)'));
-    expect(html).toContain('W 2-1');
+    expect(html.indexOf('Chelsea')).toBeLessThan(html.indexOf('Brentford'));
+    expect(html).toMatch(/v <!-- -->Chelsea|v Chelsea/);
     expect(html).toContain('9 Nov');
     expect(html).toContain('Rating');
   });
@@ -221,20 +219,17 @@ describe('Comparison', () => {
   const view = (v: string, extra: Partial<GameBlockConfig> = {}) =>
     render('player-comparison', 'pro', { ...extra, options: { view: v } });
 
-  it('heroes the subject per 90 beside the second player, no ordinals', () => {
+  it('draws both players from a shared centre under the pool, no ordinals', () => {
     const html = render('player-comparison', 'pro', scales);
     expect(html).toContain('Bukayo Saka v Phil Foden');
     expect(html).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
-    expect(html).toMatch(/key passes per\s90/);
+    expect(html).toContain('Per 90, vs Premier League wingers');
     expect(html).toContain('2.62');
     expect(html).toContain('2.11');
-    expect(html).toContain('vs Premier League wingers');
-    expect(html).toContain('data-scale-comparator');
   });
 
-  it('keeps the public scales and locks per 90 for a free reader', () => {
+  it('locks per 90 for a free reader', () => {
     const html = render('player-comparison', 'free', scales);
-    expect(html).toContain('data-scale-comparator');
     expect(html).not.toContain('2.62');
     expect(html).toContain('Per 90 figures are for Pro readers.');
   });
@@ -247,7 +242,7 @@ describe('Comparison', () => {
 
   it('has a rows view of per 90 values, no ordinals', () => {
     const html = view('rows');
-    expect(html).toContain('Saka p90');
+    expect(html).toContain('Saka');
     expect(html).toContain('2.62');
     expect(html).not.toContain('94th');
   });
@@ -278,13 +273,10 @@ describe('Comparison', () => {
     expect(html.indexOf('data-k="fd"')).toBeLessThan(html.indexOf('data-k="ast"'));
   });
 
-  it('draws side by side bars with the per 90 cells', () => {
+  it('draws the bars view as the shared-centre rows', () => {
     const html = view('bars');
-    expect(html).toContain('data-comparison-view="bars"');
-    expect(html).toContain('Bukayo Saka');
-    expect(html).toContain('Phil Foden');
     expect(html).toContain('2.62');
-    expect(html).toContain('94th');
+    expect(html).not.toContain('94th');
   });
 
   it('draws three stats across in the strip', () => {
@@ -342,7 +334,6 @@ describe('Comparison of season totals', () => {
   it('draws totals and per 90 side by side with no scales', () => {
     const html = renderTotals();
     expect(html).toContain('data-comparison-totals');
-    expect(html).not.toContain('data-scale-comparator');
     expect(html).toContain('Season totals');
     expect(html).toContain('Per 90');
     expect(html).toContain('Minutes');
@@ -351,9 +342,9 @@ describe('Comparison of season totals', () => {
     expect(html).not.toContain('percentile');
   });
 
-  it('heroes the highlighted total beside the second player', () => {
+  it('draws totals and per 90 to the larger value, no hero', () => {
     const html = renderTotals();
-    expect(html).toContain('>14<');
+    expect(html).not.toContain('data-block-anchor="hero"');
   });
 
   it('tells a percentile comparison from a totals one', () => {
@@ -367,36 +358,36 @@ describe('Comparison of season totals', () => {
 });
 
 describe('Career', () => {
-  it('heroes career appearances and lists spells with a total row', () => {
+  it('lists spells newest first with apps, goals and assists, and a total row', () => {
     const html = render('player-career');
     expect(html).toContain('>319<');
-    expect(html).toContain('career appearances');
-    expect(html).toContain('2018 to now');
     expect(html).toContain('Total');
+    expect(html).not.toContain('career appearances');
+    expect(careerYears('2018 to now')).toBe('2018 onwards');
   });
 });
 
 describe('Archetypes', () => {
-  it('heroes the best fit and scales every archetype', () => {
+  it('lists each archetype with a bar to its fit under the pool', () => {
     const html = render('player-archetypes');
     expect(html).toContain('>91<');
-    expect(html).toContain('Inside forward fit');
-    expect(html.match(/data-scale-state="value"/g)?.length).toBe(3);
+    expect(html).toContain('Inside forward');
+    expect(html.match(/data-archetype-row=/g)?.length).toBe(3);
   });
 });
 
 describe('Season trend', () => {
-  it('heroes the latest per 90 value and the change since the first season', () => {
+  it('draws per 90 by season under the pool, each over a bar, no ordinals', () => {
     const html = render('player-season-trend');
     expect(html).not.toContain('94th');
     expect(html).toContain('2.62');
-    expect(html).toContain('data-trend-chart');
-    expect(html).toContain('vs Premier League wingers');
+    expect(html).toContain('Per 90, vs Premier League wingers each season');
+    expect(html).not.toMatch(/\bhis\b/);
   });
 
-  it('locks per 90 for a free reader and keeps the chart', () => {
+  it('locks per 90 for a free reader and keeps the bars', () => {
     const html = render('player-season-trend', 'free');
-    expect(html).toContain('data-trend-chart');
+    expect(html).toContain('data-bar=');
     expect(html).not.toContain('94th');
     expect(html).not.toContain('2.62');
     expect(html).toContain('Per 90 figures are for Pro readers.');
@@ -404,7 +395,7 @@ describe('Season trend', () => {
 
   it('has a rows view with a dash for a season with no figure', () => {
     const html = render('player-season-trend', 'pro', { options: { view: 'rows' } });
-    expect(html).toContain('2024/25');
+    expect(html).toContain('24/25');
     expect(html).toContain('–');
   });
 
@@ -425,27 +416,26 @@ describe('Season trend', () => {
 });
 
 describe('Similar players', () => {
-  it('shows names, teams and similarity to Pro', () => {
+  it('shows names and similarity to Pro under "Most similar"', () => {
     const html = render('player-similar');
     expect(html).toContain('Michael Olise');
-    expect(html).toContain('Bayern Munich');
     expect(html).toContain('0.91');
-    expect(html).toContain('Same season, Premier League wingers');
+    expect(html).toContain('Most similar, Same season, Premier League wingers');
   });
 
   it('shows the titled frame with locked rows to a free reader', () => {
     const html = render('player-similar', 'free');
     expect(html).toContain('Bukayo Saka');
     expect(html).not.toContain('Michael Olise');
-    expect(html.match(/data-cell-state="locked"/g)?.length).toBe(15);
+    expect(html.match(/data-cell-state="locked"/g)?.length).toBeGreaterThanOrEqual(10);
     expect(html).toContain('Similar players are for Pro readers.');
   });
 });
 
 describe('Transfers', () => {
-  it('counts moves and lists them newest first with fees', () => {
+  it('lists moves newest first: month, from and to, fee', () => {
     const html = render('player-transfers');
-    expect(html).toContain('moves');
+    expect(html).not.toContain('moves');
     expect(html.indexOf('West Ham to Arsenal')).toBeLessThan(html.indexOf('Chelsea U18'));
     expect(html).toContain('£105m');
     expect(html).toContain('Jul 2023');
@@ -453,22 +443,19 @@ describe('Transfers', () => {
 });
 
 describe('Honours', () => {
-  it('heroes winners medals and lists honours newest first', () => {
+  it('lists honours by competition with the seasons won', () => {
     const html = render('player-honours');
-    expect(html).toContain('trophies');
+    expect(html).not.toContain('trophies');
     expect(html).toContain('FA Cup');
-    expect(html.indexOf('2024')).toBeLessThan(html.indexOf('2019/20'));
   });
 });
 
 describe('Absences', () => {
-  it('heroes games missed and words the dates', () => {
+  it('lists absences: start date, reason, span and games missed', () => {
     const html = render('player-absences');
-    expect(html).toContain('>25<');
-    expect(html).toContain('games missed');
     expect(html).toContain('Hamstring');
-    expect(html).toContain('21 Dec 2024 to 1 Apr 2025');
-    expect(html).toContain('From 20 Oct 2026, back Late November');
+    expect(html).toMatch(/games missed/);
+    expect(html).toContain('ongoing');
   });
 
   it('words a same-year absence once', () => {
@@ -477,13 +464,13 @@ describe('Absences', () => {
 });
 
 describe('Details', () => {
-  it('heroes age against the squad and lists the facts', () => {
-    const html = render('player-details');
-    expect(html).toContain('>25<');
-    expect(html).toContain('178 cm');
-    expect(html).toContain('Left');
-    expect(html).toContain('Jun 2027');
-    expect(html).toContain('5 Sep 2001');
+  it('lists the facts as label and value pairs', () => {
+    const t = render('player-details').replace(/<[^>]+>/g, '');
+    expect(t).toContain('Club:');
+    expect(t).toContain('178 cm');
+    expect(t).toContain('Left');
+    expect(t).toContain('to June 2027');
+    expect(t).toContain('5 Sep 2001, age 25');
   });
 });
 

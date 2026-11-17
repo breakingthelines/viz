@@ -22,7 +22,9 @@ export function absenceDates(a: GameBlockAbsenceJson): string {
 /** "to 12 Nov, 3 games missed", "ongoing". */
 export function absenceAside(a: GameBlockAbsenceJson): string {
   const span = a.to ? `to ${shortDate(a.to)}` : 'ongoing';
-  const missed = a.gamesMissed ? `, ${a.gamesMissed} ${a.gamesMissed === 1 ? 'game' : 'games'} missed` : '';
+  const missed = a.gamesMissed
+    ? `, ${a.gamesMissed} ${a.gamesMissed === 1 ? 'game' : 'games'} missed`
+    : '';
   return span + missed;
 }
 

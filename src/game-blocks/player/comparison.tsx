@@ -1,13 +1,14 @@
 import type { CSSProperties } from 'react';
-import { ComparisonBars, type ComparisonBarsRow } from '../../stats/comparison-bars';
 import { PercentileWheel } from '../../stats/percentile-wheel';
 import type { StatMetric } from '../../stats/stat-metric';
 import type { GameBlockComponentProps } from '../block-props';
 import { PlayerScaleKey, PlayerScaleRows, type PlayerScaleRow } from '../parts/player-scale-rows';
-import { BlockGrid, SectionLabel } from '../parts/team-league-match-ui';
+import { MirrorRows } from '../parts/comparison-mirror';
 import {
   BlockFrame,
   BlockScale,
+  Section,
+  Sections,
   GatedValue,
   TABULAR,
   useBlockLayout,
@@ -397,46 +398,7 @@ function DifferComparison(props: ComparisonProps) {
 
 /** The eight widest gaps, in the families' order, as the Stats tab draws them. */
 function BarsComparison(props: ComparisonProps) {
-  const { config, media } = props;
-  const data = config.data ?? {};
-  const metrics = data.metrics ?? [];
-  const families = familyLabels(data);
-  const keep = new Set(
-    metrics
-      .filter(ranked)
-      .sort((x, y) => gapOf(y) - gapOf(x))
-      .slice(0, 8)
-      .map((m) => m.key)
-  );
-  const rows: ComparisonBarsRow[] = metrics
-    .filter((m) => keep.has(m.key))
-    .map((m) => ({
-      key: m.key ?? '',
-      label: m.label ?? '',
-      group: families.get(m.family ?? '') ?? m.family ?? '',
-      unit: 'per90',
-      left: { value: null, percentile: subjectPct(m), display: cellOrDash(m.subjectValueCell) },
-      right: {
-        value: null,
-        percentile: comparisonPct(m),
-        display: cellOrDash(m.comparisonValueCell),
-      },
-    }));
-  return (
-    <BlockFrame
-      {...baseFrame(props, 'comparison', media)}
-      look={props.look}
-      context={comparisonScope(config)}
-    >
-      <div data-comparison-view="bars" style={{ marginTop: 14 }}>
-        <ComparisonBars
-          left={{ name: config.subject.name }}
-          right={{ name: config.comparison?.name ?? props.bName }}
-          rows={rows}
-        />
-      </div>
-    </BlockFrame>
-  );
+  return <ScalesComparison {...props} />;
 }
 
 /** "Shots p90"; a percentage stat keeps its own label. */
@@ -611,135 +573,65 @@ function ScalesComparison(props: ComparisonProps) {
   const data = config.data ?? {};
   const metrics = data.metrics ?? [];
   const top = pickComparisonHighlight(metrics, config.options.highlight);
-
-  const hero = valueHero(top, bName);
-
-  const groups = [
-    groupLabel(data.subjectGroupPhrase, undefined),
-    groupLabel(data.comparisonGroupPhrase, undefined),
-  ];
-  const groupNote =
-    groups[0] && groups[0] === groups[1]
-      ? [groups[0]]
-      : [
-          groups[0] ? `${aName} ${groups[0]}` : null,
-          groups[1] ? `${bName} ${groups[1]}` : null,
-        ].filter(Boolean);
-
-  const rows: PlayerScaleRow[] = metrics.map((m) => ({
-    key: m.key ?? '',
-    label: m.label ?? '',
-    value: subjectPct(m),
-    comparator: comparisonPct(m),
-    cells: [
-      m.subjectValueCell ? <GatedValue cell={m.subjectValueCell} /> : '–',
-      m.comparisonValueCell ? <GatedValue cell={m.comparisonValueCell} /> : '–',
-    ],
-  }));
-
   return (
     <BlockFrame
       {...baseFrame(props, 'comparison', media)}
       look={props.look}
-      context={comparisonScope(config)}
-      hero={hero}
-      annotate={top?.key ? { target: `[data-k="${top.key}"] [data-anchor="figure"]` } : undefined}
-      aside={
-        groupNote.length > 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--btl-block-ink-3)' }}>
-            {groupNote.map((g, i) => (
-              <span key={i} style={{ display: 'block' }}>
-                {g}
-              </span>
-            ))}
-          </p>
-        ) : null
-      }
+      annotate={top?.key ? { target: `[data-k="${top.key}"] [data-num]` } : undefined}
     >
-      {rows.length > 0 ? (
-        <div>
-          <PlayerScaleKey subject={aName} comparator={bName} />
-          <PlayerScaleRows rows={rows} columns={[`${aName} p90`, `${bName} p90`]} />
-        </div>
+      {metrics.length > 0 ? (
+        <Section heading={pairHeading(data)}>
+          <MirrorRows metrics={metrics} subject={aName} comparison={bName} mode="percentile" />
+        </Section>
       ) : null}
     </BlockFrame>
   );
+}
+
+/** "Per 90, vs Premier League strikers", or each player against his own pool. */
+function pairHeading(data: PlayerComparisonDataJson): string {
+  const a = groupLabel(data.subjectGroupPhrase, undefined);
+  const b = groupLabel(data.comparisonGroupPhrase, undefined);
+  return a && a === b ? `Per 90, ${a}` : 'Per 90, each vs own league and position';
 }
 
 function cellOrDash(cell: string | undefined) {
   return cell ? <GatedValue cell={cell} /> : '–';
 }
 
-/** Season totals and per 90 side by side: two plain tables, no scales. */
+/** Season totals, then per 90: the same bars from a shared centre, drawn to the larger value. */
 function TotalsComparison(props: ComparisonProps) {
   const { config, aName, bName, media } = props;
   const data = config.data ?? {};
   const metrics = data.metrics ?? [];
   const totals = metrics.filter((m) => m.family === SEASON_TOTALS);
   const per90 = metrics.filter((m) => m.family === PER_90);
-  const top =
-    totals.find((m) => m.key === config.options.highlight) ??
-    (totals.length ? totals[0] : undefined);
-  const hero: BlockHero | undefined = top?.subjectValueCell
-    ? {
-        figure: <GatedValue cell={top.subjectValueCell} />,
-        label: lowerFirst(top.label ?? ''),
-        baseline: [
-          <>
-            {bName} {cellOrDash(top.comparisonValueCell)}
-          </>,
-        ],
-      }
-    : undefined;
-  const columns = [{ label: '' }, { label: aName, strong: true }, { label: bName }];
   const minutes = (n: number | undefined) => (n ? n.toLocaleString('en-GB') : '–');
   const familyLabel = (key: string, fallback: string) =>
     data.families?.find((f) => f.key === key)?.label || fallback;
   return (
-    <BlockFrame
-      {...baseFrame(props, 'comparison', media)}
-      look={props.look}
-      context={comparisonScope(config)}
-      hero={hero}
-    >
+    <BlockFrame {...baseFrame(props, 'comparison', media)} look={props.look}>
       <div data-comparison-totals="">
-        <SectionLabel first>{familyLabel(SEASON_TOTALS, 'Season totals')}</SectionLabel>
-        <BlockGrid
-          label={familyLabel(SEASON_TOTALS, 'Season totals')}
-          columns={columns}
-          rows={[
-            {
-              key: 'minutes',
-              muted: true,
-              cells: ['Minutes', minutes(data.subjectMinutes), minutes(data.comparisonMinutes)],
-            },
-            ...totals.map((m) => ({
-              key: m.key ?? '',
-              cells: [
-                m.label ?? '',
-                cellOrDash(m.subjectValueCell),
-                cellOrDash(m.comparisonValueCell),
-              ],
-            })),
-          ]}
-        />
-        {per90.length > 0 ? (
-          <>
-            <SectionLabel>{familyLabel(PER_90, 'Per 90')}</SectionLabel>
-            <BlockGrid
-              label={familyLabel(PER_90, 'Per 90')}
-              columns={columns}
-              rows={per90.map((m) => ({
-                key: m.key ?? '',
-                cells: [
-                  m.label ?? '',
-                  cellOrDash(m.subjectValueCell),
-                  cellOrDash(m.comparisonValueCell),
-                ],
-              }))}
+        <Sections>
+          <Section heading={familyLabel(SEASON_TOTALS, 'Season totals')}>
+            <MirrorRows
+              metrics={totals}
+              subject={aName}
+              comparison={bName}
+              mode="value"
+              extra={{
+                label: 'Minutes',
+                a: minutes(data.subjectMinutes),
+                b: minutes(data.comparisonMinutes),
+              }}
             />
-          </>
-        ) : null}
+          </Section>
+          {per90.length > 0 ? (
+            <Section heading={familyLabel(PER_90, 'Per 90')}>
+              <MirrorRows metrics={per90} subject={aName} comparison={bName} mode="value" />
+            </Section>
+          ) : null}
+        </Sections>
       </div>
     </BlockFrame>
   );

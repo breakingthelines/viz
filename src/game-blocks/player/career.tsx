@@ -66,7 +66,11 @@ export function PlayerCareerBlock(props: GameBlockComponentProps<PlayerCareerDat
                   ))}
                 </Row>
                 {spells.map((r, i) => (
-                  <Row key={`${r.team?.id ?? r.team?.name}-${i}`} cols={cols} last={spells.length < 2 && i === spells.length - 1}>
+                  <Row
+                    key={`${r.team?.id ?? r.team?.name}-${i}`}
+                    cols={cols}
+                    last={spells.length < 2 && i === spells.length - 1}
+                  >
                     <NameCell>{clubName(r.team?.name)}</NameCell>
                     {narrow ? null : <LabelCell small>{careerYears(r.years)}</LabelCell>}
                     {nums(r)}

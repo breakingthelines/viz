@@ -11,7 +11,6 @@ import {
 import type { GameBlockPlayerMatchJson, PlayerFormDataJson } from './data';
 import { baseFrame, RESULT_LETTER, shortDate } from './shared';
 
-
 /** Oldest first, whatever order the builder sent. */
 export function oldestFirst(matches: GameBlockPlayerMatchJson[]): GameBlockPlayerMatchJson[] {
   return [...matches].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
@@ -89,7 +88,8 @@ function RatingColumns({
   const y = (r: number) => H - ((Math.max(LO, Math.min(HI, r)) - LO) / (HI - LO)) * H;
   let best = -1;
   matches.forEach((m, i) => {
-    if (typeof m.rating === 'number' && (best < 0 || m.rating >= (matches[best]!.rating ?? 0))) best = i;
+    if (typeof m.rating === 'number' && (best < 0 || m.rating >= (matches[best]!.rating ?? 0)))
+      best = i;
   });
   const small = { fontFamily: skin.fontSans, fontSize: 11.5, whiteSpace: 'nowrap' as const };
   return (
@@ -112,7 +112,14 @@ function RatingColumns({
       ) : null}
       <span
         aria-hidden
-        style={{ position: 'absolute', left: 0, right: 0, top: H, height: 1, background: 'var(--btl-block-line-strong)' }}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: H,
+          height: 1,
+          background: 'var(--btl-block-line-strong)',
+        }}
       />
       <div style={{ display: 'flex' }} aria-hidden>
         {matches.map((m, i) => {
@@ -160,7 +167,14 @@ function RatingColumns({
                   </>
                 ) : null}
               </div>
-              <div style={{ ...small, marginTop: 6, color: 'var(--btl-block-ink-2)', overflow: 'hidden' }}>
+              <div
+                style={{
+                  ...small,
+                  marginTop: 6,
+                  color: 'var(--btl-block-ink-2)',
+                  overflow: 'hidden',
+                }}
+              >
                 {(m.opponent?.shortName || clubShort(m.opponent?.name)).slice(0, narrow ? 7 : 11)}
               </div>
               <div style={{ ...TABULAR, ...small, fontSize: 11, color: 'var(--btl-block-ink-4)' }}>
