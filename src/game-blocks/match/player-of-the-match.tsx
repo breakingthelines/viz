@@ -47,6 +47,7 @@ export function MatchPlayerOfTheMatchBlock(
     <BlockFrame
       {...base}
       title={title}
+      titleNarrow={undefined}
       media={
         winner?.player?.id || winner?.player?.imageUrl
           ? {

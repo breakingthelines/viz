@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { gameBlockEntry } from '../registry';
 import type { GameBlockLook, GameBlockTypeId } from '../types';
 import { matchHero } from '../parts/match-common';
+import { markLabel } from './timeline';
 import { scorerRuns } from '../parts/match-board';
-import { eventWho } from '../parts/match-timeline';
 import { topGraded } from '../parts/match-fan-grades';
 import {
   formatDay,
@@ -81,17 +81,27 @@ describe('match blocks', () => {
     ).toEqual(["Cunha 34' og", "Barry 56', 61'"]);
   });
 
-  it('timeline: events in order with assists and substitutions named', () => {
+  it('timeline: the small score, the strip, goals and reds under the halves', () => {
     const html = render(config('match-timeline'));
     const t = text(html);
-    expect(t).toContain('Saka, assist Ødegaard');
-    expect(t).toContain('Martinelli for Trossard');
-    expect(t).toContain("90+3'");
-    expect(t).toContain('Yellow card, foul');
-    expect(html.match(/data-grid-subject/g)?.length).toBe(3);
+    expect(html).toContain('data-mini-strip');
+    expect(t).toContain('First half');
+    expect(t).toContain('Assist Ødegaard');
+    expect(t).not.toContain('Martinelli for Trossard');
+    expect(t).not.toContain('Yellow card');
+    expect(t).not.toContain('–');
     expect(
-      eventWho({ kind: 'KIND_RED_CARD', player: { name: 'X' }, relatedPlayer: { name: 'Y' } })
-    ).toBe('X');
+      markLabel({
+        kind: 'goal',
+        side: 'home',
+        minute: '90+6',
+        base: 90,
+        added: 6,
+        phase: 2,
+        player: { name: 'Patrick Dorgu' },
+        score: [4, 4],
+      })
+    ).toBe("Dorgu 90+6', 4-4");
   });
 
   it('fan grades: each side a section of rows on the 1 to 6 scale, no hero or tick', () => {

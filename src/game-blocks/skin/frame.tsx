@@ -86,6 +86,11 @@ export interface BlockFrameProps {
   title: string;
   /** Editor only: replaces the title with an editable field. */
   titleSlot?: ReactNode;
+  /**
+   * The title on a narrow block, when it differs: club short forms ("Man
+   * United v Aston Villa"). Only for a default title; an author's stays.
+   */
+  titleNarrow?: string;
   /** Optional author or Regista line. Nothing is drawn when empty. */
   subheading?: string;
   media?: BlockMedia;
@@ -356,6 +361,10 @@ function SaveAction({
   );
 }
 
+function shownTitle(p: BlockFrameProps, narrow: boolean): string {
+  return narrow && p.titleNarrow ? p.titleNarrow : p.title;
+}
+
 function Subheading({ text, font, size }: { text?: string; font: string; size: number }) {
   if (!text) return null;
   return (
@@ -462,6 +471,7 @@ export function TitleArt({ media }: { media: BlockMedia | undefined }) {
 
 /** The title line: the picture, then the entity name alone. */
 function TitleLine({ p, sans }: { p: BlockFrameProps; sans: boolean }) {
+  const { narrow } = useBlockLayout();
   const skin = useBlockSkin();
   const scale = useBlockScale();
   const showArt = p.titleArt !== false && !!p.media;
@@ -479,7 +489,7 @@ function TitleLine({ p, sans }: { p: BlockFrameProps; sans: boolean }) {
         color: 'var(--btl-block-ink-1)',
       }}
     >
-      {p.titleSlot ?? p.title}
+      {p.titleSlot ?? shownTitle(p, narrow)}
     </h3>
   );
   return (
@@ -884,7 +894,7 @@ function PairPosterBody(
               color: 'var(--btl-block-ink-1)',
             }}
           >
-            {p.titleSlot ?? p.title}
+            {p.titleSlot ?? shownTitle(p, narrow)}
           </h3>
           {p.subheading ? (
             <p
@@ -1092,7 +1102,7 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
                 color: 'var(--btl-block-ink-1)',
               }}
             >
-              {p.titleSlot ?? p.title}
+              {p.titleSlot ?? shownTitle(p, narrow)}
             </h3>
             {p.subheading ? (
               <p

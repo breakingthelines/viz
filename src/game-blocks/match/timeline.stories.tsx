@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, waitFor } from 'storybook/test';
 import {
   BLOCK_STORY_ARGS,
   BLOCK_STORY_ARG_TYPES,
@@ -48,4 +49,19 @@ export const CustomTitleAndSubheading: Story = {
 export const Chat: Story = { args: { density: 'chat', width: 420 } };
 export const Unavailable: Story = {
   render: unavailableStory('match-timeline', 'Not played yet'),
+};
+
+/** A strip dot lights its row on focus or hover; each dot is named "Saka 23', 1-0". */
+export const DotHighlightsRow: Story = {
+  play: async (ctx) => {
+    await commonChecks(ctx);
+    const dot = ctx.canvasElement.querySelector<SVGGElement>('[data-strip-mark]');
+    await expect(dot).not.toBeNull();
+    await expect(dot?.getAttribute('aria-label')).toMatch(/^.+ \d+(\+\d+)?', \d+-\d+$/);
+    dot?.dispatchEvent(new FocusEvent('focus'));
+    dot?.focus();
+    await waitFor(() =>
+      expect(ctx.canvasElement.querySelector('[data-timeline-active]')).not.toBeNull()
+    );
+  },
 };
