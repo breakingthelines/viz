@@ -69,6 +69,8 @@ export interface GameBlockSubject {
   id: string;
   kind: GameBlockSubjectKind;
   name: string;
+  /** A player's stored short name ("Kolo Muani"); missing means derive one from `name`. */
+  shortName?: string;
   subtitle?: string;
   imageUrl?: string;
   crestUrl?: string;
@@ -192,6 +194,7 @@ export interface GameBlockSubjectCardJson {
   imageUrl?: string;
   crestUrl?: string;
   url?: string;
+  shortName?: string;
 }
 
 export interface GameBlockUnavailableJson {

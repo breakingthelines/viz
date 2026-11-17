@@ -55,6 +55,7 @@ function subjectOf(card: GameBlockSubjectCardJson | undefined): GameBlockSubject
   if (card.imageUrl) out.imageUrl = card.imageUrl;
   if (card.crestUrl) out.crestUrl = card.crestUrl;
   if (card.url) out.url = card.url;
+  if (card.shortName?.trim()) out.shortName = card.shortName.trim();
   return out;
 }
 
