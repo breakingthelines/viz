@@ -9,7 +9,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Changed: no ordinals, medians or pool counts on any block
 
-- **Percentile wheel.** The lead line ("99th  Median 1.21  vs 49 Premier
+- **Percentile wheel.** The lead line ("99th Median 1.21 vs 49 Premier
   League wingers") is gone. `wheel` (the default) is now the compact view
   for card sets: the wheel only, no lead stat, no rows. `wheel_rows` shows
   the highlighted metric's per 90 figure, the wheel, and every metric's per
