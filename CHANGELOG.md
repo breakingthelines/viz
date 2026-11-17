@@ -64,6 +64,33 @@ One style for every game block (block-style spec, approved 16 Nov 2026).
   red, then Most picked, Readers and Result as fact rows.
 - `ScoreBoard`, `scorerRuns` and `matchQuietLines` (`parts/match-board.tsx`).
 
+### Changed: team and manager blocks in the block style
+
+- **Form**: "Last 5:" and "Season:" points per game as fact rows, then the
+  matches newest first: date, crest, "Nottingham Forest (A)", the score
+  with the club's goals first, and W (red), D or L. The poster adds the
+  points line: the red line ends "4 points", the dashed one "10.5 at 2.1
+  per game". No 3 point ceiling, no result tiles.
+- **Squad**: by position group in the label column (a section heading on a
+  narrow block), shirt number, name, and age when the data has it.
+- **Goal timing**: scored above the line in red, conceded below in ink 4,
+  each with its count; "Scored 24" and "Conceded 9" as the side labels.
+- **Season totals**: "Record: 7 won, 0 drawn, 3 lost", then each stat under
+  "vs Premier League clubs" with a bar for the club's place. No ordinals or
+  medians.
+- **Out and doubtful**: "Out" and "Doubtful" sections, each player with the
+  reason. No counts.
+- **Transfers**: "In, Summer 2026" and "Out", permanent moves only (loans,
+  returns from loan, duplicates and moves within a club left out): date,
+  player, the other club with the fee.
+- **Honours**: one row per competition with the seasons won and runner-up
+  and the count won.
+- **Manager record**: titled by the manager with the current club's crest;
+  Club, Since and Win rate as fact rows, then each spell as a span on one
+  time axis with its length. Youth sides are left out.
+- `InFrame` reads the frame's layout inside the frame: a block's own hooks
+  run outside `BlockFrame` and saw the narrow default.
+
 ## [0.35.1]
 
 ### Added
