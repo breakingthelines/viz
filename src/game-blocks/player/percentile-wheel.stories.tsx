@@ -177,7 +177,16 @@ export const CustomTitleAndSubheading: Story = {
     subheading: 'Creating more than any winger in the league',
   },
 };
-export const WheelAndRows: Story = { args: { view: 'wheel_rows' } };
+/** The compact view for card sets: the wheel only, no lead stat, no rows, no ordinals. */
+export const Compact: Story = {
+  args: { view: 'compact' },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('path.btl-pw-slc')).not.toBeNull();
+    await expect(canvasElement.textContent).not.toContain('2.62');
+    await expect(canvasElement.textContent).not.toMatch(/Median|\b\d+(st|nd|rd|th)\b/);
+    await expect(canvasElement.querySelector('[data-wheel-pool]')).toBeNull();
+  },
+};
 export const RowsOnly: Story = { args: { view: 'rows', reader: 'free' } };
 export const Chat: Story = { args: { density: 'chat', width: 420 } };
 export const Tile: Story = { args: { density: 'tile', width: 320 } };
