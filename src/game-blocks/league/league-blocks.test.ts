@@ -38,7 +38,6 @@ describe('league blocks', () => {
     const html = render(config('league-table'));
     const t = text(html);
     expect(t).toContain('Premier League');
-    expect(t).toContain('2025/26');
     expect(t).toContain('6 of 20');
     expect(t).toContain('+15');
     expect(html.match(/data-grid-subject/g)?.length).toBe(1);
@@ -58,7 +57,6 @@ describe('league blocks', () => {
     const html = render(config('league-leaders'));
     const t = text(html);
     expect(t).toContain('14 goals');
-    expect(t).toContain('Erling Haaland');
     expect(t).toContain('Saka');
     expect(html.match(/data-scale-state="value"/g)?.length).toBeGreaterThan(0);
   });
@@ -198,7 +196,6 @@ describe('league blocks', () => {
     expect(t).toContain('21 Nov 2026');
     expect(t).toContain('15:00');
     expect(t).toContain('Postponed');
-    expect(t).toContain('Matchday 13');
     expect(
       fixtureMiddle({
         status: 'GAME_BLOCK_MATCH_STATUS_FINISHED',

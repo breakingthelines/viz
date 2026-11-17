@@ -160,13 +160,9 @@ describe('Season totals', () => {
     expect(html).not.toContain('class="btl-pw-tip');
   });
 
-  it('names the scope in the context line', () => {
+  it('draws no scope line under the title', () => {
     const league = render('player-season-totals');
-    expect(league).toContain('Arsenal, Premier League 2025/26');
-    const all = render('player-season-totals', 'pro', {
-      scope: { seasonLabel: '2025/26', competitionLabel: 'All competitions' },
-    });
-    expect(all).toContain('Arsenal, all competitions 2025/26');
+    expect(league).not.toContain('Arsenal, Premier League 2025/26');
   });
 
   it('puts a small picture beside the title in editorial, the BTL mark with none', () => {
@@ -196,7 +192,6 @@ describe('Form', () => {
     const html = render('player-form');
     expect(html).toContain('7.5');
     expect(html).toContain('average rating, last 10');
-    expect(html).toContain('Season 7.1');
     expect(html.match(/data-form-bar=""/g)?.length).toBe(10);
     expect(html.indexOf('Spurs')).toBeLessThan(html.indexOf('Chelsea'));
     expect(html).toContain('data-best=""');
@@ -217,7 +212,6 @@ describe('Match log', () => {
     expect(html.indexOf('Chelsea (H)')).toBeLessThan(html.indexOf('Brentford (A)'));
     expect(html).toContain('W 2-1');
     expect(html).toContain('9 Nov');
-    expect(html).toContain('Season 7.1');
     expect(html).toContain('Rating');
   });
 });
@@ -235,7 +229,6 @@ describe('Comparison', () => {
     expect(html).toContain('2.62');
     expect(html).toContain('2.11');
     expect(html).toContain('vs Premier League wingers');
-    expect(html).toContain('Premier League 2025/26');
     expect(html).toContain('data-scale-comparator');
   });
 
@@ -265,7 +258,6 @@ describe('Comparison', () => {
     const html = render('player-comparison');
     expect(html).toContain('data-comparison-view="wheel"');
     expect(html).toContain('data-overlay="Phil Foden"');
-    expect(html).toContain('Premier League 2025/26');
     expect(html).not.toContain('Arsenal and Manchester City');
   });
 
@@ -356,14 +348,12 @@ describe('Comparison of season totals', () => {
     expect(html).toContain('Minutes');
     expect(html).toContain('2,210');
     expect(html).toContain('0.96');
-    expect(html).toContain('All competitions 2026/27 and 2026');
     expect(html).not.toContain('percentile');
   });
 
   it('heroes the highlighted total beside the second player', () => {
     const html = renderTotals();
     expect(html).toContain('>14<');
-    expect(html).toContain('Messi 19');
   });
 
   it('tells a percentile comparison from a totals one', () => {
@@ -383,7 +373,6 @@ describe('Career', () => {
     expect(html).toContain('career appearances');
     expect(html).toContain('2018 to now');
     expect(html).toContain('Total');
-    expect(html).toContain('3 teams');
   });
 });
 
@@ -392,7 +381,6 @@ describe('Archetypes', () => {
     const html = render('player-archetypes');
     expect(html).toContain('>91<');
     expect(html).toContain('Inside forward fit');
-    expect(html).toContain('vs Premier League wingers');
     expect(html.match(/data-scale-state="value"/g)?.length).toBe(3);
   });
 });
@@ -401,7 +389,6 @@ describe('Season trend', () => {
   it('heroes the latest per 90 value and the change since the first season', () => {
     const html = render('player-season-trend');
     expect(html).not.toContain('94th');
-    expect(html).toContain('Up 23 since 2021/22');
     expect(html).toContain('2.62');
     expect(html).toContain('data-trend-chart');
     expect(html).toContain('vs Premier League wingers');
@@ -493,7 +480,6 @@ describe('Details', () => {
   it('heroes age against the squad and lists the facts', () => {
     const html = render('player-details');
     expect(html).toContain('>25<');
-    expect(html).toContain('Squad average 26.3');
     expect(html).toContain('178 cm');
     expect(html).toContain('Left');
     expect(html).toContain('Jun 2027');

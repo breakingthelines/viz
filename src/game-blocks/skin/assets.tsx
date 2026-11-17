@@ -56,6 +56,22 @@ export function playerHeadshotUrl(mediaBase: string, playerId: string): string {
 }
 
 /**
+ * A club's crest, by its canonical id, as a relative CDN key
+ * (`media/resolved/crest/<id>`, which `resolveMediaSrc` puts on the media
+ * base): the crest the platform draws, served with CORS so the poster can
+ * halftone it. A ref with no canonical team id keeps its own image.
+ */
+export function teamCrestSrc(
+  ref: { id?: string; imageUrl?: string } | undefined
+): string | undefined {
+  if (!ref) return undefined;
+  if (ref.id?.startsWith('btl_football_team_')) {
+    return `media/resolved/crest/${encodeURIComponent(ref.id)}`;
+  }
+  return ref.imageUrl || undefined;
+}
+
+/**
  * A block image address made loadable: absolute URLs and data URIs as they
  * are, a relative CDN key (`media/...`, which identity and game-service emit)
  * on the media base, so it never resolves against the page's own origin.

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useGatedCell } from '../values';
-import { useBlockLayout, useBlockSkin } from './provider';
+import { useBlockLayout, useBlockScale, useBlockSkin } from './provider';
 
 /**
  * The parts every block body is built from. Each reads the enclosing frame's
@@ -74,69 +74,56 @@ export function GatedValue({
 }
 
 /**
- * The hero figure and the short label that names it. Editorial sets it in Le
- * Monde with an italic label beside it, annotated in Inter. Poster draws its
- * hero in the frame's panel instead, so blocks pass it to `BlockFrame.hero`.
+ * The hero figure with its unit word after it (style.md, Typography): Le
+ * Monde Journal bold with the unit in italic ink 3 (editorial), Inter
+ * (annotated). Poster draws its hero in the frame's art instead, so blocks
+ * pass it to `BlockFrame.hero`. Baseline items are no longer drawn: a
+ * genuine label and value pair goes in `FactRows`.
  */
 export function BlockFigure({
   figure,
   label,
-  baseline,
 }: {
   figure: ReactNode;
   label: string;
-  /** Short figures after the hero: "94th", "Median 1.40". Never a sentence. */
+  /** @deprecated Not drawn. */
   baseline?: ReactNode[];
 }) {
-  const { look, narrow, density } = useBlockLayout();
+  const { look } = useBlockLayout();
   const skin = useBlockSkin();
-  const small = density !== 'article';
-  const editorial = look !== 'annotated';
-  const size = editorial ? (small ? 64 : narrow ? 78 : 92) : small ? 52 : narrow ? 60 : 72;
+  const scale = useBlockScale();
+  const sans = look === 'annotated';
   return (
-    <div>
-      <div
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+      <span
+        data-block-anchor="hero"
         style={{
-          display: 'flex',
-          alignItems: editorial ? 'last baseline' : 'baseline',
-          gap: editorial ? 10 : 12,
-          flexWrap: editorial ? 'nowrap' : 'wrap',
+          ...TABULAR,
+          fontFamily: sans ? skin.fontSans : skin.fontSerif,
+          fontWeight: 700,
+          fontSize: scale.hero,
+          lineHeight: 0.86,
+          letterSpacing: sans ? '-0.04em' : '-0.03em',
+          color: 'var(--btl-block-ink-1)',
+          whiteSpace: 'nowrap',
         }}
       >
-        <span
-          data-block-anchor="hero"
-          style={{
-            ...TABULAR,
-            fontFamily: editorial ? skin.fontSerif : skin.fontSans,
-            fontWeight: 700,
-            fontSize: size,
-            lineHeight: editorial ? 0.92 : 0.95,
-            letterSpacing: editorial ? '-0.025em' : '-0.035em',
-            color: 'var(--btl-block-ink-1)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {figure}
-        </span>
+        {figure}
+      </span>
+      {label ? (
         <span
           data-block-anchor="hero-label"
-          style={
-            editorial
-              ? {
-                  fontFamily: skin.fontSerif,
-                  fontStyle: 'italic',
-                  fontSize: narrow ? 18 : 19,
-                  lineHeight: 1.1,
-                  color: 'var(--btl-block-ink-2)',
-                  maxWidth: '6.5em',
-                }
-              : { fontFamily: skin.fontSans, fontSize: 16, color: 'var(--btl-block-ink-2)' }
-          }
+          style={{
+            fontFamily: sans ? skin.fontSans : skin.fontSerif,
+            fontStyle: sans ? 'normal' : 'italic',
+            fontSize: scale.heroUnit,
+            lineHeight: 1.1,
+            color: 'var(--btl-block-ink-3)',
+          }}
         >
           {label.replace(/per 90/g, 'per\u00a090')}
         </span>
-      </div>
-      {baseline && baseline.length > 0 ? <BlockBaseline items={baseline} /> : null}
+      ) : null}
     </div>
   );
 }
@@ -174,29 +161,32 @@ export interface BlockRow {
 }
 
 /**
- * A plain table: label column then right-aligned figure columns, hairlines
- * between rows, the first a little stronger. The first figure column is bold.
- * `columns` labels the header; pass an empty list for no header.
+ * A plain table on the shared row height: the name, then right-aligned
+ * figures in Inter, a hairline between rows. The first figure column is
+ * semibold ink 1, the rest regular ink 3. `columns` labels the header; pass
+ * an empty list for no header.
  */
 export function BlockRows({ columns, rows }: { columns: string[]; rows: BlockRow[] }) {
-  const { look } = useBlockLayout();
   const skin = useBlockSkin();
+  const scale = useBlockScale();
+  const { look } = useBlockLayout();
   const font = useBodyFont();
-  const editorial = look === 'editorial';
   const n = rows[0]?.cells.length ?? Math.max(0, columns.length - 1);
   const grid = `minmax(0, 1fr) ${Array.from({ length: n }, () => 'minmax(44px, auto)').join(' ')}`;
   return (
-    <div role="table" style={{ ...TABULAR, fontFamily: font }}>
+    <div role="table" style={{ ...TABULAR }}>
       {columns.length > 0 ? (
         <div
           role="row"
           style={{
             display: 'grid',
             gridTemplateColumns: grid,
-            gap: 8,
-            paddingBottom: 4,
+            columnGap: 12,
+            alignItems: 'center',
+            minHeight: 26,
+            borderBottom: '1px solid var(--btl-block-line-strong)',
             fontFamily: skin.fontSans,
-            fontSize: 11.5,
+            fontSize: scale.small,
             color: 'var(--btl-block-ink-3)',
           }}
         >
@@ -214,16 +204,24 @@ export function BlockRows({ columns, rows }: { columns: string[]; rows: BlockRow
           style={{
             display: 'grid',
             gridTemplateColumns: grid,
-            gap: 8,
-            alignItems: 'baseline',
-            padding: editorial ? '4px 0 3px' : '8px 0 7px',
-            borderTop: `1px solid ${i === 0 ? 'var(--btl-block-line-strong)' : 'var(--btl-block-line)'}`,
-            fontSize: editorial ? 15 : 14.5,
-            lineHeight: 1.25,
-            color: 'var(--btl-block-ink-2)',
+            columnGap: 12,
+            alignItems: 'center',
+            minHeight: scale.row,
+            borderBottom: i === rows.length - 1 ? 0 : '1px solid var(--btl-block-line)',
           }}
         >
-          <span role="cell" style={{ minWidth: 0 }}>
+          <span
+            role="cell"
+            style={{
+              minWidth: 0,
+              fontFamily: font,
+              fontSize: look === 'editorial' ? scale.word : scale.wordSans,
+              color: 'var(--btl-block-ink-1)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {r.label}
           </span>
           {r.cells.map((c, j) => (
@@ -232,8 +230,11 @@ export function BlockRows({ columns, rows }: { columns: string[]; rows: BlockRow
               role="cell"
               style={{
                 textAlign: 'right',
-                fontWeight: j === 0 ? 700 : 400,
-                color: j === 0 ? 'var(--btl-block-ink-1)' : 'var(--btl-block-ink-2)',
+                fontFamily: skin.fontSans,
+                fontSize: scale.number,
+                fontWeight: j === 0 ? 600 : 400,
+                color: j === 0 ? 'var(--btl-block-ink-1)' : 'var(--btl-block-ink-3)',
+                whiteSpace: 'nowrap',
               }}
             >
               {c}

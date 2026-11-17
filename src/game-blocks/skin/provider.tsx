@@ -1,6 +1,11 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { GameBlockDensity, GameBlockLook } from '../types';
-import { DEFAULT_BLOCK_SKIN, type BlockSkinTokens } from './tokens';
+import {
+  BLOCK_SCALE,
+  DEFAULT_BLOCK_SKIN,
+  type BlockScaleTokens,
+  type BlockSkinTokens,
+} from './tokens';
 
 const SkinContext = createContext<BlockSkinTokens>(DEFAULT_BLOCK_SKIN);
 
@@ -64,4 +69,10 @@ export const LayoutContext = createContext<BlockLayout>({
 /** The enclosing frame's look and width class. */
 export function useBlockLayout(): BlockLayout {
   return useContext(LayoutContext);
+}
+
+/** The size scale at the enclosing frame's width: wide, or narrow (phone, chat, tile). */
+export function useBlockScale(): BlockScaleTokens {
+  const { narrow } = useContext(LayoutContext);
+  return narrow ? BLOCK_SCALE.narrow : BLOCK_SCALE.wide;
 }
