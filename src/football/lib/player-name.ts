@@ -16,8 +16,9 @@
  *  3. A single token is the name ("Rodri", "Marquinhos").
  *  4. Otherwise the last token, with any particles directly before it
  *     ("Ángel Di María" is "Di María", "Edwin van der Sar" is "van der Sar"),
- *     and a generational suffix keeps the token before it. The first token is
- *     a forename and is only taken as a particle when it is in lower case.
+ *     and a generational suffix keeps the token before it. A first token is
+ *     taken as a particle too ("De Paul" stays "De Paul") unless it is also a
+ *     common forename ("Ben White" is "White").
  */
 
 /** Lower-cased surname particles that stay with the surname after them. */
@@ -59,6 +60,9 @@ export const PLAYER_NAME_PARTICLES: ReadonlySet<string> = new Set([
   'van',
   'von',
 ]);
+
+/** Particles that are also common forenames when they come first ("Ben White"). */
+const FORENAME_PARTICLES: ReadonlySet<string> = new Set(['ben']);
 
 /** Generational suffixes that never stand alone as a short name. */
 const SUFFIXES: ReadonlySet<string> = new Set([
@@ -105,9 +109,10 @@ export function playerShortName(name: string | undefined, providerShort?: string
   let start = parts.length - 1;
   if (SUFFIXES.has(parts[start]!.toLowerCase())) start -= 1;
   while (start > 0 && PLAYER_NAME_PARTICLES.has(parts[start - 1]!.toLowerCase())) {
-    const prev = parts[start - 1]!;
-    // The first token is a forename ("Ben White") unless written in lower case.
-    if (start - 1 === 0 && prev !== prev.toLowerCase()) break;
+    // A first token that is also a common forename stays a forename ("Ben
+    // White"); any other particle there starts a short name already given
+    // ("De Paul", "Mac Allister"), so the rule leaves it whole.
+    if (start - 1 === 0 && FORENAME_PARTICLES.has(parts[0]!.toLowerCase())) break;
     start -= 1;
   }
   return parts.slice(start).join(' ');
