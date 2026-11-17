@@ -25,8 +25,9 @@ import type { MatchFanGradesDataJson } from './types';
 /**
  * Match › Fan grades: BTL reader grades on each line-up, 1 the best and 6
  * the worst. Each graded side is a section ("Arsenal, fan grade, 1 is
- * best"): shirt number, player, the grade drawn on the scale (1 at the full
- * end) and the grade. A side nobody graded is left out.
+ * best"): the starting eleven and any graded substitute, each with shirt
+ * number, name, the grade drawn on the scale (1 at the full end) and the
+ * grade. A side nobody graded is left out.
  */
 export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGradesDataJson>) {
   const data = props.config.data ?? {};
@@ -49,8 +50,16 @@ export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGrade
   );
 }
 
-function GradeRows({ players, label }: { players: GameBlockPlayerGradeJson[]; label: string }) {
+function GradeRows({
+  players: all,
+  label,
+}: {
+  players: GameBlockPlayerGradeJson[];
+  label: string;
+}) {
   const { narrow } = useBlockLayout();
+  // The starting eleven in line-up order, and any graded substitute.
+  const players = all.filter((p, i) => i < 11 || typeof p.grade === 'number');
   const cols = `22px minmax(0, 1fr) ${narrow ? 50 : 90}px 32px`;
   return (
     <Rows label={label}>

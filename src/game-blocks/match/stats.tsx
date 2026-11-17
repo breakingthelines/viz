@@ -32,7 +32,11 @@ export function MatchStatsBlock(props: GameBlockComponentProps<MatchStatsDataJso
         <Rows label="Match stats">
           <Row cols={cols} head>
             <span />
-            <LabelCell small align="right" style={{ gridColumn: '2 / span 2', color: 'var(--btl-block-ink-1)' }}>
+            <LabelCell
+              small
+              align="right"
+              style={{ gridColumn: '2 / span 2', color: 'var(--btl-block-ink-1)' }}
+            >
               {clubShort(data.match?.home?.team?.name)}
             </LabelCell>
             <LabelCell small style={{ gridColumn: '4 / span 2', color: 'var(--btl-block-ink-1)' }}>
@@ -40,7 +44,13 @@ export function MatchStatsBlock(props: GameBlockComponentProps<MatchStatsDataJso
             </LabelCell>
           </Row>
           {stats.map((s, i) => (
-            <StatRow key={s.key || i} stat={s} cols={cols} index={i} last={i === stats.length - 1} />
+            <StatRow
+              key={s.key || i}
+              stat={s}
+              cols={cols}
+              index={i}
+              last={i === stats.length - 1}
+            />
           ))}
         </Rows>
       ) : null}

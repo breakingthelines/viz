@@ -1,5 +1,12 @@
 import type { CSSProperties } from 'react';
-import { TABULAR, surname, useBlockLayout, useBlockScale, useBlockSkin, useWordStyle } from '../skin/index';
+import {
+  TABULAR,
+  surname,
+  useBlockLayout,
+  useBlockScale,
+  useBlockSkin,
+  useWordStyle,
+} from '../skin/index';
 import type { GameBlockScorerJson } from '../match/types';
 import {
   formatDay,
@@ -26,7 +33,9 @@ export function scorerRuns(scorers: GameBlockScorerJson[], side: GameBlockSideJs
     out.set(key, [...(out.get(key) ?? []), minute]);
   }
   return [...out.entries()].map(([name, mins]) =>
-    name.endsWith(' og') ? `${name.slice(0, -3)} ${mins.join(', ')} og` : `${name} ${mins.join(', ')}`
+    name.endsWith(' og')
+      ? `${name.slice(0, -3)} ${mins.join(', ')} og`
+      : `${name} ${mins.join(', ')}`
   );
 }
 
@@ -53,7 +62,11 @@ export function ScoreBoard({
   if (typeof h !== 'number' || typeof a !== 'number') return null;
   const poster = look === 'poster';
   const serif = look === 'editorial';
-  const size = small ? Math.round(scale.hero * 0.55) : poster ? Math.round(scale.hero * 1.4) : scale.hero;
+  const size = small
+    ? Math.round(scale.hero * 0.55)
+    : poster
+      ? Math.round(scale.hero * 1.4)
+      : scale.hero;
   const fig: CSSProperties = {
     ...TABULAR,
     fontFamily: serif ? skin.fontSerif : skin.fontCondensed,
@@ -104,7 +117,11 @@ export function ScoreBoard({
       }}
     >
       <div style={{ textAlign: 'right' }}>
-        <div data-score="home" data-block-anchor={winner === 'home' ? 'hero' : undefined} style={fig}>
+        <div
+          data-score="home"
+          data-block-anchor={winner === 'home' ? 'hero' : undefined}
+          style={fig}
+        >
           {h}
         </div>
         {small ? null : scorerList(home, 'right', 'Home scorers')}
@@ -116,7 +133,11 @@ export function ScoreBoard({
         -
       </div>
       <div style={{ textAlign: 'left' }}>
-        <div data-score="away" data-block-anchor={winner === 'away' ? 'hero' : undefined} style={fig}>
+        <div
+          data-score="away"
+          data-block-anchor={winner === 'away' ? 'hero' : undefined}
+          style={fig}
+        >
           {a}
         </div>
         {small ? null : scorerList(away, 'left', 'Away scorers')}

@@ -49,7 +49,14 @@ function MissingRows({ rows, label }: { rows: GameBlockAbsenceJson[]; label: str
       {rows.map((r, i) => (
         <Row key={r.player?.id || i} cols="minmax(0, 1fr) auto" last={i === rows.length - 1}>
           <NameCell>{r.player?.name}</NameCell>
-          <LabelCell small>{sentenceCase(r.reason)}</LabelCell>
+          <LabelCell small>
+            {[
+              sentenceCase(r.reason),
+              r.status && !/^out$/i.test(r.status) ? r.status.toLowerCase() : '',
+            ]
+              .filter(Boolean)
+              .join(', ')}
+          </LabelCell>
         </Row>
       ))}
     </Rows>

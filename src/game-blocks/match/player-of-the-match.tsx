@@ -64,7 +64,9 @@ export function MatchPlayerOfTheMatchBlock(
         <FactRows
           rows={[
             winner?.team?.name ? ['Club', clubName(winner.team.name)] : null,
-            data.totalVotes ? ['Votes', <Num>{data.totalVotes.toLocaleString('en-GB')}</Num>] : null,
+            data.totalVotes
+              ? ['Votes', <Num>{data.totalVotes.toLocaleString('en-GB')}</Num>]
+              : null,
           ]}
         />
       </div>
@@ -105,7 +107,14 @@ function GradeScale({ grade }: { grade: number }) {
     >
       <div style={{ position: 'relative', height: '100%' }}>
         <span
-          style={{ position: 'absolute', left: 0, right: 0, top: 9, height: 2, background: 'var(--btl-block-track)' }}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 9,
+            height: 2,
+            background: 'var(--btl-block-track)',
+          }}
         />
         {ticks.map((v) => (
           <span key={v} style={{ position: 'absolute', left: at(v), top: 0 }}>
