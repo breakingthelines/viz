@@ -34,6 +34,7 @@ export {
   Bar,
   CrestCell,
   FactRows,
+  InFrame,
   LabelCell,
   NameCell,
   Num,

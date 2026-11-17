@@ -44,6 +44,26 @@ One style for every game block (block-style spec, approved 16 Nov 2026).
   titles use them; `teamCrestSrc` reads a club's crest from the media CDN by
   id.
 
+### Changed: match blocks in the block style
+
+- **Result**: the score with each side's scorers mirrored under it (home
+  right-aligned, away left-aligned, "Barry 56', 61'"), then two quiet lines
+  ("Premier League, Matchday 10"; "6 Nov 2026, Hill Dickinson Stadium"). The
+  poster sets the score in the condensed face on the art's lower edge.
+- **Stats**: two bars per stat from a shared centre under the clubs' short
+  names, the leading side red and bold; no score hero.
+- **Missing players**: a section per club, each player with the reason (and
+  "doubtful" when not out); no counts.
+- **Player of the match**: titled by the player, the grade as the hero ("fan
+  grade, 1 is best") drawn on the 1 to 6 scale, then Club and Votes, and the
+  match in two quiet lines.
+- **Fan grades**: a section per graded side ("Arsenal, fan grade, 1 is
+  best"): the starting eleven and any graded substitute, shirt number, name,
+  the grade on a bar and the grade. Both views draw the rows.
+- **Predictions**: each outcome's share against 100, the most backed in
+  red, then Most picked, Readers and Result as fact rows.
+- `ScoreBoard`, `scorerRuns` and `matchQuietLines` (`parts/match-board.tsx`).
+
 ## [0.36.0]
 
 ### Changed: no ordinals, medians or pool counts on any block
