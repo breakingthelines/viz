@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gameBlockEntry } from '../registry';
 import type { GameBlockLook, GameBlockTypeId } from '../types';
 import { periodShort } from '../parts/team-goal-timing';
-import { groupHonours } from '../parts/team-honours';
-import { tenureYears } from '../parts/team-manager-tenures';
+import { tenureLength } from './manager-record';
 import { pickTeamStat } from '../parts/team-season-stats';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
 import { peakPeriod } from './goal-timing';
@@ -45,12 +44,13 @@ describe('team and manager blocks', () => {
     expect(t).toContain('Arsenal go top');
   });
 
-  it('season totals: the highlight as the hero, no ordinal or median', () => {
-    const t = text(render(config('team-season-totals')));
-    expect(t).toContain('9 goals conceded');
-    expect(t).not.toContain('1st of 20');
-    expect(t).not.toContain('Median');
+  it('season totals: the stats under the league, a bar for each club place, no ordinals', () => {
+    const html = render(config('team-season-totals'));
+    const t = text(html);
+    expect(t).toContain('vs Premier League clubs');
     expect(t).toContain('Clean sheets');
+    expect(t).not.toMatch(/\b\d+(st|nd|rd|th)\b|Median/);
+    expect(html).toContain('data-bar=');
   });
 
   it('season totals: without a highlight, the first stat the team leads', () => {
@@ -63,65 +63,62 @@ describe('team and manager blocks', () => {
     expect(pickTeamStat([], undefined)).toBeUndefined();
   });
 
-  it('form: points per game over the window and the result strip oldest first', () => {
+  it('form: fact rows for the window and the season, then the matches with H or A', () => {
     const html = render(config('team-form'));
     const t = text(html);
-    expect(t).toContain('2.3 points per game, last 6');
-    const strip = [...html.matchAll(/data-result="([WDL])"/g)].map((m) => m[1]).join('');
-    expect(strip).toBe('LWDWWW');
+    expect(t).toContain('Last 6: 2.3 points per game');
+    expect(t).toMatch(/Season: \d\.\d points per game/);
+    expect(t).toMatch(/\((H|A)\)/);
+    expect(html.match(/data-form-row=/g)?.length).toBe(6);
+    expect(html).not.toContain('data-points-line');
   });
 
-  it('goal timing: the peak period as the hero, both columns per period', () => {
+  it('goal timing: scored and conceded totals, both bars per period', () => {
     const html = render(config('team-goal-timing'));
     const t = text(html);
-    expect(t).toContain('goals scored, minutes 76-90');
-    expect(html.match(/data-goal-bar="for"/g)?.length).toBe(6);
-    expect(html.match(/data-goal-bar="against"/g)?.length).toBe(6);
+    expect(t).toMatch(/Scored:? \d+/);
+    expect(t).toMatch(/Conceded:? \d+/);
+    expect(html.match(/data-goals-for/g)?.length).toBe(6);
     expect(periodShort('0 to 15')).toBe('0-15');
     expect(peakPeriod([{ goalsFor: 2 }, { goalsFor: 2, label: 'late' }])?.label).toBe('late');
     expect(peakPeriod([{ goalsFor: 0 }])).toBeUndefined();
   });
 
-  it('squad: grouped by position with a count in the context', () => {
+  it('squad: grouped by position', () => {
     const t = text(render(config('team-squad')));
     expect(t).toContain('Goalkeepers');
     expect(t).toContain('Forwards');
   });
 
-  it('out and doubtful: counts out and doubtful, dated context', () => {
+  it('out and doubtful: Out and Doubtful sections, reasons, no counts', () => {
     const t = text(render(config('team-out-and-doubtful')));
-    expect(t).toContain('2 out');
-    expect(t).toContain('Late November');
+    expect(t).toContain('Out');
+    expect(t).not.toContain('2 out');
   });
 
-  it('transfers: ins then outs, fee or move type', () => {
+  it('transfers: permanent ins then outs, fee or move type, loans left out', () => {
     const t = text(render(config('team-transfers')));
-    expect(t.indexOf('Ins')).toBeLessThan(t.indexOf('Outs'));
+    expect(t.indexOf('In, ')).toBeLessThan(t.indexOf('Out'));
     expect(t).toContain('£63.5m');
-    expect(t).toContain('Loan');
+    expect(t).not.toContain('Loan');
   });
 
-  it('honours: trophies counted and grouped by competition', () => {
+  it('honours: one row per competition with seasons won and the count', () => {
     const t = text(render(config('team-honours')));
-    expect(t).toContain('7 trophies');
-    expect(t).toContain('Champions League, runner-up');
-    const groups = groupHonours([
-      { competition: { id: '45', name: 'FA Cup' }, seasonLabel: '2019/20' },
-      { competition: { id: '45', name: 'FA Cup' }, seasonLabel: '2016/17' },
-    ]);
-    expect(groups).toHaveLength(1);
-    expect(groups[0].seasons).toEqual(['2019/20', '2016/17']);
+    expect(t).toContain('FA Cup');
+    expect(t).toMatch(/Won \d{4}\/\d{2}/);
+    expect(t).not.toContain('trophies');
   });
 
-  it('manager record: career win rate as the hero and the current post as the subject row', () => {
+  it('manager record: titled by the manager, Club and Since, spans on one axis', () => {
     const html = render(config('manager-record'));
     const t = text(html);
-    expect(t).toContain('54% career win rate');
     expect(t).toContain('Unai Emery');
-    expect(html.match(/data-grid-subject/g)?.length).toBe(1);
+    expect(t).toContain('Club: Aston Villa');
+    expect(t).toContain('Win rate: 54% of games');
+    expect(html).toContain('data-tenure-span');
     expect(html).not.toContain('data-scale-median');
-    expect(tenureYears({ from: '2022-11' })).toBe('2022 to now');
-    expect(tenureYears({ from: '2016-07', to: '2018-05' })).toBe('2016 to 2018');
+    expect(tenureLength(Date.UTC(2022, 10, 1), Date.UTC(2025, 4, 1))).toBe('2.5 years');
   });
 
   it('has no prose sentences in any team block', () => {

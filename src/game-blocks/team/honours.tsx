@@ -1,22 +1,15 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, type BlockHero } from '../skin/index';
-import { HonourRows } from '../parts/team-honours';
+import { BlockFrame } from '../skin/index';
+import { HonoursRows } from '../parts/team-rows';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { TeamHonoursDataJson } from './types';
 
-/** Team › Honours: trophies by competition. The hero is the count of trophies won. */
+/** Team › Honours: one row per competition, the seasons won and runner-up, the count won. */
 export function TeamHonoursBlock(props: GameBlockComponentProps<TeamHonoursDataJson>) {
-  const { config } = props;
-  const data = config.data ?? {};
-  const honours = data.honours ?? [];
-  const won = data.winnerCount ?? 0;
-  const hero: BlockHero | undefined =
-    won > 0 ? { figure: String(won), label: won === 1 ? 'trophy' : 'trophies' } : undefined;
+  const honours = props.config.data?.honours ?? [];
   return (
-    <BlockFrame
-      {...frameBase(props, { context: config.subject.subtitle || config.context, noun: 'honours' })}
-      hero={hero}
-      aside={honours.length > 0 ? <HonourRows honours={honours} /> : null}
-    />
+    <BlockFrame {...frameBase(props, { noun: 'honours' })}>
+      {honours.length > 0 ? <HonoursRows honours={honours} /> : null}
+    </BlockFrame>
   );
 }
