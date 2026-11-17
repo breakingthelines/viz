@@ -32,16 +32,23 @@ function off(status: GameBlockMatchStatusJson | undefined): boolean {
 import { frameBase } from '../parts/team-league-match-ui';
 import type { LeagueFixturesDataJson } from './types';
 
+const MONTH =
+  /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i;
+
 /**
- * "Matchday 10" from a provider round ("Regular Season - 10", "Round 10",
- * "Matchday 10"). Empty for a date-keyed prediction round ("Game Round
- * 2026-11-21"), which is no matchday.
+ * The block's title from its round label: "Matchday 10" from a numbered
+ * round ("Regular Season - 10", "Round 10", "Apertura, Matchday 10"), a
+ * knockout round by its own name ("Round of 16", "Semi-finals"). Empty for
+ * a date-keyed prediction round ("Game Round 2026-11-21") or a span of days
+ * ("12 to 18 November"), where the competition's own title stands.
  */
-export function matchdayTitle(label: string | undefined): string {
+export function roundTitle(label: string | undefined): string {
   const l = (label ?? '').trim();
   if (!l || /\d{4}-\d{2}-\d{2}/.test(l) || /^game round/i.test(l)) return '';
   const m = /(?:regular season|round|matchday)\s*-?\s*(\d+)\s*$/i.exec(l);
-  return m ? `Matchday ${m[1]}` : '';
+  if (m) return `Matchday ${m[1]}`;
+  if (MONTH.test(l)) return '';
+  return l;
 }
 
 const DAY_LONG = new Intl.DateTimeFormat('en-GB', {
@@ -66,7 +73,7 @@ export function dayHeading(kickoff: string | undefined, narrow: boolean): string
 }
 
 /**
- * League › Fixtures: one matchday, titled "Matchday 10", grouped by day
+ * League › Fixtures: one round, titled "Matchday 10" or "Semi-finals", grouped by day
  * under a section heading. Each row: home right-aligned, its crest, the score
  * (or the UK kick-off time) centred, the away crest, away left-aligned.
  */
@@ -75,8 +82,8 @@ export function LeagueFixturesBlock(props: GameBlockComponentProps<LeagueFixture
   const data = config.data ?? {};
   const games = data.games ?? [];
   const base = frameBase(props, { noun: 'fixtures' });
-  const matchday = matchdayTitle(data.label);
-  const title = config.titleOrigin === 'default' && matchday ? matchday : base.title;
+  const round = roundTitle(data.label);
+  const title = config.titleOrigin === 'default' && round ? round : base.title;
   return (
     <BlockFrame {...base} title={title} annotate={{ target: '[data-fixture-score] [data-num]' }}>
       {games.length > 0 ? (
