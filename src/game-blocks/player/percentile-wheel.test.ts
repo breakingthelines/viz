@@ -36,30 +36,46 @@ describe('Percentile wheel block', () => {
     expect(html).not.toContain('class="btl-pw-tip');
   });
 
-  it('shows the per 90 hero, its percentile and median to a Pro reader', () => {
-    const html = render(config(), PRO);
+  const rows = (patch: Partial<GameBlockConfig['options']> = {}) =>
+    config({ options: { ...config().options, view: 'wheel_rows', ...patch } });
+
+  it('draws no ordinal, median or pool count in any view', () => {
+    for (const view of ['wheel', 'wheel_rows', 'rows']) {
+      const html = render(config({ options: { ...config().options, view } }), PRO);
+      expect(html).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
+      expect(html).not.toContain('Median');
+      expect(html).not.toContain('vs 41');
+    }
+  });
+
+  it('is compact by default: the wheel only, no lead stat and no rows', () => {
+    const html = render(config({ options: { ...config().options, view: 'wheel' } }), PRO);
+    expect(html).toContain('btl-pw-slc');
+    expect(html).not.toContain('2.62');
+    expect(html).not.toContain('data-wheel-pool');
+    expect(html).not.toContain('data-block-anchor="hero"');
+  });
+
+  it('shows the per 90 hero and every value under the pool to a Pro reader', () => {
+    const html = render(rows(), PRO);
     expect(html).toContain('2.62');
     expect(html).toMatch(/key passes per\s90/);
-    expect(html).toContain('94th');
-    expect(html).toMatch(/Median (<!-- -->)?1\.40/);
-    expect(html).toContain('vs 41 Premier League wingers');
+    expect(html).toMatch(/vs Premier League wingers(<!-- -->)?, per 90/);
     expect(html).not.toContain('data-block-locked-note');
     expect(html).not.toContain('data-cell-state');
   });
 
-  it('falls back to the public percentile and locks paid cells for a free reader', () => {
-    const html = render(config(), FREE);
+  it('locks paid values for a free reader and draws no ordinal in their place', () => {
+    const html = render(rows(), FREE);
     expect(html).not.toContain('2.62');
-    expect(html).not.toContain('1.40');
-    expect(html).toContain('key passes percentile');
-    expect(html).toContain('94th');
+    expect(html).not.toContain('94th');
     expect(html).toContain('data-cell-state="locked"');
     expect(html).toContain('Per 90 figures are for Pro readers.');
     expect(html).toContain('See plans');
   });
 
   it('renders pending on the server, with no paid figure and no locked note', () => {
-    const html = render(config());
+    const html = render(rows());
     expect(html).not.toContain('2.62');
     expect(html).toContain('data-cell-state="pending"');
     expect(html).not.toContain('data-block-locked-note');
@@ -68,7 +84,6 @@ describe('Percentile wheel block', () => {
   it('has no default prose: title, context, figures and short labels only', () => {
     const html = render(config(), PRO);
     expect(html).toContain('Bukayo Saka');
-    expect(html).toContain('Arsenal, 2025/26');
     expect(html).not.toMatch(/The median among|is in the|percentile\./);
   });
 
@@ -81,7 +96,7 @@ describe('Percentile wheel block', () => {
 
   it('draws in every look with the BTL colophon and no API-Football mark', () => {
     for (const look of ['editorial', 'poster', 'annotated'] as GameBlockLook[]) {
-      const html = render(config({ look }), PRO);
+      const html = render({ ...rows(), look }, PRO);
       expect(askedLook(html)).toBe(look);
       expect(html).toContain('aria-label="Breaking The Lines"');
       expect(html).not.toContain('API-Football');
@@ -107,7 +122,7 @@ describe('Percentile wheel block', () => {
     expect(lowerFirst('xG')).toBe('xG');
     expect(lowerFirst('PPDA')).toBe('PPDA');
     expect(groupLabel('Premier League wingers with 900 or more minutes', 41)).toBe(
-      'vs 41 Premier League wingers'
+      'vs Premier League wingers'
     );
   });
 

@@ -1,12 +1,11 @@
 import { BlockScale } from '../skin/index';
 import type { GameBlockTeamStatJson } from '../team/types';
-import { ordinal, rankToScale } from './team-league-match-common';
+import { rankToScale } from './team-league-match-common';
 import { BlockGrid, ScaleCell, type GridRow } from './team-league-match-ui';
 
 /**
- * A team's season stats, each ranked in its league: the figure, the rank, the
- * league median and the rank on the 0 to 100 scale (the red fill), with the
- * median tick at the league's middle.
+ * A team's season stats, each ranked in its league: the figure and its place
+ * among the clubs as a bar (the red fill). No ordinal, no median.
  */
 export function TeamSeasonStatRows({
   stats,
@@ -22,11 +21,9 @@ export function TeamSeasonStatRows({
       cells: [
         s.label ?? '',
         s.value?.display || '–',
-        ranked ? ordinal(s.leagueRank!) : '–',
-        s.leagueMedian?.display || '–',
         ranked ? (
           <ScaleCell>
-            <BlockScale value={rankToScale(s.leagueRank!, teamCount)} median={50} size="row" />
+            <BlockScale value={rankToScale(s.leagueRank!, teamCount)} size="row" />
           </ScaleCell>
         ) : null,
       ],
@@ -35,13 +32,7 @@ export function TeamSeasonStatRows({
   return (
     <BlockGrid
       label="Season stats"
-      columns={[
-        { label: '' },
-        { label: 'Total', strong: true },
-        { label: 'Rank' },
-        { label: 'Median', wide: true },
-        { label: '', width: 'auto' },
-      ]}
+      columns={[{ label: '' }, { label: 'Total', strong: true }, { label: '', width: 'auto' }]}
       rows={rows}
     />
   );

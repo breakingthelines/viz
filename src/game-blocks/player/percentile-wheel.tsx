@@ -16,11 +16,13 @@ import { useGatedCell } from '../values';
 /**
  * Player › Percentile wheel, the reference block for the skin. Percentiles are
  * public (as on the player card); per 90 values and group medians are gated
- * cells. The hero is the highlighted metric's per 90 figure, or its percentile
- * when the viewer cannot see the figure.
+ * cells. No ordinals, medians or pool counts are drawn: the wheel's slices
+ * carry the percentiles.
  *
- * Views: `wheel` (default), `wheel_rows` (the wheel with every metric as a
- * row), `rows` (rows only).
+ * Views: `wheel` (default, compact for card sets: the wheel only), `wheel_rows`
+ * (the highlighted metric's per 90 figure, the wheel, and every metric's per
+ * 90 value under the pool, "vs Premier League wingers"), `rows` (the rows
+ * only).
  */
 
 const STATE: Record<MetricStateJson, MetricState> = {
@@ -46,11 +48,14 @@ export function lowerFirst(label: string): string {
   return label;
 }
 
-/** "Premier League wingers with 900 or more minutes" to "vs 41 Premier League wingers". */
-export function groupLabel(phrase: string | undefined, size: number | undefined): string | null {
+/**
+ * "Premier League wingers with 900 or more minutes" to "vs Premier League
+ * wingers". Never a pool count: `size` is kept for the signature only.
+ */
+export function groupLabel(phrase: string | undefined, _size?: number): string | null {
   const head = (phrase ?? '').replace(/\s+with\s.*$/i, '').trim();
   if (!head) return null;
-  return size ? `vs ${size} ${head}` : `vs ${head}`;
+  return `vs ${head}`;
 }
 
 function hasPercentile(m: GameBlockMetricJson): m is GameBlockMetricJson & { percentile: number } {
@@ -86,15 +91,34 @@ export function toStatMetric(m: GameBlockMetricJson, family: Map<string, string>
   };
 }
 
+/** One metric as a row: its per 90 value only, no ordinal. */
 function rowOf(m: GameBlockMetricJson): BlockRow {
   return {
     key: m.key ?? '',
     label: m.label ?? '',
-    cells: [
-      m.valueCell ? <GatedValue cell={m.valueCell} /> : '–',
-      hasPercentile(m) ? ordinal(m.percentile) : '–',
-    ],
+    cells: [m.valueCell ? <GatedValue cell={m.valueCell} /> : '–'],
   };
+}
+
+/** The pool over the rows: "vs Premier League wingers, per 90". */
+function PoolHeading({ group }: { group: string | null }) {
+  const skin = useBlockSkin();
+  if (!group) return null;
+  return (
+    <p
+      data-wheel-pool=""
+      style={{
+        margin: '0 0 2px',
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--btl-block-line-strong)',
+        fontFamily: skin.fontSans,
+        fontSize: 13,
+        color: 'var(--btl-block-ink-3)',
+      }}
+    >
+      {group}, per 90
+    </p>
+  );
 }
 
 export function PlayerPercentileWheelBlock({
@@ -113,50 +137,33 @@ export function PlayerPercentileWheelBlock({
   const read = useGatedCell(top?.valueCell);
   const group = groupLabel(data.groupPhrase, data.groupSize);
 
+  // `wheel` is the compact view (card sets): the wheel only, no lead stat
+  // and no rows. `wheel_rows` adds every metric's per 90 value under the
+  // pool; `rows` is the rows alone.
   let hero: BlockHero | undefined;
-  if (top) {
-    const name = lowerFirst(top.label ?? '');
-    const pct = hasPercentile(top) ? ordinal(top.percentile) : null;
-    const median = top.medianCell ? (
-      <>
-        Median <GatedValue cell={top.medianCell} width={28} />
-      </>
-    ) : null;
-    if (read.state === 'value') {
-      hero = {
-        figure: read.display ?? String(read.value ?? ''),
-        label: `${name} per 90`,
-        baseline: [pct, median, group].filter(Boolean),
-      };
-    } else if (pct) {
-      hero = {
-        figure: pct,
-        label: `${name} percentile`,
-        baseline: [
-          top.valueCell ? (
-            <>
-              <GatedValue cell={top.valueCell} width={28} /> per 90
-            </>
-          ) : null,
-          median,
-          group,
-        ].filter(Boolean),
-      };
-    }
+  if (top && view !== 'wheel' && read.state === 'value') {
+    hero = {
+      figure: read.display ?? String(read.value ?? ''),
+      label: `${lowerFirst(top.label ?? '')} per 90`,
+    };
   }
 
-  const others = metrics.filter((m) => m !== top && hasPercentile(m));
-  const ranked = [...others].sort((a, b) => (b.percentile ?? 0) - (a.percentile ?? 0));
   let aside: ReactNode = null;
   if (view === 'wheel_rows') {
-    aside = <BlockRows columns={[]} rows={metrics.filter((m) => m !== top).map(rowOf)} />;
-  } else if (view === 'wheel' && look === 'editorial') {
-    aside = <BlockRows columns={[]} rows={ranked.slice(0, 3).map(rowOf)} />;
+    aside = (
+      <div>
+        <PoolHeading group={group} />
+        <BlockRows columns={[]} rows={metrics.filter((m) => m !== top).map(rowOf)} />
+      </div>
+    );
   }
 
   const visual =
     view === 'rows' ? (
-      <BlockRows columns={['', 'Per 90', 'Pct']} rows={metrics.map(rowOf)} />
+      <div>
+        <PoolHeading group={group} />
+        <BlockRows columns={[]} rows={metrics.map(rowOf)} />
+      </div>
     ) : metrics.length > 0 ? (
       <PercentileWheel
         metrics={metrics.map((m) => toStatMetric(m, familyLabel))}

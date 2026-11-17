@@ -5,6 +5,30 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0]
+
+### Changed: no ordinals, medians or pool counts on any block
+
+- **Percentile wheel.** The lead line ("99th  Median 1.21  vs 49 Premier
+  League wingers") is gone. `wheel` (the default) is now the compact view
+  for card sets: the wheel only, no lead stat, no rows. `wheel_rows` shows
+  the highlighted metric's per 90 figure, the wheel, and every metric's per
+  90 value under the pool heading ("vs Premier League wingers, per 90", no
+  count); `rows` is the rows alone. Rows show the value only. The wheel's
+  slices keep their percentiles. `groupLabel` never prints a count.
+- **Comparison.** Heroes are the subject's per 90 value with the second
+  player's beside it, never an ordinal; the rows view drops its percentile
+  columns.
+- **Season trend.** The hero is the latest per 90 value; the rows view shows
+  per 90 values by season, not percentile ordinals.
+- **Player rankings.** No Pct column, no median line, no median tick, no
+  pool count in the scope ("Key passes, wingers").
+- **Team season totals and stats.** No rank ordinal, no "1st of 20", no
+  Median column, no median tick. League team stats drops its median row.
+- **League strength** drops "10 of 52 leagues".
+- **Median ticks** are no longer passed to any scale (manager tenures, fan
+  grades, rankings).
+
 ## [0.35.1]
 
 ### Added

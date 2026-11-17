@@ -13,13 +13,13 @@ export function tenureYears(t: GameBlockTenureJson): string {
 
 /**
  * A manager's spells, newest first: club, years, games and results, and the
- * win rate on the 0 to 100 scale with his career rate as the tick.
+ * win rate on the 0 to 100 scale. No median tick.
  */
 export function TenureRows({
   tenures,
-  careerWinRate,
 }: {
   tenures: GameBlockTenureJson[];
+  /** @deprecated No longer drawn. */
   careerWinRate?: number;
 }) {
   return (
@@ -50,7 +50,7 @@ export function TenureRows({
             rate !== undefined ? String(Math.round(rate)) : '–',
             rate !== undefined ? (
               <ScaleCell>
-                <BlockScale value={rate} median={careerWinRate} size="row" />
+                <BlockScale value={rate} size="row" />
               </ScaleCell>
             ) : null,
           ],

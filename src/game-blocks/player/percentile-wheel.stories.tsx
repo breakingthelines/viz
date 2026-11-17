@@ -14,10 +14,11 @@ import { crestPosterChecks, editorialFallbackChecks } from './story-kit';
  * plausible, not real data. The headshot is a drawn bust, not a person.
  */
 
+/** The example in the `wheel_rows` view: the lead stat, the wheel and the rows. */
 function base(): GameBlockConfig {
   const res = toGameBlockConfig(WHEEL_EXAMPLE);
   if (!res.ok) throw new Error('fixture did not map');
-  return res.config;
+  return { ...res.config, options: { ...res.config.options, view: 'wheel_rows' } };
 }
 
 const PRO = gatedValuesFromJson(WHEEL_EXAMPLE.gated);
@@ -177,7 +178,16 @@ export const CustomTitleAndSubheading: Story = {
     subheading: 'Creating more than any winger in the league',
   },
 };
-export const WheelAndRows: Story = { args: { view: 'wheel_rows' } };
+/** The compact view for card sets: the wheel only, no lead stat, no rows, no ordinals. */
+export const Compact: Story = {
+  args: { view: 'wheel' },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('path.btl-pw-slc')).not.toBeNull();
+    await expect(canvasElement.textContent).not.toContain('2.62');
+    await expect(canvasElement.textContent).not.toMatch(/Median|\b\d+(st|nd|rd|th)\b/);
+    await expect(canvasElement.querySelector('[data-wheel-pool]')).toBeNull();
+  },
+};
 export const RowsOnly: Story = { args: { view: 'rows', reader: 'free' } };
 export const Chat: Story = { args: { density: 'chat', width: 420 } };
 export const Tile: Story = { args: { density: 'tile', width: 320 } };

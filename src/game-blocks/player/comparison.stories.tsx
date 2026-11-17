@@ -39,7 +39,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const F = 'Foden 85th';
+const F = 'Foden 2.11';
 
 // The scales view keeps the hero and the per 90 cells.
 const scales = { view: 'scales' };

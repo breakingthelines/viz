@@ -19,7 +19,7 @@ import {
 import type { GameBlockConfig } from '../types';
 import { useGatedCell } from '../values';
 import type { GameBlockComparisonMetricJson, PlayerComparisonDataJson } from './data';
-import { groupLabel, lowerFirst, ordinal } from './percentile-wheel';
+import { groupLabel, lowerFirst } from './percentile-wheel';
 import { baseFrame, pctOf, surname } from './shared';
 
 /**
@@ -114,8 +114,26 @@ export function pickComparisonHighlight(
   return best ?? metrics[0];
 }
 
-function pctText(p: number | null): string {
-  return p === null ? '–' : ordinal(p);
+/**
+ * A comparison's hero: the subject's per 90 value of one metric, with the
+ * second player's value beside it. No ordinal: the scales show the rank.
+ */
+function valueHero(
+  m: GameBlockComparisonMetricJson | undefined,
+  bName: string
+): BlockHero | undefined {
+  if (!m?.subjectValueCell) return undefined;
+  return {
+    figure: <GatedValue cell={m.subjectValueCell} width={40} />,
+    label: `${lowerFirst(m.label ?? '')} per 90`,
+    baseline: m.comparisonValueCell
+      ? [
+          <>
+            {bName} <GatedValue cell={m.comparisonValueCell} width={28} />
+          </>,
+        ]
+      : [],
+  };
 }
 
 interface ComparisonProps extends GameBlockComponentProps<PlayerComparisonDataJson> {
@@ -353,15 +371,7 @@ function DifferComparison(props: ComparisonProps) {
   const metrics = config.data?.metrics ?? [];
   const top = widestGaps(metrics, 4);
   const lead = top[0];
-  const leadA = lead ? subjectPct(lead) : null;
-  const hero: BlockHero | undefined =
-    lead && leadA !== null
-      ? {
-          figure: ordinal(leadA),
-          label: `${lowerFirst(lead.label ?? '')} percentile`,
-          baseline: [`${bName} ${pctText(comparisonPct(lead))}`],
-        }
-      : undefined;
+  const hero = valueHero(lead, bName);
   const rows: PlayerScaleRow[] = top.map((m) => ({
     key: m.key ?? '',
     label: m.label ?? '',
@@ -597,20 +607,12 @@ function DuelComparison(props: ComparisonProps) {
 }
 
 function ScalesComparison(props: ComparisonProps) {
-  const { config, aName, bName, view, media } = props;
+  const { config, aName, bName, media } = props;
   const data = config.data ?? {};
   const metrics = data.metrics ?? [];
   const top = pickComparisonHighlight(metrics, config.options.highlight);
 
-  let hero: BlockHero | undefined;
-  const topA = top ? subjectPct(top) : null;
-  if (top && topA !== null) {
-    hero = {
-      figure: ordinal(topA),
-      label: `${lowerFirst(top.label ?? '')} percentile`,
-      baseline: [`${bName} ${pctText(comparisonPct(top))}`],
-    };
-  }
+  const hero = valueHero(top, bName);
 
   const groups = [
     groupLabel(data.subjectGroupPhrase, undefined),
@@ -629,18 +631,10 @@ function ScalesComparison(props: ComparisonProps) {
     label: m.label ?? '',
     value: subjectPct(m),
     comparator: comparisonPct(m),
-    cells:
-      view === 'rows'
-        ? [
-            pctText(subjectPct(m)),
-            m.subjectValueCell ? <GatedValue cell={m.subjectValueCell} /> : '–',
-            pctText(comparisonPct(m)),
-            m.comparisonValueCell ? <GatedValue cell={m.comparisonValueCell} /> : '–',
-          ]
-        : [
-            m.subjectValueCell ? <GatedValue cell={m.subjectValueCell} /> : '–',
-            m.comparisonValueCell ? <GatedValue cell={m.comparisonValueCell} /> : '–',
-          ],
+    cells: [
+      m.subjectValueCell ? <GatedValue cell={m.subjectValueCell} /> : '–',
+      m.comparisonValueCell ? <GatedValue cell={m.comparisonValueCell} /> : '–',
+    ],
   }));
 
   return (
@@ -665,14 +659,7 @@ function ScalesComparison(props: ComparisonProps) {
       {rows.length > 0 ? (
         <div>
           <PlayerScaleKey subject={aName} comparator={bName} />
-          <PlayerScaleRows
-            rows={rows}
-            columns={
-              view === 'rows'
-                ? [aName, 'Per 90', bName, 'Per 90']
-                : [`${aName} p90`, `${bName} p90`]
-            }
-          />
+          <PlayerScaleRows rows={rows} columns={[`${aName} p90`, `${bName} p90`]} />
         </div>
       ) : null}
     </BlockFrame>
