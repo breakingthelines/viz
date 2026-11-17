@@ -1042,10 +1042,12 @@ function OrbitOverlay({
           data-slot={`${slot}-spotlight`}
           style={{
             position: 'absolute',
-            left: '50%',
+            left: 0,
+            right: 0,
             bottom: '1%',
-            transform: 'translateX(-50%)',
-            maxWidth: '100%',
+            width: 'fit-content',
+            maxWidth: 'calc(100% - 8px)',
+            marginInline: 'auto',
             borderRadius: 4,
             padding: '4px 10px',
             fontSize: 13,
