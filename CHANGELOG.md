@@ -5,6 +5,17 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.4]
+
+### Fixed
+
+- **Match timeline**: shootout kicks are read from game-service's mark, the
+  detail "Penalty shootout" on a penalty goal or missed penalty
+  (`SHOOTOUT_DETAIL`). When a block carries the mark, only marked kicks are
+  kicks, so an unmarked penalty at 120+1' stays a goal. Blocks stored before
+  the mark still fall back to the shootout score and the penalty events from
+  120' on.
+
 ## [0.38.3]
 
 ### Fixed

@@ -19,11 +19,13 @@ import type { GameBlockRefJson } from './team-league-match-common';
  * - takes penalty shootout kicks out of the rows, the running score, the
  *   strip and the stoppage reach, and lists them apart in `shootout`.
  *
- * The stored feed does not mark a shootout kick: game-service writes it as
- * a penalty goal or a missed penalty, and API-Football stamps the kicks
- * 120+1' to 120+8'. A kick is an event whose detail names the shootout, or,
- * in a match with a shootout score, one of the penalty events from 120' on,
- * counted back from the last until the scored ones make the shootout score.
+ * game-service marks a shootout kick: a penalty goal or a missed penalty
+ * whose detail is "Penalty shootout" (`SHOOTOUT_DETAIL`). When any event
+ * carries the mark, the marked ones are the kicks and nothing else is. Blocks
+ * stored before the mark have none; for them a kick is, in a match with a
+ * shootout score, one of the penalty events from 120' on (API-Football stamps
+ * kicks 120+1' onwards), counted back from the last until the scored ones
+ * make the shootout score.
  */
 
 export type TimelineKind = 'goal' | 'pen' | 'og' | 'red' | 'penmiss';
@@ -179,13 +181,23 @@ type SortedEvent = { e: GameBlockMatchEventJson; i: number; base: number; added:
 
 const KICKS = new Set(['KIND_PENALTY_GOAL', 'KIND_MISSED_PENALTY']);
 
+/** The detail game-service writes on a shootout kick (gameblocks.ShootoutDetail). */
+export const SHOOTOUT_DETAIL = 'Penalty shootout';
+
 /** The shootout kicks among the sorted events (see the model's notes). */
 function shootoutKicks(
   sorted: SortedEvent[],
   match: MatchTimelineDataJson['match']
 ): Set<SortedEvent> {
-  const flagged = sorted.filter((x) => /shoot-?out/i.test(x.e.detail ?? ''));
+  // The mark wins. Older blocks may name the shootout in other words, so
+  // any detail naming it counts too.
+  const flagged = sorted.filter(
+    (x) =>
+      KICKS.has(x.e.kind ?? '') &&
+      (x.e.detail === SHOOTOUT_DETAIL || /shoot-?out/i.test(x.e.detail ?? ''))
+  );
   if (flagged.length > 0) return new Set(flagged);
+  // No mark: a block stored before game-service marked kicks.
   const ph = match?.home?.penalties;
   const pa = match?.away?.penalties;
   if (typeof ph !== 'number' || typeof pa !== 'number') return new Set();
