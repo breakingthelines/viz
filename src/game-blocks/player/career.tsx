@@ -1,13 +1,17 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, BlockRows, type BlockHero } from '../skin/index';
+import {
+  BlockFrame,
+  InFrame,
+  LabelCell,
+  NameCell,
+  NumCell,
+  Row,
+  Rows,
+  StatCell,
+  clubName,
+} from '../skin/index';
 import type { GameBlockCareerRowJson, PlayerCareerDataJson } from './data';
-import { baseFrame, TwoPart } from './shared';
-import { countLabel } from '#/lib/count';
-
-/**
- * Player › Career. One row per spell, newest first, then the career total.
- * Wholly public. The hero is career appearances.
- */
+import { baseFrame } from './shared';
 
 /** The total row the builder sent, else the sum of the spells. */
 export function careerTotal(data: PlayerCareerDataJson): GameBlockCareerRowJson {
@@ -20,44 +24,71 @@ export function careerTotal(data: PlayerCareerDataJson): GameBlockCareerRowJson 
   };
 }
 
-function figures(r: GameBlockCareerRowJson): string[] {
-  return [String(r.appearances ?? 0), String(r.goals ?? 0), String(r.assists ?? 0)];
+/** "2022 to now" reads "2022 onwards". */
+export function careerYears(years: string | undefined): string {
+  return (years ?? '').replace(/ to now$/, ' onwards');
 }
 
+/**
+ * Player › Career (block style): one row per spell, newest first: the club
+ * (wide: its years beside it), appearances, goals and assists; a Total row
+ * under a strong hairline. Wholly public.
+ */
 export function PlayerCareerBlock(props: GameBlockComponentProps<PlayerCareerDataJson>) {
   const data = props.config.data ?? {};
   const spells = data.rows ?? [];
   const total = careerTotal(data);
-  const clubs = new Set(spells.map((r) => r.team?.id || r.team?.name).filter(Boolean)).size;
-
-  const hero: BlockHero | undefined = spells.length
-    ? {
-        figure: String(total.appearances ?? 0),
-        label: 'career appearances',
-        baseline: [
-          countLabel(total.goals ?? 0, 'goal'),
-          countLabel(total.assists ?? 0, 'assist'),
-          clubs > 1 ? `${clubs} teams` : null,
-        ].filter(Boolean),
-      }
-    : undefined;
-
-  const rows = [
-    ...spells.map((r, i) => ({
-      key: `${r.team?.id ?? r.team?.name ?? ''}-${i}`,
-      label: <TwoPart main={r.team?.name ?? ''} quiet={r.years} />,
-      cells: figures(r),
-    })),
-    ...(spells.length > 1
-      ? [{ key: 'total', label: <strong>Total</strong>, cells: figures(total) }]
-      : []),
-  ];
-
   return (
     <BlockFrame
       {...baseFrame(props, 'career')}
-      hero={hero}
-      aside={rows.length > 0 ? <BlockRows columns={['', 'Apps', 'G', 'A']} rows={rows} /> : null}
-    />
+      annotate={{ target: '[data-career-total] [data-num]' }}
+    >
+      {spells.length > 0 ? (
+        <InFrame>
+          {({ narrow }) => {
+            const cols = `minmax(0, 1fr) ${narrow ? '' : '110px '}44px 52px 44px`;
+            const nums = (r: GameBlockCareerRowJson) => (
+              <>
+                <NumCell>{r.appearances ?? 0}</NumCell>
+                <NumCell>{r.goals ?? 0}</NumCell>
+                <NumCell>{r.assists ?? 0}</NumCell>
+              </>
+            );
+            return (
+              <Rows label="Career">
+                <Row cols={cols} head>
+                  <span />
+                  {narrow ? null : <span />}
+                  {['Apps', 'Goals', 'Assists'].map((h) => (
+                    <LabelCell key={h} small align="right">
+                      {h}
+                    </LabelCell>
+                  ))}
+                </Row>
+                {spells.map((r, i) => (
+                  <Row key={`${r.team?.id ?? r.team?.name}-${i}`} cols={cols} last={spells.length < 2 && i === spells.length - 1}>
+                    <NameCell>{clubName(r.team?.name)}</NameCell>
+                    {narrow ? null : <LabelCell small>{careerYears(r.years)}</LabelCell>}
+                    {nums(r)}
+                  </Row>
+                ))}
+                {spells.length > 1 ? (
+                  <Row
+                    cols={cols}
+                    last
+                    data-career-total=""
+                    style={{ borderTop: '1px solid var(--btl-block-line-strong)' }}
+                  >
+                    <StatCell>Total</StatCell>
+                    {narrow ? null : <span />}
+                    {nums(total)}
+                  </Row>
+                ) : null}
+              </Rows>
+            );
+          }}
+        </InFrame>
+      ) : null}
+    </BlockFrame>
   );
 }

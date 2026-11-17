@@ -1,12 +1,8 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, BlockRows, type BlockHero } from '../skin/index';
+import { BlockFrame, InFrame, LabelCell, NameCell, Row, Rows } from '../skin/index';
+import { sentenceCase } from '../parts/team-rows';
 import type { GameBlockAbsenceJson, PlayerAbsencesDataJson } from './data';
 import { baseFrame, shortDate } from './shared';
-
-/**
- * Player › Absences. Injuries and suspensions, newest first: reason, dates and
- * games missed. Wholly public. The hero is the games missed in total.
- */
 
 /** "12 Sep to 3 Oct 2025", "From 9 Nov 2026", "Late November". */
 export function absenceDates(a: GameBlockAbsenceJson): string {
@@ -23,40 +19,44 @@ export function absenceDates(a: GameBlockAbsenceJson): string {
   return a.expectedReturn ?? '';
 }
 
+/** "to 12 Nov, 3 games missed", "ongoing". */
+export function absenceAside(a: GameBlockAbsenceJson): string {
+  const span = a.to ? `to ${shortDate(a.to)}` : 'ongoing';
+  const missed = a.gamesMissed ? `, ${a.gamesMissed} ${a.gamesMissed === 1 ? 'game' : 'games'} missed` : '';
+  return span + missed;
+}
+
+/**
+ * Player › Absences (block style): newest first, the start date in the label
+ * column, the reason, and the span with games missed as a small aside.
+ * Wholly public.
+ */
 export function PlayerAbsencesBlock(props: GameBlockComponentProps<PlayerAbsencesDataJson>) {
   const data = props.config.data ?? {};
   const list = [...(data.absences ?? [])].sort((a, b) =>
     (b.from ?? '').localeCompare(a.from ?? '')
   );
-  const missed = list.reduce((n, a) => n + (a.gamesMissed ?? 0), 0);
-
-  const hero: BlockHero | undefined = list.length
-    ? {
-        figure: String(missed),
-        label: missed === 1 ? 'game missed' : 'games missed',
-        baseline: [`${list.length} ${list.length === 1 ? 'absence' : 'absences'}`],
-      }
-    : undefined;
-
-  const rows = list.map((a, i) => ({
-    key: `${a.from ?? ''}-${i}`,
-    label: (
-      <>
-        {a.reason || a.status || '–'}
-        <span style={{ display: 'block', fontSize: 13, color: 'var(--btl-block-ink-3)' }}>
-          {absenceDates(a)}
-        </span>
-      </>
-    ),
-    cells: [String(a.gamesMissed ?? 0)],
-  }));
-
   return (
-    <BlockFrame
-      {...baseFrame(props, 'absences')}
-      context={props.config.subject.subtitle || props.config.context}
-      hero={hero}
-      aside={rows.length > 0 ? <BlockRows columns={['', 'Games']} rows={rows} /> : null}
-    />
+    <BlockFrame {...baseFrame(props, 'absences')}>
+      {list.length > 0 ? (
+        <InFrame>
+          {({ scale }) => (
+            <Rows label="Absences">
+              {list.map((a, i) => (
+                <Row
+                  key={`${a.from ?? ''}-${i}`}
+                  cols={`${scale.labelCol}px minmax(0, 1fr) auto`}
+                  last={i === list.length - 1}
+                >
+                  <LabelCell>{shortDate(a.from)}</LabelCell>
+                  <NameCell>{sentenceCase(a.reason)}</NameCell>
+                  <LabelCell small>{absenceAside(a)}</LabelCell>
+                </Row>
+              ))}
+            </Rows>
+          )}
+        </InFrame>
+      ) : null}
+    </BlockFrame>
   );
 }
