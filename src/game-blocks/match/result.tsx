@@ -1,18 +1,19 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame } from '../skin/index';
-import { matchFrame, matchHero } from '../parts/match-common';
-import { ScorerColumns } from '../parts/match-scorers';
+import { BlockFrame, QuietLines } from '../skin/index';
+import { matchFrame } from '../parts/match-common';
+import { ScoreBoard, matchQuietLines } from '../parts/match-board';
 import type { MatchResultDataJson } from './types';
 
-/** Match › Result: the score as the hero, scorers under each side. */
+/**
+ * Match › Result: the score with each side's scorers mirrored under it, then
+ * at most two quiet lines (competition and matchday; date and venue).
+ */
 export function MatchResultBlock(props: GameBlockComponentProps<MatchResultDataJson>) {
   const data = props.config.data ?? {};
-  const scorers = data.scorers ?? [];
   return (
-    <BlockFrame
-      {...matchFrame(props, data.match, 'result')}
-      hero={matchHero(data.match)}
-      aside={scorers.length > 0 ? <ScorerColumns scorers={scorers} /> : null}
-    />
+    <BlockFrame {...matchFrame(props, data.match, 'result')}>
+      <ScoreBoard match={data.match} scorers={data.scorers ?? []} />
+      <QuietLines lines={matchQuietLines(data.match)} />
+    </BlockFrame>
   );
 }

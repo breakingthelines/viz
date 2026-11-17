@@ -1,48 +1,83 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, type BlockHero } from '../skin/index';
+import {
+  Bar,
+  BlockFrame,
+  FactRows,
+  NameCell,
+  Num,
+  NumCell,
+  Row,
+  Rows,
+  clubName,
+  useBlockLayout,
+} from '../skin/index';
 import { matchFrame } from '../parts/match-common';
-import { PredictionRows, type PredictionShare } from '../parts/match-predictions';
-import { isPlayed, matchScore, refName } from '../parts/team-league-match-common';
+import { isPlayed, matchScore } from '../parts/team-league-match-common';
 import type { MatchPredictionsDataJson } from './types';
-import { countLabel } from '#/lib/count';
 
 /**
- * Match › Predictions: what BTL readers picked. The most backed outcome is the
- * hero; the most picked score, the reader count and, once played, the result
- * are its short labels.
+ * Match › Predictions: what BTL readers picked, each outcome's share drawn
+ * against 100, the most backed in red; then the most picked score, the
+ * readers and, once played, the result as fact rows.
  */
 export function MatchPredictionsBlock(props: GameBlockComponentProps<MatchPredictionsDataJson>) {
   const data = props.config.data ?? {};
-  const home = refName(data.match?.home?.team, true) || 'Home';
-  const away = refName(data.match?.away?.team, true) || 'Away';
-  const shares: PredictionShare[] = [
+  const { narrow } = useBlockLayout();
+  const home = clubName(data.match?.home?.team?.name) || 'Home';
+  const away = clubName(data.match?.away?.team?.name) || 'Away';
+  const shares = [
     { key: 'home', label: `${home} win`, share: data.homeShare },
     { key: 'draw', label: 'Draw', share: data.drawShare },
     { key: 'away', label: `${away} win`, share: data.awayShare },
-  ];
-  const lead = shares
-    .filter((s) => typeof s.share === 'number')
-    .sort((a, b) => (b.share ?? 0) - (a.share ?? 0))[0];
+  ].filter((s): s is { key: string; label: string; share: number } => typeof s.share === 'number');
+  const top = Math.max(...shares.map((s) => s.share), 0);
   const score = isPlayed(data.match?.status) ? matchScore(data.match) : '';
-  const hero: BlockHero | undefined = lead
-    ? {
-        figure: `${Math.round(lead.share ?? 0)}%`,
-        label:
-          lead.key === 'draw' ? 'backed a draw' : `backed ${lead.key === 'home' ? home : away}`,
-        baseline: [
-          data.mostPickedScore
-            ? `Most picked ${data.mostPickedScore}${typeof data.mostPickedShare === 'number' ? `, ${Math.round(data.mostPickedShare)}%` : ''}`
-            : null,
-          data.readerCount ? countLabel(data.readerCount, 'reader') : null,
-          score ? `Result ${score}` : null,
-        ].filter(Boolean),
-      }
-    : undefined;
+  const cols = `minmax(0, 1fr) 48px ${narrow ? 140 : 300}px`;
   return (
     <BlockFrame
       {...matchFrame(props, data.match, 'predictions')}
-      hero={hero}
-      aside={lead ? <PredictionRows shares={shares} /> : null}
-    />
+      annotate={{ target: '[data-lead-share] [data-num]' }}
+    >
+      {shares.length > 0 ? (
+        <Rows label="Predictions">
+          {shares.map((s, i) => {
+            const lead = s.share === top;
+            return (
+              <Row
+                key={s.key}
+                cols={cols}
+                last={i === shares.length - 1}
+                data-lead-share={lead ? '' : undefined}
+              >
+                <NameCell>{s.label}</NameCell>
+                <NumCell dim={!lead}>{`${Math.round(s.share)}%`}</NumCell>
+                <Bar frac={s.share / 100} dim={!lead} />
+              </Row>
+            );
+          })}
+        </Rows>
+      ) : null}
+      <div style={{ marginTop: 20 }}>
+        <FactRows
+          rows={[
+            data.mostPickedScore
+              ? ([
+                  'Most picked',
+                  <>
+                    <Num>{data.mostPickedScore}</Num>
+                    {typeof data.mostPickedShare === 'number'
+                      ? `, ${Math.round(data.mostPickedShare)}%`
+                      : ''}
+                  </>,
+                ] as const)
+              : null,
+            data.readerCount
+              ? (['Readers', <Num>{data.readerCount.toLocaleString('en-GB')}</Num>] as const)
+              : null,
+            score ? (['Result', <Num>{score}</Num>] as const) : null,
+          ]}
+        />
+      </div>
+    </BlockFrame>
   );
 }

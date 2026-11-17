@@ -1,50 +1,74 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, type BlockHero } from '../skin/index';
+import {
+  Bar,
+  BlockFrame,
+  NameCell,
+  NumCell,
+  Row,
+  Rows,
+  Section,
+  Sections,
+  clubName,
+  surname,
+  useBlockLayout,
+} from '../skin/index';
 import { matchFrame } from '../parts/match-common';
-import { FanGradeSides, hasGrade, topGraded } from '../parts/match-fan-grades';
-import { oneDecimal, refName } from '../parts/team-league-match-common';
+import { hasGrade } from '../parts/match-fan-grades';
+import {
+  gradeScaleLabel,
+  gradeToScale,
+  oneDecimal,
+  type GameBlockPlayerGradeJson,
+} from '../parts/team-league-match-common';
 import type { MatchFanGradesDataJson } from './types';
-import { countLabel } from '#/lib/count';
 
 /**
- * Match › Fan grades: BTL reader grades for both line-ups, in formation
- * (`pitch`, the default) or as ranked lists (`list`). Grades are BTL's 1 to 6,
- * lower better: the best (lowest) grade is the hero; each team's average is
- * its baseline. A side no reader graded is left out, header and all.
+ * Match › Fan grades: BTL reader grades on each line-up, 1 the best and 6
+ * the worst. Each graded side is a section ("Arsenal, fan grade, 1 is
+ * best"): shirt number, player, the grade drawn on the scale (1 at the full
+ * end) and the grade. A side nobody graded is left out.
  */
 export function MatchFanGradesBlock(props: GameBlockComponentProps<MatchFanGradesDataJson>) {
   const data = props.config.data ?? {};
-  const home = data.home ?? [];
-  const away = data.away ?? [];
-  const view = props.config.options.view === 'list' ? 'list' : 'pitch';
-  const top = topGraded([...home, ...away]);
-  const hero: BlockHero | undefined =
-    top && typeof top.grade === 'number'
-      ? {
-          figure: oneDecimal(top.grade),
-          label: `best grade, ${refName(top.player, true) || refName(top.player)}`,
-          baseline: top.votes ? [countLabel(top.votes, 'vote')] : undefined,
-        }
-      : undefined;
   const sides = [
-    {
-      name: refName(data.match?.home?.team),
-      players: home,
-      average: data.homeAverage,
-      formation: data.homeFormation,
-    },
-    {
-      name: refName(data.match?.away?.team),
-      players: away,
-      average: data.awayAverage,
-      formation: data.awayFormation,
-    },
+    { name: clubName(data.match?.home?.team?.name), players: data.home ?? [] },
+    { name: clubName(data.match?.away?.team?.name), players: data.away ?? [] },
   ].filter((s) => hasGrade(s.players));
   return (
-    <BlockFrame
-      {...matchFrame(props, data.match, 'fan-grades')}
-      hero={hero}
-      aside={sides.length > 0 ? <FanGradeSides sides={sides} view={view} top={top} /> : null}
-    />
+    <BlockFrame {...matchFrame(props, data.match, 'fan-grades')}>
+      {sides.length > 0 ? (
+        <Sections>
+          {sides.map((s, i) => (
+            <Section key={s.name || i} heading={`${s.name}, fan grade, 1 is best`}>
+              <GradeRows players={s.players} label={s.name} />
+            </Section>
+          ))}
+        </Sections>
+      ) : null}
+    </BlockFrame>
+  );
+}
+
+function GradeRows({ players, label }: { players: GameBlockPlayerGradeJson[]; label: string }) {
+  const { narrow } = useBlockLayout();
+  const cols = `22px minmax(0, 1fr) ${narrow ? 50 : 90}px 32px`;
+  return (
+    <Rows label={label}>
+      {players.map((p, i) => {
+        const graded = typeof p.grade === 'number';
+        return (
+          <Row key={p.player?.id || i} cols={cols} last={i === players.length - 1}>
+            <NumCell dim>{p.shirtNumber ?? ''}</NumCell>
+            <NameCell>{narrow ? surname(p.player?.name) : p.player?.name}</NameCell>
+            {graded ? (
+              <Bar frac={gradeToScale(p.grade!) / 100} label={gradeScaleLabel(p.grade!)} />
+            ) : (
+              <span />
+            )}
+            <NumCell dim={!graded}>{graded ? oneDecimal(p.grade) : '–'}</NumCell>
+          </Row>
+        );
+      })}
+    </Rows>
   );
 }
