@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { BlockScale, GatedValue } from '../skin/index';
 import type { GameBlockRankingRowJson } from '../league/types';
 import { useGatedCell } from '../values';
-import { ordinal } from './team-league-match-common';
 import { BlockGrid, RefName, ScaleCell } from './team-league-match-ui';
 
 /**
@@ -13,10 +12,10 @@ function RankingScale({ row }: { row: GameBlockRankingRowJson }) {
   const read = useGatedCell(row.percentileCell || undefined);
   if (!row.percentileCell) {
     if (typeof row.percentile !== 'number') return null;
-    return <BlockScale value={row.percentile} median={50} size="row" />;
+    return <BlockScale value={row.percentile} size="row" />;
   }
   if (read.state === 'value' && typeof read.value === 'number') {
-    return <BlockScale value={read.value} median={50} size="row" />;
+    return <BlockScale value={read.value} size="row" />;
   }
   if (read.state === 'no-data') return null;
   return <BlockScale value={0} size="row" state={read.state} />;
@@ -48,7 +47,6 @@ export function RankingRows({
         { label: '', width: 'minmax(0, 1fr)' },
         { label: '', align: 'left', wide: true },
         { label: valueLabel, strong: true },
-        { label: 'Pct' },
         { label: '', width: 'auto' },
       ]}
       rows={rows.map((r, i) => ({
@@ -63,9 +61,6 @@ export function RankingRows({
           </Either>,
           <Either cell={r.valueCell} width={28}>
             {r.value?.display || '–'}
-          </Either>,
-          <Either cell={r.percentileCell} width={24}>
-            {typeof r.percentile === 'number' ? ordinal(r.percentile) : '–'}
           </Either>,
           <ScaleCell>
             <RankingScale row={r} />
