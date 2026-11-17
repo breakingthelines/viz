@@ -2,7 +2,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Crest } from '#/football/lib/crest';
 import { resolveMediaSrc, useMediaBase } from './assets';
 import { TABULAR } from './primitives';
-import { useBlockLayout, useBlockScale, useBlockSkin } from './provider';
+import { useBlockLayout, useBlockScale, useBlockSkin, type BlockLayout } from './provider';
+import type { BlockScaleTokens } from './tokens';
 
 /**
  * The shared rows of the block style (style.md, Context and label columns,
@@ -389,4 +390,20 @@ export function QuietLines({ lines }: { lines: (string | null | undefined | fals
       ))}
     </div>
   );
+}
+
+/**
+ * The enclosing frame's layout for a block body. A block component renders
+ * `BlockFrame` itself, so its own hooks run outside the frame and read the
+ * default layout; a body that depends on the width or the drawn look reads
+ * it through this, inside the frame.
+ */
+export function InFrame({
+  children,
+}: {
+  children: (layout: BlockLayout & { scale: BlockScaleTokens }) => ReactNode;
+}) {
+  const layout = useBlockLayout();
+  const scale = useBlockScale();
+  return <>{children({ ...layout, scale })}</>;
 }

@@ -20,41 +20,40 @@ import type { GameBlockMatchStatJson, MatchStatsDataJson } from './types';
 export function MatchStatsBlock(props: GameBlockComponentProps<MatchStatsDataJson>) {
   const data = props.config.data ?? {};
   const stats = data.stats ?? [];
-  const { narrow } = useBlockLayout();
-  const half = narrow ? 70 : 150;
-  const cols = `minmax(0, 1fr) 44px ${half}px ${half}px 44px`;
   return (
     <BlockFrame
       {...matchFrame(props, data.match, 'match-stats')}
       annotate={{ target: '[data-stat-row="1"] [data-lead] [data-num]' }}
     >
-      {stats.length > 0 ? (
-        <Rows label="Match stats">
-          <Row cols={cols} head>
-            <span />
-            <LabelCell
-              small
-              align="right"
-              style={{ gridColumn: '2 / span 2', color: 'var(--btl-block-ink-1)' }}
-            >
-              {clubShort(data.match?.home?.team?.name)}
-            </LabelCell>
-            <LabelCell small style={{ gridColumn: '4 / span 2', color: 'var(--btl-block-ink-1)' }}>
-              {clubShort(data.match?.away?.team?.name)}
-            </LabelCell>
-          </Row>
-          {stats.map((s, i) => (
-            <StatRow
-              key={s.key || i}
-              stat={s}
-              cols={cols}
-              index={i}
-              last={i === stats.length - 1}
-            />
-          ))}
-        </Rows>
-      ) : null}
+      {stats.length > 0 ? <StatsTable data={data} /> : null}
     </BlockFrame>
+  );
+}
+
+function StatsTable({ data }: { data: MatchStatsDataJson }) {
+  const stats = data.stats ?? [];
+  const { narrow } = useBlockLayout();
+  const half = narrow ? 70 : 150;
+  const cols = `minmax(0, 1fr) 44px ${half}px ${half}px 44px`;
+  return (
+    <Rows label="Match stats">
+      <Row cols={cols} head>
+        <span />
+        <LabelCell
+          small
+          align="right"
+          style={{ gridColumn: '2 / span 2', color: 'var(--btl-block-ink-1)' }}
+        >
+          {clubShort(data.match?.home?.team?.name)}
+        </LabelCell>
+        <LabelCell small style={{ gridColumn: '4 / span 2', color: 'var(--btl-block-ink-1)' }}>
+          {clubShort(data.match?.away?.team?.name)}
+        </LabelCell>
+      </Row>
+      {stats.map((s, i) => (
+        <StatRow key={s.key || i} stat={s} cols={cols} index={i} last={i === stats.length - 1} />
+      ))}
+    </Rows>
   );
 }
 
