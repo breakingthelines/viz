@@ -1,3 +1,5 @@
+import { playerShortName } from '#/football/lib/player-name';
+
 /**
  * Club and player names as every block prints them (style.md, Title). Clubs
  * use the BTL display name, the club form dropped ("Liverpool F.C." is
@@ -102,30 +104,10 @@ export function clubFit(name: string | undefined, narrow: boolean, max = 16): st
   return narrow && full.length > max ? clubShort(name) : full;
 }
 
-const PARTICLES = new Set([
-  'van',
-  'von',
-  'de',
-  'der',
-  'den',
-  'da',
-  'dos',
-  'das',
-  'di',
-  'del',
-  'la',
-  'le',
-  'mac',
-  'ter',
-  'ten',
-  'el',
-]);
-
-/** A player's surname with its particle: "Virgil van Dijk" is "van Dijk". */
+/**
+ * A player's short name: "Virgil van Dijk" is "van Dijk", "Ángel Di María"
+ * is "Di María". The shared rule, `playerShortName`.
+ */
 export function surname(name: string | undefined): string {
-  const p = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  if (p.length < 2) return p[0] ?? '';
-  let i = p.length - 1;
-  while (i > 1 && PARTICLES.has(p[i - 1]!.toLowerCase())) i--;
-  return p.slice(i).join(' ');
+  return playerShortName(name);
 }

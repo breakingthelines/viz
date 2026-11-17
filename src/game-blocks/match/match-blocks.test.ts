@@ -104,6 +104,48 @@ describe('match blocks', () => {
     ).toBe("Dorgu 90+6', 4-4");
   });
 
+  it('timeline: a shootout lists its kicks after extra time, apart from the goals', () => {
+    const base = config('match-timeline');
+    const ref = (name: string) => ({ id: name, name });
+    const kick = (minute: string, side: 'H' | 'A', name: string, scored = true) => ({
+      minute,
+      side: side === 'H' ? 'GAME_BLOCK_SIDE_HOME' : 'GAME_BLOCK_SIDE_AWAY',
+      kind: scored ? 'KIND_PENALTY_GOAL' : 'KIND_MISSED_PENALTY',
+      player: ref(name),
+    });
+    const html = render({
+      ...base,
+      data: {
+        match: {
+          home: { team: { id: 'arg', name: 'Argentina' }, score: 1, penalties: 2 },
+          away: { team: { id: 'fra', name: 'France' }, score: 1, penalties: 1 },
+        },
+        events: [
+          {
+            ...kick('36', 'H', 'Ángel Di María'),
+            kind: 'KIND_GOAL',
+            relatedPlayer: ref('Alexis Mac Allister'),
+          },
+          { ...kick('108', 'A', 'Kylian Mbappé'), kind: 'KIND_GOAL' },
+          kick('120+3', 'H', 'Gonzalo Montiel'),
+          kick('120+1', 'A', 'Kylian Mbappé'),
+          kick('120+2', 'H', 'Lionel Messi'),
+          kick('120+4', 'A', 'Kingsley Coman', false),
+        ],
+      },
+    } as typeof base);
+    const t = text(html);
+    expect(t).toContain('Di María');
+    expect(t).toContain('Assist Mac Allister');
+    expect(t.indexOf('Extra time, second half')).toBeLessThan(t.indexOf('Penalty shootout'));
+    expect(t).toMatch(
+      /Penalty shootout.*1 .*Mbappé Scored 0-1.*2 .*Messi Scored 1-1.*3 .*Montiel Scored 2-1.*4 .*Coman Missed 2-1/
+    );
+    expect(html.match(/data-timeline-kick/g)).toHaveLength(4);
+    expect(html.match(/data-timeline-row=""/g)).toHaveLength(2);
+    expect(copyProblems(html)).toEqual([]);
+  });
+
   it('fan grades: each side a section of rows on the 1 to 6 scale, no hero or tick', () => {
     for (const view of ['pitch', 'list']) {
       const html = render(config('match-fan-grades', { options: { view } }));

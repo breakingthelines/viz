@@ -5,6 +5,23 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.3]
+
+### Fixed
+
+- **Match timeline**: a match decided on penalties lists its shootout after
+  extra time under "Penalty shootout": each kick in order, the taker, Scored
+  or Missed, and the running shootout score. Kicks are no longer counted as
+  goals, in the running score or on the strip. The stored feed does not mark
+  kicks, so they are read from a detail naming the shootout, else from the
+  shootout score and the penalty events from 120' on.
+- **Player names**: one short-name rule, `playerShortName`, mirrored from the
+  design system with the same test table. Compound surnames stay whole ("Di
+  María", "Mac Allister", "van Dijk", "ter Stegen", "Al-Dawsari") and the
+  provider's short form wins when given. `surname` in `football/lib`, the
+  block skin and the player blocks all use it, and the result board prefers
+  identity's short name.
+
 ## [0.38.2]
 
 ### Fixed

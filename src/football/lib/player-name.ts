@@ -1,80 +1,133 @@
 /**
  * Shared player-name helpers for football viz labels.
  *
- * Surnames are the last whitespace token, but compound / nobiliary surnames
- * carry one or more leading particles ("van Dijk", "Mac Allister", "De Bruyne",
- * "van der Sar"). Taking only the final token drops the particle, so we walk
- * backwards from the last token and keep absorbing recognised particles.
+ * `playerShortName` is the one short-name rule. It mirrors the design
+ * system's `playerShortName` (design-system
+ * src/components/game-centre/player-short-name.ts) line for line, with the
+ * same test table (src/football/lib/__tests__/player-name.test.ts); change
+ * both together. viz cannot import it: the design system is an optional peer
+ * and CI cannot install it yet.
+ *
+ * In order:
+ *  1. The provider's short form wins when given: leading initials go
+ *     ("R. Kolo Muani" is "Kolo Muani"), a form with none stays whole
+ *     ("Vinícius Júnior").
+ *  2. A name with leading initials is treated the same way.
+ *  3. A single token is the name ("Rodri", "Marquinhos").
+ *  4. Otherwise the last token, with any particles directly before it
+ *     ("Ángel Di María" is "Di María", "Edwin van der Sar" is "van der Sar"),
+ *     and a generational suffix keeps the token before it. The first token is
+ *     a forename and is only taken as a particle when it is in lower case.
  */
 
-/**
- * Lower-cased compound / nobiliary surname particles. When one of these sits
- * immediately before the running surname, it belongs to the surname.
- */
-const SURNAME_PARTICLES: ReadonlySet<string> = new Set([
-  'van',
-  'von',
-  'der',
-  'den',
+/** Lower-cased surname particles that stay with the surname after them. */
+export const PLAYER_NAME_PARTICLES: ReadonlySet<string> = new Set([
+  'abu',
+  'al',
+  'ben',
+  'bin',
+  'da',
+  'dal',
+  'dalla',
+  'das',
   'de',
+  'dei',
   'del',
   'della',
+  'den',
+  'der',
+  'des',
   'di',
-  'da',
-  'das',
+  'do',
   'dos',
   'du',
+  'el',
+  'ibn',
   'la',
   'le',
+  'lo',
   'mac',
   'mc',
-  'st',
+  'op',
   'san',
   'santa',
+  'st',
+  'st.',
+  'te',
   'ten',
   'ter',
-  'te',
-  'op',
-  'bin',
-  'ibn',
-  'al',
-  'abu',
+  'van',
+  'von',
 ]);
 
-/** Split a name into non-empty whitespace-separated tokens. */
-function tokenize(name: string): string[] {
-  return name.trim().split(/\s+/).filter(Boolean);
+/** Generational suffixes that never stand alone as a short name. */
+const SUFFIXES: ReadonlySet<string> = new Set([
+  'jr',
+  'jr.',
+  'junior',
+  'júnior',
+  'filho',
+  'neto',
+  'sobrinho',
+  'ii',
+  'iii',
+  'iv',
+]);
+
+/** A single letter and a dot: an abbreviated forename ("Á."). */
+const INITIAL = /^\p{L}\.$/u;
+
+function tokens(name: string | undefined): string[] {
+  return (name ?? '').trim().split(/\s+/).filter(Boolean);
+}
+
+/** The tokens after any leading initials, or undefined when there are none. */
+function afterInitials(parts: readonly string[]): string[] | undefined {
+  let start = 0;
+  while (start < parts.length && INITIAL.test(parts[start]!)) start += 1;
+  if (start === 0 || start >= parts.length) return undefined;
+  return parts.slice(start);
+}
+
+/**
+ * A player's short name: "Di María" for "Ángel Di María", "Mac Allister" for
+ * "Alexis Mac Allister", "Kolo Muani" for "Randal Kolo Muani" when the
+ * provider's "R. Kolo Muani" is given as `providerShort`.
+ */
+export function playerShortName(name: string | undefined, providerShort?: string): string {
+  const given = tokens(providerShort);
+  if (given.length > 0) return (afterInitials(given) ?? given).join(' ');
+  const parts = tokens(name);
+  if (parts.length === 0) return '';
+  const rest = afterInitials(parts);
+  if (rest) return rest.join(' ');
+  if (parts.length === 1) return parts[0]!;
+  let start = parts.length - 1;
+  if (SUFFIXES.has(parts[start]!.toLowerCase())) start -= 1;
+  while (start > 0 && PLAYER_NAME_PARTICLES.has(parts[start - 1]!.toLowerCase())) {
+    const prev = parts[start - 1]!;
+    // The first token is a forename ("Ben White") unless written in lower case.
+    if (start - 1 === 0 && prev !== prev.toLowerCase()) break;
+    start -= 1;
+  }
+  return parts.slice(start).join(' ');
+}
+
+/**
+ * Surname for an under-marker / chain label: `playerShortName`.
+ *
+ * - "Bukayo Saka"         → "Saka"
+ * - "Alexis Mac Allister" → "Mac Allister"
+ * - "Virgil van Dijk"     → "van Dijk"
+ * - "Pedri"               → "Pedri"
+ */
+export function surname(name: string): string {
+  return playerShortName(name);
 }
 
 /** True when `token` is a known compound/nobiliary surname particle. */
 function isParticle(token: string): boolean {
-  return SURNAME_PARTICLES.has(token.toLowerCase());
-}
-
-/**
- * Surname for an under-marker / chain label. Takes the last whitespace token,
- * then prepends any directly-preceding particle tokens so compound surnames
- * stay intact.
- *
- * - "Bukayo Saka"        → "Saka"
- * - "Alexis Mac Allister" → "Mac Allister"
- * - "Virgil van Dijk"     → "van Dijk"
- * - "Kevin De Bruyne"     → "De Bruyne"
- * - "Edwin van der Sar"   → "van der Sar"
- * - "Pedri"               → "Pedri"
- * - ""                    → ""
- */
-export function surname(name: string): string {
-  const parts = tokenize(name);
-  if (parts.length === 0) return '';
-
-  // Start at the final token and absorb any particles that precede it.
-  let start = parts.length - 1;
-  while (start > 0 && isParticle(parts[start - 1] ?? '')) {
-    start -= 1;
-  }
-
-  return parts.slice(start).join(' ');
+  return PLAYER_NAME_PARTICLES.has(token.toLowerCase());
 }
 
 /**
@@ -88,14 +141,14 @@ export function surname(name: string): string {
  * - ""                    → "?"
  */
 export function monogram(name: string): string {
-  const parts = tokenize(name);
+  const parts = tokens(name);
   if (parts.length === 0) return '?';
 
   const first = parts[0] ?? '';
   if (parts.length === 1) return first.charAt(0).toUpperCase();
 
   // Use the core of the surname (skip leading particles) for the second initial.
-  const surnameTokens = tokenize(surname(name));
+  const surnameTokens = tokens(surname(name));
   const core = surnameTokens.find((token) => !isParticle(token)) ?? surnameTokens[0] ?? '';
 
   return (first.charAt(0) + core.charAt(0)).toUpperCase();

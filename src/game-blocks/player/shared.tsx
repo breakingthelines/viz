@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { playerShortName } from '#/football/lib/player-name';
 import type { GameBlockComponentProps } from '../block-props';
 import type { BlockFrameProps, BlockMedia } from '../skin/index';
 import type { GameBlockConfig } from '../types';
@@ -15,10 +16,9 @@ export function playerContext(config: GameBlockConfig<unknown>): string {
   return parts.length > 0 ? parts.join(', ') : config.context;
 }
 
-/** "Bukayo Saka" to "Saka". */
+/** "Bukayo Saka" to "Saka", "Alexis Mac Allister" to "Mac Allister". */
 export function surname(name: string | undefined): string {
-  const parts = (name ?? '').trim().split(/\s+/);
-  return parts[parts.length - 1] ?? '';
+  return playerShortName(name);
 }
 
 /** The props every player block passes its frame, before its own hero and body. */
