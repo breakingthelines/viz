@@ -14,11 +14,10 @@ import { crestPosterChecks, editorialFallbackChecks } from './story-kit';
  * plausible, not real data. The headshot is a drawn bust, not a person.
  */
 
-/** The example in the `wheel_rows` view: the lead stat, the wheel and the rows. */
 function base(): GameBlockConfig {
   const res = toGameBlockConfig(WHEEL_EXAMPLE);
   if (!res.ok) throw new Error('fixture did not map');
-  return { ...res.config, options: { ...res.config.options, view: 'wheel_rows' } };
+  return res.config;
 }
 
 const PRO = gatedValuesFromJson(WHEEL_EXAMPLE.gated);
@@ -180,7 +179,7 @@ export const CustomTitleAndSubheading: Story = {
 };
 /** The compact view for card sets: the wheel only, no lead stat, no rows, no ordinals. */
 export const Compact: Story = {
-  args: { view: 'wheel' },
+  args: { view: 'compact' },
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('path.btl-pw-slc')).not.toBeNull();
     await expect(canvasElement.textContent).not.toContain('2.62');

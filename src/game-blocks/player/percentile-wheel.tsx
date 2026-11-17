@@ -2,16 +2,8 @@ import type { ReactNode } from 'react';
 import { PercentileWheel } from '../../stats/percentile-wheel';
 import type { MetricState, StatMetric } from '../../stats/stat-metric';
 import type { GameBlockComponentProps } from '../block-props';
-import {
-  BlockFrame,
-  BlockRows,
-  GatedValue,
-  useBlockSkin,
-  type BlockHero,
-  type BlockRow,
-} from '../skin/index';
+import { BlockFrame, BlockRows, GatedValue, useBlockSkin, type BlockRow } from '../skin/index';
 import type { GameBlockMetricJson, MetricStateJson, PlayerPercentileWheelDataJson } from '../types';
-import { useGatedCell } from '../values';
 
 /**
  * Player › Percentile wheel, the reference block for the skin. Percentiles are
@@ -19,10 +11,9 @@ import { useGatedCell } from '../values';
  * cells. No ordinals, medians or pool counts are drawn: the wheel's slices
  * carry the percentiles.
  *
- * Views: `wheel` (default, compact for card sets: the wheel only), `wheel_rows`
- * (the highlighted metric's per 90 figure, the wheel, and every metric's per
- * 90 value under the pool, "vs Premier League wingers"), `rows` (the rows
- * only).
+ * Views: `wheel` (default) and `wheel_rows`, the wheel and every metric's
+ * per 90 value under the pool ("vs Premier League wingers, per 90");
+ * `compact`, the wheel alone, for card sets; `rows`, the rows alone.
  */
 
 const STATE: Record<MetricStateJson, MetricState> = {
@@ -134,29 +125,18 @@ export function PlayerPercentileWheelBlock({
   const look = config.look ?? 'editorial';
   const view = config.options.view || 'wheel';
   const top = pickHighlight(metrics, config.options.highlight);
-  const read = useGatedCell(top?.valueCell);
   const group = groupLabel(data.groupPhrase, data.groupSize);
 
-  // `wheel` is the compact view (card sets): the wheel only, no lead stat
-  // and no rows. `wheel_rows` adds every metric's per 90 value under the
-  // pool; `rows` is the rows alone.
-  let hero: BlockHero | undefined;
-  if (top && view !== 'wheel' && read.state === 'value') {
-    hero = {
-      figure: read.display ?? String(read.value ?? ''),
-      label: `${lowerFirst(top.label ?? '')} per 90`,
-    };
-  }
-
-  let aside: ReactNode = null;
-  if (view === 'wheel_rows') {
-    aside = (
-      <div>
-        <PoolHeading group={group} />
-        <BlockRows columns={[]} rows={metrics.filter((m) => m !== top).map(rowOf)} />
-      </div>
-    );
-  }
+  // `compact` (card sets): the wheel alone. `wheel` (the default) and
+  // `wheel_rows`: the wheel, then every metric's per 90 value under the pool
+  // (the approved design). `rows`: the rows alone. No lead stat in any view.
+  const rowsUnder = view === 'wheel' || view === 'wheel_rows';
+  const aside: ReactNode = rowsUnder ? (
+    <div>
+      <PoolHeading group={group} />
+      <BlockRows columns={[]} rows={metrics.map(rowOf)} />
+    </div>
+  ) : null;
 
   const visual =
     view === 'rows' ? (
@@ -196,7 +176,6 @@ export function PlayerPercentileWheelBlock({
         crestSrc: subject.crestUrl,
         personId: subject.kind === 'player' ? subject.id : undefined,
       }}
-      hero={hero}
       lockedNote={config.lockedNote}
       density={density}
       exportName={`btl-${subject.name}-percentiles`}

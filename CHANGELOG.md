@@ -10,12 +10,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ### Changed: no ordinals, medians or pool counts on any block
 
 - **Percentile wheel.** The lead line ("99th Median 1.21 vs 49 Premier
-  League wingers") is gone. `wheel` (the default) is now the compact view
-  for card sets: the wheel only, no lead stat, no rows. `wheel_rows` shows
-  the highlighted metric's per 90 figure, the wheel, and every metric's per
-  90 value under the pool heading ("vs Premier League wingers, per 90", no
-  count); `rows` is the rows alone. Rows show the value only. The wheel's
-  slices keep their percentiles. `groupLabel` never prints a count.
+  League wingers") is gone, and there is no lead stat. `wheel` (the default,
+  so stored blocks keep their look) and `wheel_rows` draw the wheel, then
+  every metric's per 90 value under the pool heading ("vs Premier League
+  wingers, per 90", no count). New view `compact`: the wheel alone, for card
+  sets. `rows` is the rows alone. The wheel's slices keep their percentiles;
+  rows show the value only. `groupLabel` never prints a count.
 - **Comparison.** Heroes are the subject's per 90 value with the second
   player's beside it, never an ordinal; the rows view drops its percentile
   columns.

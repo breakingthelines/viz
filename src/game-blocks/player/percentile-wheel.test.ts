@@ -37,10 +37,10 @@ describe('Percentile wheel block', () => {
   });
 
   const rows = (patch: Partial<GameBlockConfig['options']> = {}) =>
-    config({ options: { ...config().options, view: 'wheel_rows', ...patch } });
+    config({ options: { ...config().options, view: 'wheel', ...patch } });
 
   it('draws no ordinal, median or pool count in any view', () => {
-    for (const view of ['wheel', 'wheel_rows', 'rows']) {
+    for (const view of ['wheel', 'wheel_rows', 'compact', 'rows']) {
       const html = render(config({ options: { ...config().options, view } }), PRO);
       expect(html).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
       expect(html).not.toContain('Median');
@@ -48,18 +48,19 @@ describe('Percentile wheel block', () => {
     }
   });
 
-  it('is compact by default: the wheel only, no lead stat and no rows', () => {
-    const html = render(config({ options: { ...config().options, view: 'wheel' } }), PRO);
+  it('compact (card sets): the wheel only, no lead stat and no rows', () => {
+    const html = render(config({ options: { ...config().options, view: 'compact' } }), PRO);
     expect(html).toContain('btl-pw-slc');
     expect(html).not.toContain('2.62');
     expect(html).not.toContain('data-wheel-pool');
     expect(html).not.toContain('data-block-anchor="hero"');
   });
 
-  it('shows the per 90 hero and every value under the pool to a Pro reader', () => {
-    const html = render(rows(), PRO);
+  it('by default draws the wheel and every per 90 value under the pool, no lead stat', () => {
+    const html = render(config(), PRO);
+    expect(html).toContain('btl-pw-slc');
     expect(html).toContain('2.62');
-    expect(html).toMatch(/key passes per\s90/);
+    expect(html).not.toContain('data-block-anchor="hero"');
     expect(html).toMatch(/vs Premier League wingers(<!-- -->)?, per 90/);
     expect(html).not.toContain('data-block-locked-note');
     expect(html).not.toContain('data-cell-state');
