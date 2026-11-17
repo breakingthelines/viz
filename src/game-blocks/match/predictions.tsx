@@ -9,7 +9,7 @@ import {
   Row,
   Rows,
   clubName,
-  useBlockLayout,
+  InFrame,
 } from '../skin/index';
 import { matchFrame } from '../parts/match-common';
 import { isPlayed, matchScore } from '../parts/team-league-match-common';
@@ -22,7 +22,6 @@ import type { MatchPredictionsDataJson } from './types';
  */
 export function MatchPredictionsBlock(props: GameBlockComponentProps<MatchPredictionsDataJson>) {
   const data = props.config.data ?? {};
-  const { narrow } = useBlockLayout();
   const home = clubName(data.match?.home?.team?.name) || 'Home';
   const away = clubName(data.match?.away?.team?.name) || 'Away';
   const shares = [
@@ -32,30 +31,33 @@ export function MatchPredictionsBlock(props: GameBlockComponentProps<MatchPredic
   ].filter((s): s is { key: string; label: string; share: number } => typeof s.share === 'number');
   const top = Math.max(...shares.map((s) => s.share), 0);
   const score = isPlayed(data.match?.status) ? matchScore(data.match) : '';
-  const cols = `minmax(0, 1fr) 48px ${narrow ? 140 : 300}px`;
   return (
     <BlockFrame
       {...matchFrame(props, data.match, 'predictions')}
       annotate={{ target: '[data-lead-share] [data-num]' }}
     >
       {shares.length > 0 ? (
-        <Rows label="Predictions">
-          {shares.map((s, i) => {
-            const lead = s.share === top;
-            return (
-              <Row
-                key={s.key}
-                cols={cols}
-                last={i === shares.length - 1}
-                data-lead-share={lead ? '' : undefined}
-              >
-                <NameCell>{s.label}</NameCell>
-                <NumCell dim={!lead}>{`${Math.round(s.share)}%`}</NumCell>
-                <Bar frac={s.share / 100} dim={!lead} />
-              </Row>
-            );
-          })}
-        </Rows>
+        <InFrame>
+          {({ narrow }) => (
+            <Rows label="Predictions">
+              {shares.map((s, i) => {
+                const lead = s.share === top;
+                return (
+                  <Row
+                    key={s.key}
+                    cols={`minmax(0, 1fr) 48px ${narrow ? 140 : 300}px`}
+                    last={i === shares.length - 1}
+                    data-lead-share={lead ? '' : undefined}
+                  >
+                    <NameCell>{s.label}</NameCell>
+                    <NumCell dim={!lead}>{`${Math.round(s.share)}%`}</NumCell>
+                    <Bar frac={s.share / 100} dim={!lead} />
+                  </Row>
+                );
+              })}
+            </Rows>
+          )}
+        </InFrame>
       ) : null}
       <div style={{ marginTop: 20 }}>
         <FactRows
