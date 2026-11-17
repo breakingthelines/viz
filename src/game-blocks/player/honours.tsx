@@ -20,7 +20,7 @@ function newestFirst(list: GameBlockHonourJson[]): GameBlockHonourJson[] {
 export function PlayerHonoursBlock(props: GameBlockComponentProps<PlayerHonoursDataJson>) {
   const honours = newestFirst(props.config.data?.honours ?? []);
   return (
-    <BlockFrame {...baseFrame(props, 'honours')}>
+    <BlockFrame {...baseFrame(props, 'honours')} annotate={{ target: '[data-num]' }}>
       {honours.length > 0 ? <HonoursRows honours={honours} /> : null}
     </BlockFrame>
   );

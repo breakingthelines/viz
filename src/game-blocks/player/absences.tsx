@@ -39,7 +39,10 @@ export function PlayerAbsencesBlock(props: GameBlockComponentProps<PlayerAbsence
     (b.from ?? '').localeCompare(a.from ?? '')
   );
   return (
-    <BlockFrame {...baseFrame(props, 'absences')}>
+    <BlockFrame
+      {...baseFrame(props, 'absences')}
+      annotate={{ target: '[role="row"] [role="cell"]:last-child' }}
+    >
       {list.length > 0 ? (
         <InFrame>
           {({ scale }) => (

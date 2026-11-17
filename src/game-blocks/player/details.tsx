@@ -48,7 +48,7 @@ export function PlayerDetailsBlock(props: GameBlockComponentProps<PlayerDetailsD
   const born = d.dateOfBirth ? `${shortDate(d.dateOfBirth)} ${d.dateOfBirth.slice(0, 4)}` : '';
   const contract = /^(\d{4})-(\d{2})/.exec(d.contractEnd ?? '');
   return (
-    <BlockFrame {...baseFrame(props, 'details')} split>
+    <BlockFrame {...baseFrame(props, 'details')} split annotate={{ target: '[data-num]' }}>
       <FactRows
         rows={[
           d.team?.name ? (['Club', clubName(d.team.name)] as const) : null,

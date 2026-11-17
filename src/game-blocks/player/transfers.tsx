@@ -23,7 +23,7 @@ export function PlayerTransfersBlock(props: GameBlockComponentProps<PlayerTransf
     (b.date ?? '').localeCompare(a.date ?? '')
   );
   return (
-    <BlockFrame {...baseFrame(props, 'transfers')}>
+    <BlockFrame {...baseFrame(props, 'transfers')} annotate={{ target: '[data-num]' }}>
       {moves.length > 0 ? (
         <InFrame>
           {({ narrow, scale }) => (

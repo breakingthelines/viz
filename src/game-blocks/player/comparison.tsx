@@ -580,9 +580,11 @@ function ScalesComparison(props: ComparisonProps) {
       annotate={top?.key ? { target: `[data-k="${top.key}"] [data-num]` } : undefined}
     >
       {metrics.length > 0 ? (
-        <Section heading={pairHeading(data)}>
-          <MirrorRows metrics={metrics} subject={aName} comparison={bName} mode="percentile" />
-        </Section>
+        <div data-comparison-view={props.view}>
+          <Section heading={pairHeading(data)}>
+            <MirrorRows metrics={metrics} subject={aName} comparison={bName} mode="percentile" />
+          </Section>
+        </div>
       ) : null}
     </BlockFrame>
   );
