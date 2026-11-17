@@ -1,35 +1,28 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { BlockFrame, type BlockHero } from '../skin/index';
-import { refName } from '../parts/team-league-match-common';
-import { LeaderRows } from '../parts/league-leaders';
+import { BlockFrame, Section } from '../skin/index';
+import { StatBoard } from '../parts/league-board';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { LeagueLeadersDataJson } from './types';
 
-/**
- * League › Leaders: top scorers, assists or cards. The leader's figure is the
- * hero; the board follows.
- */
+/** League › Leaders: one stat's board under its name ("Goals"), the leader's bar full. */
 export function LeagueLeadersBlock(props: GameBlockComponentProps<LeagueLeadersDataJson>) {
-  const { config } = props;
-  const data = config.data ?? {};
+  const data = props.config.data ?? {};
   const rows = data.rows ?? [];
   const label = data.categoryLabel || data.category || '';
-  const lead = rows[0];
-  const hero: BlockHero | undefined = lead?.value?.display
-    ? {
-        figure: lead.value.display,
-        label: label.toLowerCase(),
-        baseline: [refName(lead.player), refName(lead.team, true)].filter(Boolean),
-      }
-    : undefined;
+  const max = Math.max(0, ...rows.map((r) => r.value?.value ?? 0));
   return (
     <BlockFrame
-      {...frameBase(props, {
-        context: [config.scope.seasonLabel, label].filter(Boolean).join(', ') || config.context,
-        noun: 'leaders',
-      })}
-      hero={hero}
-      aside={rows.length > 1 ? <LeaderRows rows={rows.slice(1)} valueLabel={label} /> : null}
-    />
+      {...frameBase(props, { noun: 'leaders' })}
+      annotate={{ target: '[data-board-row] [data-num]' }}
+    >
+      {rows.length > 0 ? (
+        <Section heading={label}>
+          <StatBoard
+            rows={rows.map((r, i) => ({ key: r.player?.id || String(i), ...r }))}
+            max={max}
+          />
+        </Section>
+      ) : null}
+    </BlockFrame>
   );
 }

@@ -37,7 +37,7 @@ function CategoryBoard({ category }: { category: LeaguePlayerRankingsCategoryJso
   const skin = useBlockSkin();
   const body = useBodyFont();
   const label = category.metricLabel || category.metricKey || '';
-  const heading = category.per90 ? `${label} per 90` : label;
+  const heading = category.per90 ? `${label} p90` : label;
   const rows = category.rows ?? [];
   const small = narrow ? 13 : 14;
   const row: CSSProperties = {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameBlockEntry } from '../registry';
 import type { GameBlockLook, GameBlockTypeId } from '../types';
-import { fixtureMiddle, groupByDay } from '../parts/league-fixtures';
+import { dayHeading, matchdayTitle } from './fixtures';
 import { config, copyProblems, render, text } from '../parts/team-league-match-test-kit';
 import type { LeaguePlayerRankingsDataJson } from './types';
 import { askedLook } from '../fixtures/look';
@@ -34,40 +34,39 @@ describe('league blocks', () => {
     }
   });
 
-  it('table: the highlighted team as the subject row and how many rows are shown', () => {
+  it('table: crest rows, GD with a sign, the highlighted club bold, no row count', () => {
     const html = render(config('league-table'));
     const t = text(html);
     expect(t).toContain('Premier League');
-    expect(t).toContain('6 of 20');
+    expect(t).not.toContain('6 of 20');
     expect(t).toContain('+15');
-    expect(html.match(/data-grid-subject/g)?.length).toBe(1);
+    expect(html.match(/data-table-subject/g)?.length).toBe(1);
     const none = render(config('league-table', { options: { view: 'top_six' } }));
-    expect(none).not.toContain('data-grid-subject');
+    expect(none).not.toContain('data-table-subject');
   });
 
-  it('team stats: sorted rows, the highlighted team, the league median row', () => {
+  it('team stats: a board per stat, the five best clubs, no median row', () => {
     const html = render(config('league-team-stats'));
     const t = text(html);
-    expect(t).toContain('Median');
-    expect(t).toContain('15.8');
+    expect(t).not.toContain('Median');
+    expect(html.match(/data-stat-board=/g)?.length).toBeGreaterThan(1);
     expect(t.indexOf('Man City')).toBeLessThan(t.indexOf('Arsenal'));
-    expect(html.match(/data-grid-subject/g)?.length).toBe(1);
   });
 
-  it('leaders: the leader as the hero, the rest as rows on the leader scale', () => {
+  it('leaders: one board under the stat, the leader first, a bar for each', () => {
     const html = render(config('league-leaders'));
     const t = text(html);
-    expect(t).toContain('14 goals');
-    expect(t).toContain('Saka');
-    expect(html.match(/data-scale-state="value"/g)?.length).toBeGreaterThan(0);
+    expect(t).toContain('Goals');
+    expect(t).not.toContain('14 goals');
+    expect(t.indexOf('Haaland')).toBeLessThan(t.indexOf('Saka'));
+    expect(html.match(/data-board-row/g)?.length).toBeGreaterThan(1);
   });
 
-  it('player rankings, Pro: names, values, percentiles and the median resolve', () => {
+  it('player rankings, Pro: names and values resolve; no ordinal or median', () => {
     const t = text(render(config('league-player-rankings')));
     expect(t).toContain('Bukayo Saka');
     expect(t).toContain('2.62');
-    expect(t).toContain('98th');
-    expect(t).toContain('Median 1.40');
+    expect(t).not.toMatch(/\b\d+(st|nd|rd|th)\b|Median/);
   });
 
   it('player rankings, free: every gated cell locked, the note shown, nothing paid leaks', () => {
@@ -77,7 +76,6 @@ describe('league blocks', () => {
     expect(t).not.toContain('2.62');
     expect(t).not.toContain('1.40');
     expect(html).toContain('data-cell-state="locked"');
-    expect(html).toContain('data-scale-state="locked"');
     expect(t).toContain('Rankings for paid metrics are for Pro readers.');
   });
 
@@ -119,8 +117,8 @@ describe('league blocks', () => {
     );
     const t = text(html);
     expect(t).toContain('Erling Haaland');
-    expect(t).toContain('99th');
-    expect(t).toContain('Median 3');
+    expect(t).not.toContain('99th');
+    expect(t).not.toContain('Median');
     expect(html).not.toContain('data-cell-state');
     expect(html).not.toContain('data-block-locked-note');
   });
@@ -191,28 +189,25 @@ describe('league blocks', () => {
     expect(html.match(/data-cell-state="locked"/g)?.length).toBe(1);
   });
 
-  it('fixtures: grouped by day, kick-off times and statuses', () => {
+  it('fixtures: titled by matchday, grouped by day, kick-off times and statuses', () => {
     const t = text(render(config('league-fixtures')));
-    expect(t).toContain('21 Nov 2026');
+    expect(t).toContain('Sat 21 Nov');
     expect(t).toContain('15:00');
     expect(t).toContain('Postponed');
-    expect(
-      fixtureMiddle({
-        status: 'GAME_BLOCK_MATCH_STATUS_FINISHED',
-        home: { score: 1, penalties: 4 },
-        away: { score: 1, penalties: 3 },
-      })
-    ).toBe('1-1 (4-3 pens)');
-    expect(groupByDay([{ kickoff: '2026-11-21T23:30:00Z' }])[0][0]).toBe('2026-11-21');
+    expect(matchdayTitle('Regular Season - 10')).toBe('Matchday 10');
+    expect(matchdayTitle('Round 11')).toBe('Matchday 11');
+    expect(matchdayTitle('Game Round 2026-11-21')).toBe('');
+    expect(dayHeading('2026-11-21T15:00:00Z', false)).toBe('Saturday 21 November');
+    expect(dayHeading('2026-11-21T15:00:00Z', true)).toBe('Sat 21 Nov');
   });
 
-  it('bracket: rounds in order, the side through marked, an undecided tie plain', () => {
+  it('bracket: rounds in order, Leg 1, Leg 2 and Aggregate, the side through bold', () => {
     const html = render(config('league-bracket'));
     const t = text(html);
     expect(t.indexOf('Quarter-finals')).toBeLessThan(t.indexOf('Semi-finals'));
     expect(t).toContain('Final');
-    expect(t).toContain('5-1 on aggregate');
-    expect(t).toContain('To be decided');
+    expect(t).toContain('Aggregate');
+    expect(t).not.toContain('Total');
     expect(html.match(/data-tie-winner/g)?.length).toBe(5);
   });
 
