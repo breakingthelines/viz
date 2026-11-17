@@ -21,7 +21,8 @@ import type { GameBlockConfig } from '../types';
 import { useGatedCell } from '../values';
 import type { GameBlockComparisonMetricJson, PlayerComparisonDataJson } from './data';
 import { groupLabel, lowerFirst } from './percentile-wheel';
-import { baseFrame, pctOf, surname } from './shared';
+import { playerShort } from '../skin/names';
+import { baseFrame, pctOf } from './shared';
 
 /**
  * Player › Comparison. Two players in one position group, each against his
@@ -151,8 +152,8 @@ export function PlayerComparisonBlock(props: GameBlockComponentProps<PlayerCompa
   const metrics = config.data?.metrics ?? [];
   const a = config.subject;
   const b = config.comparison;
-  const aName = surname(a.name);
-  const bName = surname(b?.name) || 'Comparison';
+  const aName = playerShort(a);
+  const bName = playerShort(b) || 'Comparison';
   // Players carry their ids, so the poster draws their cut-outs and never a
   // headshot where a crest goes.
   const media: BlockMedia = {

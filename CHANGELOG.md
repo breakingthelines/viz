@@ -5,6 +5,15 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0]
+
+### Changed
+
+- **Player comparison**: the two players' names in the keys, rows and wheels
+  prefer the subject cards' stored short names (`GameBlockSubjectCard.short_name`,
+  protos 0.234.0: "Bruno Fernandes", "Son") and fall back to
+  `playerShortName`. `GameBlockSubject.shortName` carries it.
+
 ## [0.39.0]
 
 ### Changed

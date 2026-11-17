@@ -215,6 +215,43 @@ describe('Match log', () => {
 });
 
 describe('Comparison', () => {
+  it("names the players by the subject cards' stored short names", () => {
+    const json = {
+      ...PLAYER_EXAMPLES['player-comparison'],
+      subject: {
+        ...PLAYER_EXAMPLES['player-comparison'].subject,
+        name: 'Bruno Miguel Borges Fernandes',
+        shortName: 'Bruno Fernandes',
+      },
+      comparison: {
+        ...PLAYER_EXAMPLES['player-comparison'].comparison,
+        name: 'Son Heung-min',
+        shortName: 'Son',
+      },
+    } as GameBlockJson;
+    const res = toGameBlockConfig(json);
+    if (!res.ok) throw new Error(res.reason);
+    expect(res.config.subject.shortName).toBe('Bruno Fernandes');
+    expect(res.config.comparison?.shortName).toBe('Son');
+    const html = renderToStaticMarkup(
+      h(GameBlockValuesProvider, {
+        initial: { [res.config.snapshotId]: values('player-comparison', 'pro') },
+        children: h(GameBlockView, { config: res.config }),
+      })
+    );
+    expect(html).toContain('>Bruno Fernandes<');
+    expect(html).toContain('>Son<');
+    expect(html).not.toContain('>Heung-min<');
+    // Without them, the shared rule.
+    const plain = toGameBlockConfig({
+      ...json,
+      subject: { ...json.subject, shortName: '' },
+      comparison: { ...json.comparison, shortName: '' },
+    } as GameBlockJson);
+    if (!plain.ok) throw new Error(plain.reason);
+    expect(plain.config.subject.shortName).toBeUndefined();
+  });
+
   const scales = { options: { view: 'scales', highlight: 'key' } };
   const view = (v: string, extra: Partial<GameBlockConfig> = {}) =>
     render('player-comparison', 'pro', { ...extra, options: { view: v } });
