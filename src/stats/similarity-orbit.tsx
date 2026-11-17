@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -22,16 +23,20 @@ import {
   linkedDot,
   memberIndex,
   nearestDot,
+  orbitCardLines,
   orbitLayout,
+  pairCardLines,
   pairOrbitLabel,
-  placeLines,
-  placesLine,
-  rankPhrase,
+  placeCard,
   singleOrbitLabel,
+  spotlightIds,
+  spotlightLine,
+  type CardSpot,
   type OrbitData,
   type OrbitLayout,
   type OrbitPlayer,
   type OrbitScale,
+  type OrbitSpotlight,
 } from './similarity-orbit-model';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -45,19 +50,29 @@ import {
  *                        player: his dot in his own colour with his face,
  *                        the disc inside his radius lit (the Compare page).
  *
- * Interactive (the default): a name shows beside a dot under the pointer or
- * keyboard focus; a tap or Enter selects a player, lights the disc to his
- * radius, gives him a face and opens the detail strip under the orbits (the
- * caller supplies its actions). Arrow keys move through the dots in rank
- * order. Escape, the same dot again, the strip's close control or a tap
- * outside closes it. `interactive={false}` draws the static picture only,
- * for an article or a share card.
+ * Interactive (the default; owner, 2026-11-17): the pointer over a dot or a
+ * face makes it the hot player (a pointer cursor, the dot grows, the rest
+ * fade a little), draws a line from the centre to him with his score and a
+ * faint ring at his distance, and opens a card beside him (headshot, name,
+ * club, how similar and where he sits). Keyboard focus does the same. Every
+ * label sits in one top layer above the faces, stems and centre, never
+ * clipped by the orbit and kept on screen. A tap or Enter selects a player,
+ * lights the disc to his radius, gives him a face and opens the detail
+ * strip under the orbits with the card's lines (the caller supplies its
+ * actions). Arrow keys move through the dots in rank order. Escape, the same
+ * dot again, the strip's close control or a tap outside closes it. A
+ * `spotlight` lights the members who play a role and fades the rest, with a
+ * caption. `interactive={false}` draws the static picture only, for an
+ * article or a share card.
  *
- * The static picture is the server HTML. Once hydrated, dots drift slowly
- * round their homes (Web Animations, seeded from the player id, never so far
- * that two dots cross; faces and stems follow their dot, the centre stays).
- * The drift is off under prefers-reduced-motion and with `motion={false}`,
- * and pauses off screen and while anything is hovered, focused or selected.
+ * The static picture is the server HTML. Once hydrated, the first time the
+ * orbit is on screen its dots settle out from the centre in rank order and
+ * the faces fade in; a re-centred combined orbit glides every dot from its
+ * old place to its new one. Then dots drift slowly round their homes (Web
+ * Animations, seeded from the player id, never so far that two dots cross;
+ * faces and stems follow their dot, the centre stays). All motion is off
+ * under prefers-reduced-motion and with `motion={false}`; the drift pauses
+ * off screen and while anything is hovered, focused or selected.
  * ──────────────────────────────────────────────────────────────────────── */
 
 export const ORBIT_RED = '#ff3b3b';
@@ -87,6 +102,24 @@ export interface OrbitScaleChoice {
 export type OrbitFaceSources = (player: OrbitPlayer) => readonly string[];
 
 const defaultSources: OrbitFaceSources = (p) => (p.imageUrl ? [p.imageUrl] : []);
+
+/** Layout effects in the browser, plain effects on the server (no warning). */
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/** Labels' top layer, above faces (auto), crayon loops (3) and the anchor. */
+const OVERLAY_Z = 30;
+/** Stem width at the regular scale: 2 for one orbit, 3 for a combined pair. */
+const STEM_WIDTH = 2;
+
+/** Positions kept across a re-centre for the glide, per layout size. */
+type GlideStore = RefObject<Map<
+  number,
+  {
+    anchor: string;
+    dots: Map<string, { x: number; y: number }>;
+    faces: Map<string, { x: number; y: number }>;
+  }
+> | null>;
 
 /* ── motion ─────────────────────────────────────────────────────────────── */
 
@@ -263,7 +296,16 @@ function Face({
   label,
   onClick,
   slot,
+  hot = false,
+  faded = false,
+  faceId,
 }: {
+  /** Under the pointer or focus: a little bigger, never dimmed. */
+  hot?: boolean;
+  /** Outside a roles spotlight. */
+  faded?: boolean;
+  /** The player's id, for the field's hover. */
+  faceId?: string;
   sources: readonly string[];
   /** Diameter as a share of the orbit's width, 0 to 1. */
   size: number;
@@ -281,19 +323,20 @@ function Face({
     display: 'block',
     width: `${(size * 100).toFixed(3)}cqw`,
     height: `${(size * 100).toFixed(3)}cqw`,
-    transform: 'translate(-50%, -50%)',
+    transform: hot ? 'translate(-50%, -50%) scale(1.08)' : 'translate(-50%, -50%)',
     borderRadius: 9999,
     overflow: 'hidden',
     padding: 0,
     border: 0,
     background: '#2a2828',
     boxShadow: `0 0 0 2px ${SURFACE}, 0 0 0 ${size > 0.15 ? 3.5 : 3}px ${ring}`,
-    opacity: dim ? 0.55 : 1,
+    opacity: faded ? 0.3 : dim && !hot ? 0.55 : 1,
+    transition: `transform 160ms ${EASE}, opacity 160ms ${EASE}`,
   };
   const img = <Headshot sources={sources} />;
   if (!onClick) {
     return (
-      <span data-slot={slot} aria-hidden="true" style={style}>
+      <span data-slot={slot} data-face-id={faceId} aria-hidden="true" style={style}>
         {img}
       </span>
     );
@@ -302,6 +345,7 @@ function Face({
     <button
       type="button"
       data-slot={slot}
+      data-face-id={faceId}
       aria-label={label}
       tabIndex={-1}
       onClick={(e) => {
@@ -365,6 +409,12 @@ interface FieldProps {
   loops?: readonly { id: string; color: string }[];
   /** Stem weight, as a multiple of the default. */
   stemWeight?: number;
+  /** The hover card's lines for a member; his place alone without it. */
+  cardLines?: (id: string) => string[];
+  /** Members lit by a roles spotlight (the rest fade), with its caption. */
+  spotlight?: { ids: ReadonlySet<string>; line: string } | null;
+  /** Positions kept across a re-centre, for the glide. */
+  glide?: GlideStore;
   sources: OrbitFaceSources;
   slot: string;
 }
@@ -431,8 +481,12 @@ function ScaleView({
   const size = scale.size;
   const n = data.members.length;
   const svgRef = useRef<SVGSVGElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
   const dotRefs = useRef<(SVGCircleElement | null)[]>([]);
   const [focused, setFocused] = useState<number | null>(null);
+  // Focus from the keyboard shows the card; a tap's focus opens the strip only.
+  const [keyFocus, setKeyFocus] = useState(false);
+  const spot = p.spotlight && p.spotlight.ids.size > 0 ? p.spotlight : null;
 
   const selectedIndex = p.selected ? memberIndex(data, p.selected) : -1;
   const hoverIndex = p.hover ? memberIndex(data, p.hover) : -1;
@@ -457,6 +511,7 @@ function ScaleView({
   const focusDot = (i: number) => {
     const next = Math.max(0, Math.min(n - 1, i));
     setFocused(next);
+    setKeyFocus(true);
     dotRefs.current[next]?.focus();
   };
   const onKey = (e: KeyboardEvent<SVGCircleElement>, i: number) => {
@@ -496,14 +551,52 @@ function ScaleView({
   };
 
   const litR = p.lit >= 0 && dots[p.lit] ? dots[p.lit]!.r : -1;
-  const hoverAt = hoverIndex >= 0 ? hoverIndex : focused;
-  const hoverDot = hoverAt !== null && hoverAt >= 0 ? dots[hoverAt] : undefined;
-  const hoverName = hoverAt !== null && hoverAt >= 0 ? (data.members[hoverAt]?.name ?? '') : '';
+  // The hot player: under the pointer, else focused from the keyboard. The
+  // distance line also follows a tap's pick, so a phone sees it too.
+  const hotAt = !interactive
+    ? -1
+    : hoverIndex >= 0
+      ? hoverIndex
+      : focused !== null && keyFocus
+        ? focused
+        : -1;
+  const lineAt = hotAt >= 0 ? hotAt : interactive ? selectedIndex : -1;
+  const hotId = interactive && p.hover ? p.hover : null;
+
+  // Settle once, the first time the orbit moves (hydrated, on screen,
+  // motion allowed); glide on a re-centre. Positions are kept per layout.
+  const settled = useRef(false);
+  useClientLayoutEffect(() => {
+    const root = fieldRef.current;
+    if (!root) return;
+    const dotsNow = new Map<string, { x: number; y: number }>();
+    dots.forEach((d, i) => dotsNow.set(data.members[i]!.id, { x: d.x, y: d.y }));
+    dotsNow.set(data.anchor.id, { x: cx, y: cy });
+    const facesNow = new Map<string, { x: number; y: number }>();
+    faces.forEach((f) => facesNow.set(data.members[f.index]!.id, { x: f.x, y: f.y }));
+    facesNow.set(data.anchor.id, { x: cx, y: cy });
+    const store = p.glide?.current ?? null;
+    const before = store?.get(size);
+    const prev = before && before.anchor !== data.anchor.id ? before : null;
+    store?.set(size, { anchor: data.anchor.id, dots: dotsNow, faces: facesNow });
+    if (!p.moving || prefersReducedMotion()) return;
+    if (!prev && settled.current) return;
+    settled.current = true;
+    animateArrival(root, size, { x: cx, y: cy }, data, dotsNow, facesNow, prev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.anchor.id, p.moving]);
 
   const handlers = interactive
     ? {
         onPointerMove: (e: PointerEvent<HTMLDivElement>) => {
           if (e.pointerType !== 'mouse') return;
+          // A face is its player's hover target as much as his dot.
+          const face = (e.target as Element).closest?.('[data-face-id]');
+          if (face) {
+            const id = face.getAttribute('data-face-id');
+            if (id !== p.hover) p.onHover(id);
+            return;
+          }
           const at = unitsAt(e);
           if (!at) return;
           const i = nearestDot(dots, at.x, at.y, at.reach);
@@ -533,6 +626,7 @@ function ScaleView({
       style={{ marginTop: pct(layout.overflow.top), marginBottom: pct(layout.overflow.bottom) }}
     >
       <div
+        ref={fieldRef}
         data-slot={`${p.slot}-field`}
         style={{
           position: 'relative',
@@ -541,6 +635,7 @@ function ScaleView({
           containerType: 'inline-size',
           touchAction: 'manipulation',
           userSelect: 'none',
+          cursor: hotAt >= 0 && hoverIndex >= 0 ? 'pointer' : undefined,
         }}
         {...handlers}
       >
@@ -582,68 +677,115 @@ function ScaleView({
                 : p.dim;
             const isSelected = i === selectedIndex;
             const ring = ringed.has(i) || isSelected;
+            const lit = !!spot && spot.ids.has(m.id);
+            const hot = i === hotAt;
+            const fade = spot ? (lit || hot ? 1 : 0.16) : hotAt >= 0 && !hot ? 0.5 : 1;
             return (
               <g
                 key={m.id}
-                data-orbit-drift={p.moving ? driftAttr(m.id, n, scale, 'svg') : undefined}
+                data-orbit-glide={m.id}
+                style={{ opacity: fade, transition: `opacity 160ms ${EASE}` }}
               >
-                {face ? (
-                  <line
-                    x1={face.stem[0]}
-                    y1={face.stem[1]}
-                    x2={face.stem[2]}
-                    y2={face.stem[3]}
-                    stroke={role?.ink ?? ORBIT_WHITE}
-                    strokeWidth={(big ? 1.25 : 1) * (p.stemWeight ?? 1)}
-                    strokeOpacity={role?.dim ? 0.55 : 1}
-                  />
-                ) : null}
-                {ring ? (
+                <g data-orbit-drift={p.moving ? driftAttr(m.id, n, scale, 'svg') : undefined}>
+                  {face ? (
+                    <line
+                      data-slot={`${p.slot}-stem`}
+                      data-orbit-stem=""
+                      x1={face.stem[0]}
+                      y1={face.stem[1]}
+                      x2={face.stem[2]}
+                      y2={face.stem[3]}
+                      stroke={role?.ink ?? ORBIT_WHITE}
+                      strokeWidth={STEM_WIDTH * (big ? 1 : 0.7) * (p.stemWeight ?? 1)}
+                      strokeLinecap="round"
+                      strokeOpacity={role?.dim && !hot ? 0.55 : 1}
+                    />
+                  ) : null}
+                  {ring ? (
+                    <circle
+                      data-slot={`${p.slot}-ring`}
+                      data-player={m.id}
+                      cx={d.x}
+                      cy={d.y}
+                      r={scale.dot + (big ? 3.5 : 2.4)}
+                      fill="none"
+                      stroke={ORBIT_WHITE}
+                      strokeWidth={big ? 1.5 : 1}
+                    />
+                  ) : null}
+                  {i === focused ? (
+                    <circle
+                      cx={d.x}
+                      cy={d.y}
+                      r={scale.dot + (big ? 5.5 : 3.5)}
+                      fill="none"
+                      stroke={LABEL}
+                      strokeOpacity={0.7}
+                      strokeWidth={1}
+                    />
+                  ) : null}
                   <circle
-                    data-slot={`${p.slot}-ring`}
+                    ref={(node) => {
+                      dotRefs.current[i] = node;
+                    }}
+                    data-slot={`${p.slot}-dot`}
                     data-player={m.id}
+                    data-rank={m.rank}
+                    data-hot={hot ? 'true' : undefined}
+                    data-lit={lit ? 'true' : undefined}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? (i === active ? 0 : -1) : undefined}
+                    aria-label={
+                      interactive ? (m.club ? `${m.name}, ${m.club}` : m.name) : undefined
+                    }
+                    aria-pressed={interactive ? isSelected : undefined}
                     cx={d.x}
                     cy={d.y}
-                    r={scale.dot + (big ? 3.5 : 2.4)}
-                    fill="none"
-                    stroke={ORBIT_WHITE}
-                    strokeWidth={big ? 1.5 : 1}
+                    r={
+                      hot
+                        ? scale.dot + (big ? 2 : 1.2)
+                        : role || isSelected || lit
+                          ? scale.dot + 0.8
+                          : scale.dot
+                    }
+                    fill={isSelected || hot || (lit && !role) ? ORBIT_WHITE : fill}
+                    style={{ outline: 'none', transition: `r 160ms ${EASE}` }}
+                    onFocus={
+                      interactive
+                        ? (e) => {
+                            setFocused(i);
+                            // Arrow keys set it before moving focus; a tap never does.
+                            const visible = e.currentTarget.matches?.(':focus-visible') ?? false;
+                            setKeyFocus((k) => k || visible);
+                          }
+                        : undefined
+                    }
+                    onBlur={
+                      interactive
+                        ? (e) => {
+                            setFocused((f) => (f === i ? null : f));
+                            // Arrowing to the next dot keeps the keyboard's card.
+                            const next = e.relatedTarget as Node | null;
+                            if (!next || !svgRef.current?.contains(next)) setKeyFocus(false);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={interactive ? (e) => onKey(e, i) : undefined}
                   />
-                ) : null}
-                {i === focused ? (
-                  <circle
-                    cx={d.x}
-                    cy={d.y}
-                    r={scale.dot + (big ? 5.5 : 3.5)}
-                    fill="none"
-                    stroke={LABEL}
-                    strokeOpacity={0.7}
-                    strokeWidth={1}
-                  />
-                ) : null}
-                <circle
-                  ref={(node) => {
-                    dotRefs.current[i] = node;
-                  }}
-                  data-slot={`${p.slot}-dot`}
-                  data-player={m.id}
-                  data-rank={m.rank}
-                  role={interactive ? 'button' : undefined}
-                  tabIndex={interactive ? (i === active ? 0 : -1) : undefined}
-                  aria-label={interactive ? (m.club ? `${m.name}, ${m.club}` : m.name) : undefined}
-                  aria-pressed={interactive ? isSelected : undefined}
-                  cx={d.x}
-                  cy={d.y}
-                  r={role || isSelected ? scale.dot + 0.8 : scale.dot}
-                  fill={isSelected ? ORBIT_WHITE : fill}
-                  style={{ outline: 'none' }}
-                  onFocus={interactive ? () => setFocused(i) : undefined}
-                  onBlur={interactive ? () => setFocused((f) => (f === i ? null : f)) : undefined}
-                  onKeyDown={interactive ? (e) => onKey(e, i) : undefined}
-                />
+                </g>
               </g>
             );
           })}
+          {lineAt >= 0 && dots[lineAt] ? (
+            <DistanceMark
+              cx={cx}
+              cy={cy}
+              x={dots[lineAt]!.x}
+              y={dots[lineAt]!.y}
+              big={big}
+              slot={p.slot}
+            />
+          ) : null}
         </svg>
         {faces.map((f) => {
           const m = data.members[f.index]!;
@@ -651,7 +793,7 @@ function ScaleView({
           return (
             <span
               key={`face-${m.id}`}
-              data-orbit-drift={p.moving ? driftAttr(m.id, n, scale, 'html') : undefined}
+              data-orbit-glide-face={m.id}
               style={{
                 position: 'absolute',
                 display: 'block',
@@ -659,27 +801,44 @@ function ScaleView({
                 top: pct(f.y),
                 width: 0,
                 height: 0,
+                zIndex: m.id === hotId ? 2 : undefined,
               }}
             >
-              <Face
-                slot={`${p.slot}-face`}
-                sources={p.sources(m)}
-                size={f.size / size}
-                ring={role.ring}
-                dim={role.dim}
-                label={m.name}
-                onClick={
-                  interactive
-                    ? p.onFace
-                      ? () => p.onFace!(m.id)
-                      : () => p.onSelect(m.id === p.selected ? null : m.id, false)
-                    : undefined
-                }
-              />
+              <span
+                data-orbit-drift={p.moving ? driftAttr(m.id, n, scale, 'html') : undefined}
+                style={{
+                  position: 'absolute',
+                  display: 'block',
+                  left: 0,
+                  top: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              >
+                <Face
+                  faceId={m.id}
+                  hot={m.id === hotId}
+                  faded={!!spot && !spot.ids.has(m.id)}
+                  slot={`${p.slot}-face`}
+                  sources={p.sources(m)}
+                  size={f.size / size}
+                  ring={role.ring}
+                  dim={role.dim}
+                  label={m.name}
+                  onClick={
+                    interactive
+                      ? p.onFace
+                        ? () => p.onFace!(m.id)
+                        : () => p.onSelect(m.id === p.selected ? null : m.id, false)
+                      : undefined
+                  }
+                />
+              </span>
             </span>
           );
         })}
         <span
+          data-orbit-glide-face={data.anchor.id}
           style={{
             position: 'absolute',
             display: 'block',
@@ -690,6 +849,8 @@ function ScaleView({
           }}
         >
           <Face
+            faceId={p.onAnchor ? data.anchor.id : undefined}
+            hot={!!p.onAnchor && data.anchor.id === hotId}
             slot={`${p.slot}-anchor`}
             sources={p.sources(data.anchor)}
             size={scale.face / size}
@@ -711,35 +872,393 @@ function ScaleView({
             slot={p.slot}
           />
         ) : null}
-        {interactive && hoverDot && hoverName ? (
-          <span
-            data-slot={`${p.slot}-name`}
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              zIndex: 10,
-              left: pct(hoverDot.x),
-              top: pct(hoverDot.y),
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-              borderRadius: 3,
-              padding: '2px 6px',
-              fontSize: 12,
-              lineHeight: 1.25,
-              color: LABEL,
-              background: 'rgba(21,21,21,0.88)',
-              transform:
-                hoverDot.x > size * 0.6
-                  ? 'translate(calc(-100% - 8px), -50%)'
-                  : 'translate(8px, -50%)',
-            }}
-          >
-            {hoverName}
-          </span>
+        {interactive ? (
+          <OrbitOverlay
+            slot={p.slot}
+            fieldRef={fieldRef}
+            size={size}
+            cx={cx}
+            cy={cy}
+            card={
+              hotAt >= 0 && dots[hotAt]
+                ? {
+                    member: data.members[hotAt]!,
+                    sources: p.sources(data.members[hotAt]!),
+                    lines: p.cardLines
+                      ? p.cardLines(data.members[hotAt]!.id)
+                      : orbitCardLines(data, hotAt, data.anchor.name),
+                    ring: roleAt.get(hotAt)?.ring ?? ORBIT_WHITE,
+                    dot: dots[hotAt]!,
+                    face: faceAt.get(hotAt),
+                    dotR: scale.dot + (big ? 2 : 1.2),
+                  }
+                : null
+            }
+            distance={
+              lineAt >= 0 && dots[lineAt] && data.members[lineAt]?.similarity !== undefined
+                ? {
+                    x: dots[lineAt]!.x,
+                    y: dots[lineAt]!.y,
+                    pct: data.members[lineAt]!.similarity!,
+                    inner: scale.face / 2 + (big ? 16 : 11),
+                  }
+                : null
+            }
+            caption={spot ? spot.line : null}
+          />
         ) : null}
       </div>
     </div>
   );
+}
+
+/** The hot player's distance: a line from the centre and a faint ring at it. */
+function DistanceMark({
+  cx,
+  cy,
+  x,
+  y,
+  big,
+  slot,
+}: {
+  cx: number;
+  cy: number;
+  x: number;
+  y: number;
+  big: boolean;
+  slot: string;
+}) {
+  const r = Math.hypot(x - cx, y - cy);
+  return (
+    <g pointerEvents="none" data-slot={`${slot}-distance`}>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke={ORBIT_WHITE}
+        strokeOpacity={0.22}
+        strokeWidth={big ? 1 : 0.8}
+      />
+      <line
+        x1={cx}
+        y1={cy}
+        x2={x}
+        y2={y}
+        stroke={ORBIT_WHITE}
+        strokeOpacity={0.7}
+        strokeWidth={big ? 1.4 : 1}
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
+interface OverlayCard {
+  member: OrbitPlayer;
+  sources: readonly string[];
+  lines: readonly string[];
+  ring: string;
+  dot: { x: number; y: number };
+  face?: { x: number; y: number; size: number };
+  dotR: number;
+}
+
+const LABEL_SURFACE = '#1c1c1c';
+const LABEL_BORDER = '1px solid rgba(255,255,255,0.12)';
+const LABEL_SHADOW = '0 6px 20px rgba(0,0,0,0.5)';
+
+/**
+ * Every label the orbit shows, in one layer above everything else in it:
+ * the hover card, the distance score and the spotlight caption. Opaque, so
+ * nothing shows through; the card is measured and placed to stay on screen.
+ */
+function OrbitOverlay({
+  slot,
+  fieldRef,
+  size,
+  cx,
+  cy,
+  card,
+  distance,
+  caption,
+}: {
+  slot: string;
+  fieldRef: RefObject<HTMLDivElement | null>;
+  size: number;
+  cx: number;
+  cy: number;
+  card: OverlayCard | null;
+  distance: { x: number; y: number; pct: number; inner: number } | null;
+  caption: string | null;
+}) {
+  const pct = (v: number) => `${((v / size) * 100).toFixed(3)}%`;
+  let badge: { left: string; top: string } | null = null;
+  if (distance) {
+    const r = Math.hypot(distance.x - cx, distance.y - cy) || 1;
+    // On the line just outside the centre face, or past the dot when he is
+    // that close.
+    const at = r > distance.inner + 18 ? Math.max(distance.inner, r * 0.45) : r + 14;
+    badge = {
+      left: pct(cx + ((distance.x - cx) / r) * at),
+      top: pct(cy + ((distance.y - cy) / r) * at),
+    };
+  }
+  return (
+    <div
+      data-slot={`${slot}-overlay`}
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: OVERLAY_Z,
+        pointerEvents: 'none',
+      }}
+    >
+      {distance && badge ? (
+        <span
+          data-slot={`${slot}-distance-label`}
+          style={{
+            position: 'absolute',
+            left: badge.left,
+            top: badge.top,
+            transform: 'translate(-50%, -50%)',
+            borderRadius: 3,
+            padding: '1px 6px',
+            fontSize: 12,
+            fontWeight: 600,
+            lineHeight: 1.4,
+            whiteSpace: 'nowrap',
+            color: '#ffffff',
+            background: LABEL_SURFACE,
+            border: LABEL_BORDER,
+          }}
+        >
+          {distance.pct}%
+        </span>
+      ) : null}
+      {caption ? (
+        <span
+          data-slot={`${slot}-spotlight`}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: '1%',
+            transform: 'translateX(-50%)',
+            maxWidth: '100%',
+            borderRadius: 4,
+            padding: '4px 10px',
+            fontSize: 13,
+            lineHeight: 1.35,
+            textAlign: 'center',
+            color: LABEL,
+            background: LABEL_SURFACE,
+            border: LABEL_BORDER,
+            boxShadow: LABEL_SHADOW,
+          }}
+        >
+          {caption}
+        </span>
+      ) : null}
+      {card ? (
+        <HoverCard
+          key={card.member.id}
+          card={card}
+          fieldRef={fieldRef}
+          size={size}
+          cx={cx}
+          cy={cy}
+          slot={slot}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** The hot player's card: measured, then placed beside him and kept on screen. */
+function HoverCard({
+  card,
+  fieldRef,
+  size,
+  cx,
+  cy,
+  slot,
+}: {
+  card: OverlayCard;
+  fieldRef: RefObject<HTMLDivElement | null>;
+  size: number;
+  cx: number;
+  cy: number;
+  slot: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [spot, setSpot] = useState<CardSpot | null>(null);
+  const key = `${card.dot.x},${card.dot.y},${card.face?.x ?? ''},${card.lines.join('|')}`;
+  useClientLayoutEffect(() => {
+    const el = ref.current;
+    const field = fieldRef.current;
+    if (!el || !field) return;
+    const rect = field.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const k = rect.width / size;
+    const view = field.ownerDocument.defaultView;
+    const vw = view?.innerWidth ?? rect.right;
+    const margin = 8;
+    const at = card.face ?? card.dot;
+    setSpot(
+      placeCard({
+        x: at.x * k,
+        y: at.y * k,
+        clear: card.face ? (card.face.size / 2) * k + 3 : card.dotR * k,
+        face: !!card.face,
+        cx: cx * k,
+        cy: cy * k,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        minX: margin - rect.left,
+        maxX: vw - margin - rect.left,
+        minY: margin - rect.top,
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, size]);
+  return (
+    <span
+      ref={ref}
+      data-slot={`${slot}-card`}
+      data-side={spot?.side}
+      style={{
+        position: 'absolute',
+        left: spot ? spot.left : 0,
+        top: spot ? spot.top : 0,
+        visibility: spot ? 'visible' : 'hidden',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+        width: 'max-content',
+        maxWidth: 'min(280px, calc(100vw - 16px))',
+        boxSizing: 'border-box',
+        borderRadius: 4,
+        padding: '9px 12px 9px 9px',
+        background: LABEL_SURFACE,
+        border: LABEL_BORDER,
+        boxShadow: LABEL_SHADOW,
+      }}
+    >
+      <span
+        style={{
+          width: 30,
+          height: 30,
+          flexShrink: 0,
+          borderRadius: 9999,
+          background: '#2a2828',
+          boxShadow: `0 0 0 2px ${SURFACE}, 0 0 0 3px ${card.ring}`,
+        }}
+      >
+        <Headshot sources={card.sources} />
+      </span>
+      <span style={{ display: 'flex', minWidth: 0, flexDirection: 'column', gap: 1 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: '#ffffff' }}>
+          {card.member.name}
+        </span>
+        {card.member.club ? (
+          <span style={{ fontSize: 12, lineHeight: 1.35, color: MUTED }}>{card.member.club}</span>
+        ) : null}
+        {card.lines.map((l, k) => (
+          <span
+            key={l}
+            data-slot={`${slot}-card-line`}
+            style={{ marginTop: k === 0 ? 4 : 0, fontSize: 12, lineHeight: 1.4, color: LABEL }}
+          >
+            {l}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The arrival: with no earlier layout, dots fly out from the centre in rank
+ * order and the faces and stems fade in after them; after a re-centre, every
+ * dot and face glides from where it was. Web Animations on the glide
+ * wrappers, so the drift inside them runs on.
+ */
+function animateArrival(
+  root: HTMLElement,
+  size: number,
+  centre: { x: number; y: number },
+  data: OrbitData,
+  dots: Map<string, { x: number; y: number }>,
+  faces: Map<string, { x: number; y: number }>,
+  prev: {
+    dots: Map<string, { x: number; y: number }>;
+    faces: Map<string, { x: number; y: number }>;
+  } | null
+) {
+  const order = new Map(data.members.map((m, i) => [m.id, i]));
+  root.querySelectorAll<SVGGElement>('[data-orbit-glide]').forEach((el) => {
+    if (typeof el.animate !== 'function') return;
+    const id = el.getAttribute('data-orbit-glide')!;
+    const now = dots.get(id);
+    if (!now) return;
+    if (prev) {
+      const was = prev.dots.get(id);
+      if (!was) return;
+      el.animate(
+        [{ transform: `translate(${was.x - now.x}px, ${was.y - now.y}px)` }, { transform: 'none' }],
+        { duration: 760, easing: EASE }
+      );
+      return;
+    }
+    el.animate(
+      [
+        { transform: `translate(${centre.x - now.x}px, ${centre.y - now.y}px)`, opacity: 0 },
+        { transform: 'none', opacity: 1 },
+      ],
+      { duration: 720, delay: 60 + (order.get(id) ?? 0) * 4, easing: EASE, fill: 'backwards' }
+    );
+  });
+  const cq = (v: number) => `${((v / size) * 100).toFixed(3)}cqw`;
+  root.querySelectorAll<HTMLElement>('[data-orbit-glide-face]').forEach((el, k) => {
+    if (typeof el.animate !== 'function') return;
+    const id = el.getAttribute('data-orbit-glide-face')!;
+    const now = faces.get(id);
+    if (!now) return;
+    const was = prev ? (prev.faces.get(id) ?? prev.dots.get(id)) : undefined;
+    if (prev && was) {
+      el.animate(
+        [
+          { transform: `translate(${cq(was.x - now.x)}, ${cq(was.y - now.y)})` },
+          { transform: 'none' },
+        ],
+        { duration: 760, easing: EASE }
+      );
+      return;
+    }
+    const centreFace = id === data.anchor.id;
+    el.animate(
+      [
+        { opacity: 0, transform: 'scale(0.6)' },
+        { opacity: 1, transform: 'none' },
+      ],
+      {
+        duration: 460,
+        delay: prev ? 380 : centreFace ? 0 : 520 + k * 90,
+        easing: EASE,
+        fill: 'backwards',
+      }
+    );
+  });
+  root.querySelectorAll<SVGElement>('[data-orbit-stem]').forEach((el) => {
+    if (typeof el.animate !== 'function') return;
+    el.animate(
+      prev ? [{ opacity: 0 }, { opacity: 0 }, { opacity: 1 }] : [{ opacity: 0 }, { opacity: 1 }],
+      prev
+        ? { duration: 760, easing: 'linear' }
+        : { duration: 360, delay: 560, easing: EASE, fill: 'backwards' }
+    );
+  });
 }
 
 /**
@@ -1132,6 +1651,8 @@ export interface SimilarityOrbitProps {
   renderActions?: (member: OrbitPlayer) => ReactNode;
   /** The accessible name; a sentence naming the closest three by default. */
   label?: string;
+  /** Lights the members who play a role, with a caption; null for none. */
+  spotlight?: OrbitSpotlight | null;
   slot?: string;
 }
 
@@ -1147,6 +1668,7 @@ export function SimilarityOrbit({
   faceSources = defaultSources,
   renderActions,
   label,
+  spotlight = null,
   slot = 'similarity-orbit',
 }: SimilarityOrbitProps) {
   const start =
@@ -1159,6 +1681,16 @@ export function SimilarityOrbit({
   const selected = s.pick?.id ?? null;
   const index = selected ? memberIndex(orbit, selected) : -1;
   const member = index >= 0 ? orbit.members[index] : undefined;
+  const glide: GlideStore = useRef(new Map());
+  const short = anchorShort ?? orbit.anchor.name;
+  const cardLines = (id: string) => orbitCardLines(orbit, memberIndex(orbit, id), short);
+  const lit = useMemo(
+    () =>
+      spotlight
+        ? { ids: spotlightIds(orbit, spotlight), line: spotlightLine(orbit, spotlight) }
+        : null,
+    [orbit, spotlight]
+  );
   return (
     <div
       {...s.rootProps}
@@ -1187,6 +1719,9 @@ export function SimilarityOrbit({
         onHover={(id) => s.setHover(id ? { id, orbit: 0 } : null)}
         onSelect={s.select(0)}
         sources={faceSources}
+        cardLines={cardLines}
+        spotlight={lit}
+        glide={glide}
       />
       {interactive ? (
         <OrbitDetailStrip
@@ -1197,10 +1732,10 @@ export function SimilarityOrbit({
           ring={index >= 0 && index < 3 ? ORBIT_RED : ORBIT_WHITE}
           sources={member ? faceSources(member) : []}
           title={member ? [member.name, member.club].filter(Boolean).join(', ') : ''}
-          line={member ? rankPhrase(orbit, index, anchorShort ?? orbit.anchor.name) : ''}
+          line={member ? cardLines(member.id).join(', ') : ''}
           name={member?.name ?? ''}
           club={member?.club}
-          lines={member ? [rankPhrase(orbit, index, anchorShort ?? orbit.anchor.name)] : []}
+          lines={member ? cardLines(member.id) : []}
           onClose={() => s.close(true)}
           actions={member && renderActions ? renderActions(member) : undefined}
         />
@@ -1273,6 +1808,8 @@ export interface SimilarityOrbitPairProps {
   cellClassName?: string;
   /** The class on the row of orbits (its gap by breakpoint); 12 px without one. */
   rowClassName?: string;
+  /** Lights the members who play a role in both orbits; null for none. */
+  spotlight?: OrbitSpotlight | null;
   slot?: string;
 }
 
@@ -1288,9 +1825,11 @@ export function SimilarityOrbitPair({
   cellStyle,
   cellClassName,
   rowClassName,
+  spotlight = null,
   slot = 'similarity-orbits',
 }: SimilarityOrbitPairProps) {
   const s = useOrbitSelection(null);
+  const glides: [GlideStore, GlideStore] = [useRef(new Map()), useRef(new Map())];
   const moving = useOrbitMotion(s.rootRef, motion && interactive);
   useDrift(s.rootRef, moving, s.still, `${orbits[0].anchor.id}:${orbits[1].anchor.id}`);
   const inks = [ORBIT_RED, ORBIT_WHITE] as const;
@@ -1357,6 +1896,13 @@ export function SimilarityOrbitPair({
                 onSelect={s.select(o)}
                 onAnchor={() => s.select(o)(anchors[o].id, false)}
                 sources={faceSources}
+                cardLines={(id) => pairCardLines(orbits, shortNames, id, o)}
+                spotlight={
+                  spotlight
+                    ? { ids: spotlightIds(d, spotlight), line: spotlightLine(d, spotlight) }
+                    : null
+                }
+                glide={glides[o]}
               />
               {captioned ? (
                 <span
@@ -1385,10 +1931,10 @@ export function SimilarityOrbitPair({
           animate={moving}
           sources={picked ? faceSources(picked) : []}
           title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
-          line={pick ? placesLine(orbits, shortNames, pick.id) : ''}
+          line={pick ? pairCardLines(orbits, shortNames, pick.id, pick.orbit).join(' · ') : ''}
           name={picked?.name ?? ''}
           club={picked?.club}
-          lines={pick ? placeLines(orbits, shortNames, pick.id) : []}
+          lines={pick ? pairCardLines(orbits, shortNames, pick.id, pick.orbit) : []}
           onClose={() => s.close(true)}
           actions={picked && renderActions ? renderActions(picked, main) : undefined}
         />
@@ -1430,6 +1976,8 @@ export interface SimilarityOrbitCombinedProps {
    * the player the orbit is centred on now.
    */
   renderActions?: (player: OrbitPlayer, main: boolean, centre: OrbitPlayer) => ReactNode;
+  /** Lights the members who play a role, whichever player is centred; null for none. */
+  spotlight?: OrbitSpotlight | null;
   slot?: string;
 }
 
@@ -1449,6 +1997,7 @@ export function SimilarityOrbitCombined({
   motion = true,
   faceSources = defaultSources,
   renderActions,
+  spotlight = null,
   slot = 'similarity-orbit-combined',
 }: SimilarityOrbitCombinedProps) {
   const [centre, setCentre] = useState<0 | 1>(0);
@@ -1456,23 +2005,8 @@ export function SimilarityOrbitCombined({
   const s = useOrbitSelection(null);
   const moving = useOrbitMotion(s.rootRef, motion && interactive);
   useDrift(s.rootRef, moving, s.still, `${orbits[0].anchor.id}:${orbits[1].anchor.id}:${shown}`);
-  const morphRef = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    const el = morphRef.current;
-    if (!el || typeof el.animate !== 'function' || prefersReducedMotion()) return;
-    el.animate(
-      [
-        { opacity: 0.2, transform: 'scale(0.94) rotate(-6deg)' },
-        { opacity: 1, transform: 'scale(1) rotate(0deg)' },
-      ],
-      { duration: 280, easing: EASE }
-    );
-  }, [shown]);
+  // The re-centre glides every dot from its old place (animateArrival).
+  const glide: GlideStore = useRef(new Map());
 
   const inks = [ORBIT_RED, ORBIT_WHITE] as const;
   const d = orbits[shown];
@@ -1488,6 +2022,12 @@ export function SimilarityOrbitCombined({
     : undefined;
   const main = !!picked && anchors.some((a) => a.id === picked.id);
 
+  const lit = useMemo(
+    () =>
+      spotlight ? { ids: spotlightIds(d, spotlight), line: spotlightLine(d, spotlight) } : null,
+    [d, spotlight]
+  );
+
   const swap = (to: 0 | 1) => {
     if (to === centre) return;
     s.close(false);
@@ -1502,7 +2042,7 @@ export function SimilarityOrbitCombined({
       data-orbit-centre={d.anchor.id}
       style={{ display: 'flex', minWidth: 0, flexDirection: 'column', gap: 12 }}
     >
-      <div ref={morphRef} key={shown}>
+      <div key={shown}>
         <OrbitField
           slot={`${slot}-orbit`}
           data={d}
@@ -1530,8 +2070,11 @@ export function SimilarityOrbitCombined({
             { id: d.anchor.id, color: LOOP_INK },
             { id: other.id, color: LOOP_INK },
           ]}
-          stemWeight={1.8}
+          stemWeight={1.5}
           sources={faceSources}
+          cardLines={(id) => pairCardLines(orbits, shortNames, id, shown)}
+          spotlight={lit}
+          glide={glide}
         />
       </div>
       {interactive ? (
@@ -1584,10 +2127,10 @@ export function SimilarityOrbitCombined({
           ring={selIndex >= 0 && selIndex < 3 ? ink : ORBIT_WHITE}
           sources={picked ? faceSources(picked) : []}
           title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
-          line={selected ? placesLine(orbits, shortNames, selected) : ''}
+          line={selected ? pairCardLines(orbits, shortNames, selected, shown).join(' · ') : ''}
           name={picked?.name ?? ''}
           club={picked?.club}
-          lines={selected ? placeLines(orbits, shortNames, selected) : []}
+          lines={selected ? pairCardLines(orbits, shortNames, selected, shown) : []}
           quietPlaces
           onClose={() => s.close(true)}
           actions={picked && renderActions ? renderActions(picked, main, d.anchor) : undefined}

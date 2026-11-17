@@ -5,6 +5,39 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0]
+
+### Added
+
+- **Similarity orbits** (owner, 2026-11-17), in `SimilarityOrbit`,
+  `SimilarityOrbitCombined` and `SimilarityOrbitPair`:
+  - The pointer on a dot or a face makes him the hot player: a pointer
+    cursor, his dot grows, the rest fade a little. Faces are hover targets.
+  - A hover card beside him (headshot, name, club, how similar and where he
+    sits): "73% similar to Haaland", "16th closest of 157 strikers"; on a
+    combined or paired orbit one line per orbit, "78% like Mbappé, 6th
+    closest". Keyboard focus shows it too; a tap opens the strip, which now
+    carries the same lines.
+  - A line from the centre to him, a faint ring at his distance and his score
+    on an opaque label.
+  - `spotlight` (`OrbitSpotlight`): lights the members who play a role and
+    fades the rest, with a caption ("Box Threat: 18 of the 157 other
+    strikers").
+  - Every label (card, score, caption) sits in one top layer above faces,
+    stems and the centre; the card is measured and kept on screen.
+  - Motion: the first time an orbit is on screen its dots settle out from the
+    centre by rank; a re-centred combined orbit glides every dot to its new
+    place (replacing the fade and turn). Off under reduced motion and with
+    `motion={false}`.
+- `OrbitMember.similarity` and `OrbitMember.roles`; `orbitCardLines`,
+  `pairCardLines`, `placeWords`, `spotlightIds`, `spotlightLine`, `placeCard`.
+
+### Changed
+
+- Stems are wider and longer: 2 px on one player's orbit and 3 px on a
+  combined pair, at least `STEM_MIN` (12 units at the regular scale) long.
+- The hover name tag is replaced by the card.
+
 ## [0.40.0]
 
 ### Changed
