@@ -92,10 +92,10 @@ describe('match blocks', () => {
     expect(t).toContain('Martinelli 2.5');
   });
 
-  it('fan grades, list view: best grade first, on the 1 to 6 scale with the average as the tick', () => {
+  it('fan grades, list view: best grade first, on the 1 to 6 scale, no average tick', () => {
     const html = render(config('match-fan-grades', { options: { view: 'list' } }));
     expect(html).not.toContain('data-top-grade');
-    expect(html.match(/data-scale-median/g)?.length).toBe(23);
+    expect(html).not.toContain('data-scale-median');
     expect(html).toContain('aria-label="Grade 1.3 of 6, 1 is best"');
     expect(html).not.toContain('out of 100');
     const t = text(html);

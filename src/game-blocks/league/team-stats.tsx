@@ -4,7 +4,7 @@ import { TeamStatsTable } from '../parts/league-team-stats';
 import { frameBase } from '../parts/team-league-match-ui';
 import type { LeagueTeamStatsDataJson } from './types';
 
-/** League › Team stats: the chosen columns for every team, sorted, with the league median. */
+/** League › Team stats: the chosen columns for every team, sorted. */
 export function LeagueTeamStatsBlock(props: GameBlockComponentProps<LeagueTeamStatsDataJson>) {
   const { config } = props;
   const data = config.data ?? {};
