@@ -91,6 +91,24 @@ One style for every game block (block-style spec, approved 16 Nov 2026).
 - `InFrame` reads the frame's layout inside the frame: a block's own hooks
   run outside `BlockFrame` and saw the narrow default.
 
+### Changed: league blocks in the block style
+
+- **Table**: place, crest, club, P W D L GD Pts (P GD Pts narrow), points
+  bold, the highlighted club bold. No "6 of 20" note.
+- **Fixtures**: titled "Matchday 10" from the provider round (a date-keyed
+  prediction round keeps the competition name), grouped by day ("Saturday 7
+  November", "Sat 7 Nov" narrow), home right-aligned, the score or UK
+  kick-off centred, away left-aligned; a postponed game shows its status.
+- **Player rankings and leaders**: one board under the stat ("Key passes
+  p90, wingers"): name, club (wide), a bar to the leader, the value. A
+  several-stat board's heading reads "Key passes p90" for a per 90 stat.
+- **Team stats**: a board per stat (the five best clubs), two across when
+  wide; abbreviated column labels in words ("Pts" is "Points").
+- **League strength**: rows under "Index", the block's league in red.
+- **Bracket**: a section per round; two-legged rounds head "Leg 1", "Leg 2"
+  and "Aggregate" (the word kept at every width), one-game rounds "Score";
+  the side through bold, the other in ink 3.
+
 ## [0.36.0]
 
 ### Changed: no ordinals, medians or pool counts on any block
