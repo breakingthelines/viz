@@ -84,20 +84,20 @@
       "wide": {
         "size": 12.5,
         "labels": {
-          "npg": ["Goals", "-76.00", "207.6", false],
+          "npg": ["NP goals", "-76.00", "207.6", false],
           "shots": ["Shots", "-52.00", "207.6", false],
-          "sotp": ["On target", "-28.00", "207.6", false],
+          "sotp": ["On target %", "-28.00", "207.6", false],
           "ast": ["Assists", "0.00", "207.6", false],
           "key": ["Key passes", "24.00", "214.1", true],
           "passes": ["Passes", "52.00", "214.1", true],
-          "acc": ["Accuracy", "76.00", "214.1", true],
+          "acc": ["Pass %", "76.00", "214.1", true],
           "drs": ["Dribbles", "104.00", "214.1", true],
-          "drp": ["Success", "128.00", "214.1", true],
-          "fd": ["Fouled", "152.00", "214.1", true],
+          "drp": ["Dribble %", "128.00", "214.1", true],
+          "fd": ["Fouls won", "152.00", "214.1", true],
           "tkl": ["Tackles", "180.00", "207.6", false],
           "int": ["Interceptions", "204.00", "207.6", false],
-          "dw": ["Duels", "228.00", "207.6", false],
-          "dwp": ["Win rate", "252.00", "207.6", false]
+          "dw": ["Duels won", "228.00", "207.6", false],
+          "dwp": ["Duel %", "252.00", "207.6", false]
         },
         "families": [
           ["Shooting", "-87.40", "-16.60", true],
@@ -110,20 +110,20 @@
       "narrow": {
         "size": 15,
         "labels": {
-          "npg": ["Goals", "-76.00", "208.2", false],
+          "npg": ["NP goals", "-76.00", "208.2", false],
           "shots": ["Shots", "-52.00", "208.2", false],
-          "sotp": ["On target", "-28.00", "208.2", false],
+          "sotp": ["On target %", "-28.00", "208.2", false],
           "ast": ["Assists", "0.00", "208.2", false],
           "key": ["Key passes", "24.00", "215.9", true],
           "passes": ["Passes", "52.00", "215.9", true],
-          "acc": ["Accuracy", "76.00", "215.9", true],
+          "acc": ["Pass %", "76.00", "215.9", true],
           "drs": ["Dribbles", "104.00", "215.9", true],
-          "drp": ["Success", "128.00", "215.9", true],
-          "fd": ["Fouled", "152.00", "215.9", true],
+          "drp": ["Dribble %", "128.00", "215.9", true],
+          "fd": ["Fouls won", "152.00", "215.9", true],
           "tkl": ["Tackles", "180.00", "208.2", false],
-          "int": ["Interceptions", "204.00", "208.2", false],
-          "dw": ["Duels", "228.00", "208.2", false],
-          "dwp": ["Win rate", "252.00", "208.2", false]
+          "int": ["Int", "204.00", "208.2", false],
+          "dw": ["Duels won", "228.00", "208.2", false],
+          "dwp": ["Duel %", "252.00", "208.2", false]
         },
         "families": [
           ["Shooting", "-87.40", "-16.60", true],
@@ -244,9 +244,9 @@
       "wide": {
         "size": 12.5,
         "labels": {
-          "npg": ["Goals", "-80.36", "207.6", false],
+          "npg": ["NP goals", "-80.36", "207.6", false],
           "shots": ["Shots", "-65.09", "207.6", false],
-          "sotp": ["On target", "-49.82", "207.6", false],
+          "sotp": ["SoT %", "-49.82", "207.6", false],
           "npxg": ["npxG", "-34.55", "207.6", false],
           "tib": ["Box tch", "-19.27", "207.6", false],
           "ast": ["Assists", "0.00", "207.6", false],
@@ -265,7 +265,7 @@
           "tkl": ["Tackles", "210.55", "207.6", false],
           "int": ["Int", "225.82", "207.6", false],
           "dw": ["Duels", "241.09", "207.6", false],
-          "dwp": ["Win rate", "256.36", "207.6", false]
+          "dwp": ["Duel %", "256.36", "207.6", false]
         },
         "families": [
           ["Shooting", "-87.40", "-12.24", true],
@@ -278,7 +278,7 @@
       "narrow": {
         "size": 13.5,
         "labels": {
-          "npg": ["Goals", "-80.36", "207.8", false],
+          "npg": ["npG", "-80.36", "207.8", false],
           "shots": ["Shots", "-65.09", "207.8", false],
           "sotp": ["SoT %", "-49.82", "207.8", false],
           "npxg": ["npxG", "-34.55", "207.8", false],
@@ -299,7 +299,7 @@
           "tkl": ["Tackles", "210.55", "207.8", false],
           "int": ["Int", "225.82", "207.8", false],
           "dw": ["Duels", "241.09", "207.8", false],
-          "dwp": ["Win rate", "256.36", "207.8", false]
+          "dwp": ["Duel %", "256.36", "207.8", false]
         },
         "families": [
           ["Shooting", "-87.40", "-12.24", true],

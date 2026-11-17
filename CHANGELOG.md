@@ -5,6 +5,16 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.1]
+
+### Changed
+
+- **Percentile wheel**: the wheel words read on their own. Counts are plain
+  nouns and every rate ends in %: "NP goals", "On target %", "Pass %",
+  "Dribble %", "Fouls won", "Duels won", "Duel %" (were "Goals", "On target",
+  "Accuracy", "Success", "Fouled", "Duels", "Win rate"). Duels are drawn as
+  their own family when the template sends one (game-service#321).
+
 ## [0.40.0]
 
 ### Changed

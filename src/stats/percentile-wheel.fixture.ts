@@ -114,3 +114,22 @@ export const COMPARISON: PercentileWheelComparison = {
     dwp: 80,
   },
 };
+
+/**
+ * The live template's wheel families, in drawing order. Duels have their
+ * own family since game-service#321: the provider counts every one-on-one
+ * contest, in attack and defence, so they are not a Defending stat.
+ */
+export const LIVE_GROUP_ORDER = [
+  'Shooting',
+  'Creating',
+  'Passing',
+  'Carrying',
+  'Defending',
+  'Duels',
+];
+
+/** The fixture rows grouped as the live template groups them. */
+export const LIVE_METRICS: StatMetric[] = SUBJECT_METRICS.map((m) =>
+  m.key === 'dw' || m.key === 'dwp' ? { ...m, group: 'Duels' } : m
+);
