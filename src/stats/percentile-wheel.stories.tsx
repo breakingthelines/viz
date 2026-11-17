@@ -9,6 +9,8 @@ import {
   COMPARISON,
   GROUP_ORDER,
   SUBJECT_METRICS,
+  LIVE_GROUP_ORDER,
+  LIVE_METRICS,
   withEventMetrics,
 } from './percentile-wheel.fixture';
 
@@ -297,12 +299,17 @@ export const Narrow: Story = {
 };
 
 /**
- * The live template's five families (Discipline has no wheel metric, so the
- * Stats tab leaves it out) at phone width: every label in full, including
- * "Interceptions", clear of its neighbours.
+ * The live template's six wheel families, Duels on their own (Discipline has
+ * no wheel metric, so the Stats tab leaves it out), at phone width: every
+ * label in full, including "Interceptions", clear of its neighbours.
  */
-export const PhoneFiveFamilies: Story = {
-  args: { groupOrder: GROUP_ORDER.slice(0, 5), labels: 'short', comparison: COMPARISON },
+export const PhoneLiveFamilies: Story = {
+  args: {
+    metrics: LIVE_METRICS,
+    groupOrder: LIVE_GROUP_ORDER,
+    labels: 'short',
+    comparison: COMPARISON,
+  },
   render: (args) => <Panel {...args} width={358} />,
   play: async ({ canvasElement }) => {
     const root = canvasElement.querySelector('.btl-pw')!;

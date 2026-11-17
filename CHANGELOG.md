@@ -38,6 +38,16 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   combined pair, at least `STEM_MIN` (12 units at the regular scale) long.
 - The hover name tag is replaced by the card.
 
+## [0.40.1]
+
+### Changed
+
+- **Percentile wheel**: the wheel words read on their own. Counts are plain
+  nouns and every rate ends in %: "NP goals", "On target %", "Pass %",
+  "Dribble %", "Fouls won", "Duels won", "Duel %" (were "Goals", "On target",
+  "Accuracy", "Success", "Fouled", "Duels", "Win rate"). Duels are drawn as
+  their own family when the template sends one (game-service#321).
+
 ## [0.40.0]
 
 ### Changed
