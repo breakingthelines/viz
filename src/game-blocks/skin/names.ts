@@ -111,3 +111,12 @@ export function clubFit(name: string | undefined, narrow: boolean, max = 16): st
 export function surname(name: string | undefined): string {
   return playerShortName(name);
 }
+
+/**
+ * A player's short name from his ref: the stored one (identity's
+ * `Player.short_name`, carried as `GameBlockRef.short_name`: "Kolo Muani",
+ * "Bruno Fernandes", "Rodri"), else `playerShortName` of the name.
+ */
+export function playerShort(ref: { name?: string; shortName?: string } | undefined): string {
+  return ref?.shortName?.trim() || playerShortName(ref?.name);
+}

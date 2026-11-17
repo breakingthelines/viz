@@ -1,4 +1,5 @@
 import type { GameBlockMatchEventJson, GameBlockMatchEventKindJson } from '../match/types';
+import { playerShort } from '../skin/names';
 import { refName, type GameBlockMatchJson } from './team-league-match-common';
 import { BlockGrid } from './team-league-match-ui';
 
@@ -22,8 +23,8 @@ const GOALS = new Set<GameBlockMatchEventKindJson | undefined>([
 
 /** "Saka", "Martinelli for Trossard", "Saka, assist Ødegaard". */
 export function eventWho(e: GameBlockMatchEventJson): string {
-  const who = refName(e.player, true) || refName(e.player);
-  const other = refName(e.relatedPlayer, true) || refName(e.relatedPlayer);
+  const who = playerShort(e.player);
+  const other = playerShort(e.relatedPlayer);
   if (!other) return who;
   if (e.kind === 'KIND_SUBSTITUTION') return `${who} for ${other}`;
   if (GOALS.has(e.kind)) return `${who}, assist ${other}`;

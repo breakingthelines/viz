@@ -23,6 +23,8 @@ export interface OrbitPlayer {
   /** Any stable id; the two orbits of a pair must use the same ids. */
   id: string;
   name: string;
+  /** His stored short name ("Kolo Muani"); empty means derive one from `name`. */
+  shortName?: string;
   /** His club, short form. */
   club?: string;
   /** His page. */
