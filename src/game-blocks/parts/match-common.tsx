@@ -1,5 +1,5 @@
 import type { GameBlockComponentProps } from '../block-props';
-import { teamCrestSrc, type BlockFrameProps, type BlockHero } from '../skin/index';
+import { clubFit, teamCrestSrc, type BlockFrameProps, type BlockHero } from '../skin/index';
 import {
   kickoffParts,
   matchLine,
@@ -48,5 +48,13 @@ export function matchFrame(
         ? { kind: 'pair', src: home || away, pairSrc: home ? away : undefined }
         : undefined,
   });
-  return { ...base, title: blockTitle(props.config, matchTitle(match)) };
+  const title = blockTitle(props.config, matchTitle(match));
+  const origin = props.config.titleOrigin;
+  const authored = origin === 'author' || origin === 'regista';
+  const fit = (n: string | undefined) => clubFit(n, true);
+  const titleNarrow =
+    !authored && match?.home?.team?.name && match?.away?.team?.name
+      ? `${fit(match.home.team.name)} v ${fit(match.away.team.name)}`
+      : undefined;
+  return { ...base, title, titleNarrow };
 }

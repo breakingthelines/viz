@@ -109,6 +109,30 @@ One style for every game block (block-style spec, approved 16 Nov 2026).
   and "Aggregate" (the word kept at every width), one-game rounds "Score";
   the side through bold, the other in ink 3.
 
+### Changed: the match timeline (direction B, strip plus stack)
+
+- **Timeline** draws the small score, a minimal strip and the goals and red
+  cards as a list under "First half" and "Second half". The strip: dots
+  only (an own goal a hollow ring, a red card a red card), home above the
+  line and away below, a crest at the start of each lane; each half its own
+  segment running on by its stoppage time, so 90+2' and 90+6' sit apart and
+  in order. Each row: the minute, the side's crest, the player's headshot
+  (the crest when there is none), the name, how it came ("Assist
+  Mazraoui", "Penalty", "Own goal", "Second yellow", "Red card") and the
+  running score ("2-2"). No substitutions, yellow cards or VAR checks.
+- **Interaction** (articles and Regista): each row with a player id links
+  to the player's page, with a quiet highlight on hover or focus; each
+  strip dot is focusable ("Dorgu 90+6', 4-4") and lights its row on hover,
+  focus or tap. A saved image is drawn still.
+- `timelineModel` (`parts/timeline-model.ts`) cleans a stored feed the way
+  game-service now does: sorts stoppage time, folds a yellow and a red into
+  one "Second yellow", drops bench cards, duplicates, self-assists and an
+  own goal's assist, and drops a scorer-less goal ruled out by VAR when the
+  goals would outrun the score. Rows use identity's short name when the ref
+  carries one.
+- `titleNarrow`: a match's default title uses club short forms on a narrow
+  block ("Man United v Aston Villa").
+
 ## [0.36.0]
 
 ### Changed: no ordinals, medians or pool counts on any block
