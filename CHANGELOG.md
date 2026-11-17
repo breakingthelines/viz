@@ -5,6 +5,15 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.2]
+
+### Fixed
+
+- **League fixtures**: a knockout round is titled by its own name ("Round
+  of 16", "Semi-finals") instead of the competition's. A numbered round
+  still reads "Matchday 10", and a span of days keeps the competition's
+  title.
+
 ## [0.38.1]
 
 ### Fixed
