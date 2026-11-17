@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clubFit, clubName, clubShort, surname } from './names';
+import { clubFit, clubName, clubShort, playerShort, surname } from './names';
 
 describe('club names', () => {
   it('drops the club form', () => {
@@ -33,5 +33,23 @@ describe('surname', () => {
     expect(surname('Virgil van Dijk')).toBe('van Dijk');
     expect(surname('Kevin De Bruyne')).toBe('De Bruyne');
     expect(surname('Rodri')).toBe('Rodri');
+  });
+});
+
+describe('playerShort', () => {
+  it('prefers the stored short name', () => {
+    expect(playerShort({ name: 'Randal Kolo Muani', shortName: 'Kolo Muani' })).toBe('Kolo Muani');
+    expect(
+      playerShort({ name: 'Bruno Miguel Borges Fernandes', shortName: 'Bruno Fernandes' })
+    ).toBe('Bruno Fernandes');
+    expect(playerShort({ name: 'Son Heung-min', shortName: 'Son' })).toBe('Son');
+    expect(playerShort({ name: 'Rodrigo Hernández Cascante', shortName: 'Rodri' })).toBe('Rodri');
+  });
+
+  it('falls back to the shared rule when the stored one is empty', () => {
+    expect(playerShort({ name: 'Alexis Mac Allister' })).toBe('Mac Allister');
+    expect(playerShort({ name: 'Ángel Di María', shortName: '' })).toBe('Di María');
+    expect(playerShort({ name: 'Rodri', shortName: '  ' })).toBe('Rodri');
+    expect(playerShort(undefined)).toBe('');
   });
 });

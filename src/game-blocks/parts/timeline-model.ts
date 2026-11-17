@@ -1,4 +1,4 @@
-import { clubName, surname } from '../skin/names';
+import { clubName, playerShort } from '../skin/names';
 import type { GameBlockMatchEventJson, MatchTimelineDataJson } from '../match/types';
 import type { GameBlockRefJson } from './team-league-match-common';
 
@@ -87,7 +87,7 @@ export function isGoalRow(r: TimelineRow): boolean {
 
 /** A player's name as a row prints it: identity's short name, else the surname. */
 export function shortName(ref: GameBlockRefJson | undefined): string {
-  return ref?.shortName || surname(ref?.name);
+  return playerShort(ref);
 }
 
 export function timelineModel(data: MatchTimelineDataJson): TimelineModel {

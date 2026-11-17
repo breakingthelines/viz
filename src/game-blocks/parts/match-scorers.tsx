@@ -1,13 +1,13 @@
-import { useBlockLayout, useBodyFont } from '../skin/index';
+import { playerShort, useBlockLayout, useBodyFont } from '../skin/index';
 import type { GameBlockScorerJson } from '../match/types';
-import { refName, type GameBlockSideJson } from './team-league-match-common';
+import { type GameBlockSideJson } from './team-league-match-common';
 
 /** "Saka 23', 67' pen" per scorer, in first-goal order. */
 export function scorerLines(scorers: GameBlockScorerJson[], side: GameBlockSideJson): string[] {
   const out = new Map<string, string[]>();
   for (const s of scorers) {
     if (s.side !== side) continue;
-    const name = refName(s.player, true) || refName(s.player);
+    const name = playerShort(s.player);
     const minute = `${s.minute ?? ''}'${s.detail ? ` ${s.detail}` : ''}`;
     out.set(name, [...(out.get(name) ?? []), minute]);
   }

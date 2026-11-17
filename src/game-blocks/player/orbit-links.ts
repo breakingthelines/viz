@@ -9,6 +9,8 @@
  * slug).
  */
 
+import { playerShortName } from '#/football/lib/player-name';
+
 const PLAYER_ID_PREFIX = 'btl_football_player_';
 const ROUTE_ID_RE = /^[a-z0-9]+$/;
 const PLAYER_PAGE_RE = /^\/game\/football\/player\/([a-z0-9]+)\/([^/?#]+)$/;
@@ -93,29 +95,11 @@ export function playerComparePath(a: OrbitLinkPlayer, b: OrbitLinkPlayer): strin
   )}`;
 }
 
-const SURNAME_PARTICLES = new Set([
-  'da',
-  'de',
-  'del',
-  'della',
-  'der',
-  'di',
-  'do',
-  'dos',
-  'du',
-  'la',
-  'le',
-  'ten',
-  'ter',
-  'van',
-  'von',
-]);
-
-/** "Mbappé" for "Kylian Mbappé", "De Bruyne" for "Kevin De Bruyne" (the Compare page's rule). */
-export function orbitSurname(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return words[0] ?? '';
-  let start = words.length - 1;
-  while (start > 1 && SURNAME_PARTICLES.has(words[start - 1]!.toLowerCase())) start--;
-  return words.slice(start).join(' ');
+/**
+ * A player's short name on the orbit's links and verdict: the stored one
+ * (identity's, "Kolo Muani", "Bruno Fernandes"), else `playerShortName` of
+ * the name ("Mbappé" for "Kylian Mbappé", "De Bruyne" for "Kevin De Bruyne").
+ */
+export function orbitSurname(name: string, shortName?: string): string {
+  return shortName?.trim() || playerShortName(name);
 }

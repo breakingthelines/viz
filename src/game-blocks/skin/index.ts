@@ -29,7 +29,7 @@ export {
   useBlockScale,
   useBlockSkin,
 } from './provider';
-export { clubFit, clubName, clubShort, surname } from './names';
+export { clubFit, clubName, clubShort, playerShort, surname } from './names';
 export {
   Bar,
   CrestCell,

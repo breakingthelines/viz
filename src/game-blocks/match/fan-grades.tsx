@@ -9,7 +9,7 @@ import {
   Section,
   Sections,
   clubName,
-  surname,
+  playerShort,
   useBlockLayout,
 } from '../skin/index';
 import { matchFrame } from '../parts/match-common';
@@ -68,7 +68,7 @@ function GradeRows({
         return (
           <Row key={p.player?.id || i} cols={cols} last={i === players.length - 1}>
             <NumCell dim>{p.shirtNumber ?? ''}</NumCell>
-            <NameCell>{narrow ? surname(p.player?.name) : p.player?.name}</NameCell>
+            <NameCell>{narrow ? playerShort(p.player) : p.player?.name}</NameCell>
             {graded ? (
               <Bar frac={gradeToScale(p.grade!) / 100} label={gradeScaleLabel(p.grade!)} />
             ) : (

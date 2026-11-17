@@ -53,6 +53,7 @@ export function toOrbitData(o: GameBlockOrbitJson): OrbitData {
     anchor: {
       id: anchor.id ?? '',
       name: anchor.name ?? '',
+      ...(anchor.shortName ? { shortName: anchor.shortName } : {}),
       url: anchor.url || undefined,
       imageUrl: anchor.imageUrl || undefined,
     },
@@ -65,6 +66,7 @@ export function toOrbitData(o: GameBlockOrbitJson): OrbitData {
       .map((m) => ({
         id: m.player!.id!,
         name: m.player!.name ?? '',
+        ...(m.player!.shortName ? { shortName: m.player!.shortName } : {}),
         club: m.team?.name || undefined,
         url: m.player!.url || undefined,
         imageUrl: m.player!.imageUrl || undefined,
@@ -115,7 +117,11 @@ function StripActions({
   const page = playerPagePath(player);
   const options = anchors
     .filter((a) => a.id !== player.id)
-    .map((a) => ({ id: a.id, href: playerComparePath(player, a), label: orbitSurname(a.name) }))
+    .map((a) => ({
+      id: a.id,
+      href: playerComparePath(player, a),
+      label: orbitSurname(a.name, a.shortName),
+    }))
     .filter((o): o is { id: string; href: string; label: string } => !!o.href);
   const [pick, setPick] = useState(() =>
     Math.max(
@@ -387,8 +393,8 @@ function OrbitVisual({ orbits, interactive }: { orbits: OrbitData[]; interactive
     const pair = [orbits[0]!, orbits[1]!] as const;
     const anchors = [pair[0].anchor, pair[1].anchor];
     const shortNames = [
-      orbitSurname(pair[0].anchor.name),
-      orbitSurname(pair[1].anchor.name),
+      orbitSurname(pair[0].anchor.name, pair[0].anchor.shortName),
+      orbitSurname(pair[1].anchor.name, pair[1].anchor.shortName),
     ] as const;
     // The dropdown starts on the player the orbit is centred on.
     const actions = (p: OrbitPlayer, _main?: boolean, centre?: OrbitPlayer) => (
@@ -432,7 +438,7 @@ function OrbitVisual({ orbits, interactive }: { orbits: OrbitData[]; interactive
     <SimilarityOrbit
       slot="orbit-block-single"
       orbit={single}
-      anchorShort={orbitSurname(single.anchor.name)}
+      anchorShort={orbitSurname(single.anchor.name, single.anchor.shortName)}
       scales={[{ scale: ORBIT_SINGLE }]}
       interactive={interactive}
       motion={interactive}

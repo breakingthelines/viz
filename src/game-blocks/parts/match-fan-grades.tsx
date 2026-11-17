@@ -1,9 +1,8 @@
-import { BlockScale, TABULAR, useBlockLayout, useBlockSkin } from '../skin/index';
+import { BlockScale, TABULAR, playerShort, useBlockLayout, useBlockSkin } from '../skin/index';
 import {
   gradeScaleLabel,
   gradeToScale,
   oneDecimal,
-  refName,
   type GameBlockPlayerGradeJson,
 } from './team-league-match-common';
 import { BlockGrid, ScaleCell, SectionLabel } from './team-league-match-ui';
@@ -52,7 +51,7 @@ export function GradeList({
       rows={graded.map((p, i) => ({
         key: p.player?.id || String(i),
         cells: [
-          refName(p.player, true) || refName(p.player),
+          playerShort(p.player),
           typeof p.grade === 'number' ? oneDecimal(p.grade) : '–',
           p.votes ? String(p.votes) : '',
           typeof p.grade === 'number' ? (
@@ -155,7 +154,7 @@ export function GradePitch({
                       color: 'var(--btl-block-ink-3)',
                     }}
                   >
-                    {refName(p.player, true) || refName(p.player)}
+                    {playerShort(p.player)}
                   </span>
                 </span>
               );
@@ -172,9 +171,7 @@ export function GradePitch({
             color: 'var(--btl-block-ink-3)',
           }}
         >
-          {subs
-            .map((p) => `${refName(p.player, true) || refName(p.player)} ${oneDecimal(p.grade)}`)
-            .join(', ')}
+          {subs.map((p) => `${playerShort(p.player)} ${oneDecimal(p.grade)}`).join(', ')}
         </p>
       ) : null}
     </div>

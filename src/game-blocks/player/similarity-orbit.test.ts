@@ -173,5 +173,26 @@ describe('orbit links', () => {
     expect(orbitSurname('Kylian Mbappé')).toBe('Mbappé');
     expect(orbitSurname('Kevin De Bruyne')).toBe('De Bruyne');
     expect(orbitSurname('Haaland')).toBe('Haaland');
+    expect(orbitSurname('Alexis Mac Allister')).toBe('Mac Allister');
+    expect(orbitSurname('Ángel Di María')).toBe('Di María');
+  });
+
+  it('prefers the stored short name', () => {
+    expect(orbitSurname('Randal Kolo Muani', 'Kolo Muani')).toBe('Kolo Muani');
+    expect(orbitSurname('Bruno Miguel Borges Fernandes', 'Bruno Fernandes')).toBe(
+      'Bruno Fernandes'
+    );
+    expect(orbitSurname('Randal Kolo Muani', '')).toBe('Muani');
+  });
+
+  it('carries the stored short name into the orbit', () => {
+    const o = toOrbitData({
+      anchor: { id: 'a', name: 'Randal Kolo Muani', shortName: 'Kolo Muani' },
+      members: [
+        { player: { id: 'b', name: 'Rodrigo Hernández Cascante', shortName: 'Rodri' }, rank: 1 },
+      ],
+    });
+    expect(o.anchor.shortName).toBe('Kolo Muani');
+    expect(o.members[0]!.shortName).toBe('Rodri');
   });
 });

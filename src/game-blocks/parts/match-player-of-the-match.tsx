@@ -1,9 +1,8 @@
-import { BlockScale, TABULAR, useBlockSkin } from '../skin/index';
+import { BlockScale, TABULAR, playerShort, useBlockSkin } from '../skin/index';
 import {
   gradeScaleLabel,
   gradeToScale,
   oneDecimal,
-  refName,
   type GameBlockPlayerGradeJson,
 } from './team-league-match-common';
 
@@ -22,8 +21,7 @@ export function PlayerOfTheMatchScale({
   const skin = useBlockSkin();
   const w = winner.grade;
   const r = runnerUp?.grade;
-  const name = (p: GameBlockPlayerGradeJson | undefined) =>
-    refName(p?.player, true) || refName(p?.player);
+  const name = (p: GameBlockPlayerGradeJson | undefined) => playerShort(p?.player);
   return (
     <div style={{ ...TABULAR, fontFamily: skin.fontSans }}>
       {typeof w === 'number' ? (

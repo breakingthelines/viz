@@ -5,6 +5,21 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0]
+
+### Changed
+
+- **Player names**: every block that prints a player's short name prefers the
+  stored one, identity's `Player.short_name` carried as
+  `GameBlockRef.short_name` ("Kolo Muani", "Bruno Fernandes", "Son", "Rodri"),
+  and falls back to `playerShortName` when it is empty. This covers the
+  timeline rows and strip labels, scorers, fan grades, player of the match and
+  the similarity orbit. New helper `playerShort(ref)`.
+- **Similarity orbit**: `orbitSurname(name, shortName?)` takes the stored
+  short name and otherwise uses `playerShortName`; its own particle list is
+  gone, so "Alexis Mac Allister" is "Mac Allister" there too. `OrbitPlayer`
+  carries an optional `shortName`.
+
 ## [0.38.4]
 
 ### Fixed
