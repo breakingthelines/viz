@@ -55,6 +55,7 @@ export {
   ORBIT_COMPACT,
   ORBIT_REGULAR,
   ORBIT_SINGLE,
+  STEM_MIN,
   driftFor,
   isJoint,
   linkedDot,
@@ -63,14 +64,21 @@ export {
   orbitLayout,
   combinedOrbitLabel,
   pairOrbitLabel,
+  orbitCardLines,
+  pairCardLines,
+  placeCard,
   placeFaces,
   placeLines,
   placesLine,
+  placeWords,
   poolSize,
   rankPhrase,
   singleOrbitLabel,
+  spotlightIds,
+  spotlightLine,
 } from './similarity-orbit-model';
 export type {
+  CardSpot,
   DotPlace,
   FacePlace,
   OrbitData,
@@ -78,6 +86,7 @@ export type {
   OrbitMember,
   OrbitPlayer,
   OrbitScale,
+  OrbitSpotlight,
 } from './similarity-orbit-model';
 
 export { FormChart, formOpponentCode } from './form-chart';

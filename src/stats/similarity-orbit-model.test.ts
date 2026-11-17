@@ -4,6 +4,13 @@ import {
   ORBIT_COMPACT,
   ORBIT_REGULAR,
   ORBIT_SINGLE,
+  STEM_MIN,
+  orbitCardLines,
+  pairCardLines,
+  placeCard,
+  placeWords,
+  spotlightIds,
+  spotlightLine,
   driftFor,
   driftKeyframes,
   isJoint,
@@ -93,6 +100,10 @@ describe('orbit geometry', () => {
           expect(Math.hypot(x2 - f.x, y2 - f.y)).toBeCloseTo(f.size / 2, 3);
           const cross = (x2 - x1) * (f.y - dot.y) - (y2 - y1) * (f.x - dot.x);
           expect(Math.abs(cross)).toBeLessThan(1e-6);
+          // Long enough to read as a line (owner, 2026-11-17).
+          expect(Math.hypot(x2 - x1, y2 - y1)).toBeGreaterThanOrEqual(
+            STEM_MIN * (scale.size / ORBIT_REGULAR.size) - 1
+          );
           expect(Math.hypot(f.x - c, f.y - c)).toBeGreaterThanOrEqual(scale.face / 2 + f.size / 2);
           for (const g of layout.faces) {
             if (g === f) continue;
@@ -239,5 +250,95 @@ describe('a pair across two pools', () => {
       'Martin Ødegaard, from outside this pool, would be 43rd closest of the 157 other strikers to Erling Haaland. Closest: Alexander Isak.'
     );
     expect(singleOrbitLabel(o)).toContain('the 157 other strikers');
+  });
+});
+
+describe('hover card and strip lines', () => {
+  const scored = (data: OrbitData): OrbitData => ({
+    ...data,
+    members: data.members.map((m, i) => ({ ...m, similarity: 90 - i })),
+  });
+
+  it('gives the score, then the place in the pool', () => {
+    const d = scored(orbit('h', 157));
+    expect(orbitCardLines(d, 0, 'Haaland')).toEqual([
+      '90% similar to Haaland',
+      'Closest of 157 strikers',
+    ]);
+    expect(orbitCardLines(d, 15, 'Haaland')).toEqual([
+      '75% similar to Haaland',
+      '16th closest of 157 strikers',
+    ]);
+    expect(placeWords(d, 2)).toBe('3rd closest');
+  });
+
+  it('falls back to the place alone without a score', () => {
+    const d = orbit('h', 20);
+    expect(orbitCardLines(d, 4, 'Haaland')).toEqual(['5th closest to Haaland']);
+  });
+
+  it('gives a pair one line per orbit, the drawn orbit first', () => {
+    const a = scored(rename(orbit('mb', 157), 5, 'ft', 'Ferran Torres'));
+    const b = scored(rename(orbit('ha', 157), 18, 'ft', 'Ferran Torres'));
+    expect(pairCardLines([a, b], ['Mbappé', 'Haaland'], 'ft', 0)).toEqual([
+      '85% like Mbappé, 6th closest',
+      '72% like Haaland, 19th closest',
+    ]);
+    expect(pairCardLines([a, b], ['Mbappé', 'Haaland'], 'ft', 1)).toEqual([
+      '72% like Haaland, 19th closest',
+      '85% like Mbappé, 6th closest',
+    ]);
+    // A centre player is in the other orbit only.
+    const c = scored(rename(orbit('mb', 157), 84, 'ha', 'Erling Haaland'));
+    expect(pairCardLines([c, b], ['Mbappé', 'Haaland'], 'ha', 0)).toEqual([
+      '6% like Mbappé, 85th closest',
+    ]);
+  });
+});
+
+describe('roles spotlight', () => {
+  it('lights the members who play any of its roles and counts the pool', () => {
+    const d = orbit('h', 6);
+    d.members[1]!.roles = ['Box Threat'];
+    d.members[3]!.roles = ['Poacher', 'Box Threat'];
+    d.members[4]!.roles = ['Dribbler'];
+    d.members[5]!.outsidePool = true;
+    d.members[5]!.roles = ['Box Threat'];
+    const spot = { roles: ['Box Threat'], label: 'Box Threat' };
+    expect([...spotlightIds(d, spot)].sort()).toEqual(['m1', 'm3', 'm5']);
+    expect(spotlightLine(d, spot)).toBe('Box Threat: 2 of the 5 other strikers');
+    expect(spotlightIds(d, null).size).toBe(0);
+    expect(spotlightIds(d, { roles: [], label: '' }).size).toBe(0);
+  });
+});
+
+describe('placeCard', () => {
+  const base = { cx: 190, cy: 190, width: 200, height: 80, minX: -40, maxX: 420, minY: -500 };
+
+  it('sits beside a face on the side with room', () => {
+    const left = placeCard({ ...base, x: 120, y: 100, clear: 20, face: true });
+    expect(left.side).toBe('right');
+    expect(left.left).toBe(150);
+    const right = placeCard({ ...base, x: 300, y: 100, clear: 20, face: true });
+    expect(right.side).toBe('left');
+    expect(right.left).toBe(70);
+  });
+
+  it('drops under or over a dot, away from the centre, when no side fits', () => {
+    const narrow = { ...base, minX: 0, maxX: 260 };
+    const low = placeCard({ ...narrow, x: 130, y: 260, clear: 4, face: true });
+    expect(low.side).toBe('below');
+    expect(low.top).toBe(274);
+    const high = placeCard({ ...narrow, x: 130, y: 120, clear: 4, face: false });
+    expect(high.side).toBe('above');
+    expect(high.top).toBe(120 - 4 - 10 - 80);
+  });
+
+  it('stays inside the viewport edges and flips under when the top is off screen', () => {
+    const edge = placeCard({ ...base, x: 10, y: 120, clear: 4, face: false, minX: 4, minY: 40 });
+    expect(edge.left).toBe(4);
+    expect(edge.side).toBe('below');
+    const far = placeCard({ ...base, x: 410, y: 300, clear: 4, face: false, maxX: 400 });
+    expect(far.left + base.width).toBeLessThanOrEqual(400);
   });
 });

@@ -6,7 +6,9 @@
  *
  * The data is plain, so game-service's `SimilarityOrbit` (the Compare page,
  * the Stats tab) and the game block's `GameBlockOrbit` both map onto it:
- * members closest first with their ranks, no scores.
+ * members closest first with their ranks, and, where the caller has them,
+ * each member's similarity score and roles (the hover card and the roles
+ * spotlight; owner, 2026-11-17).
  *
  * The layout is a golden-angle sunflower with equal area per player: the
  * k-th closest sits at radius sqrt(r1² + (R² - r1²)(k + ½) / n), so rank is
@@ -45,6 +47,13 @@ export interface OrbitMember extends OrbitPlayer {
    * pair only, and left out of the pool's size and everyone else's place.
    */
   outsidePool?: boolean;
+  /** How alike he is to the anchor, 0 to 100: the hover card's "73% similar". */
+  similarity?: number;
+  /**
+   * The roles he plays, in the caller's own keys (archetype names on the
+   * Compare page): a spotlight on a role lights the members who play it.
+   */
+  roles?: readonly string[];
 }
 
 export interface OrbitData {
@@ -190,6 +199,150 @@ export function linkedDot(
   return memberIndex(here, pickId) >= 0 ? pickId : null;
 }
 
+/* ── the hover card and the strip ───────────────────────────────────────── */
+
+/** His place in words, ties broken as the strip's: "closest", "16th closest". */
+export function placeWords(data: OrbitData, index: number): string {
+  const m = data.members[index];
+  if (!m) return '';
+  const place = m.outsidePool
+    ? m.rank
+    : 1 + data.members.slice(0, index).filter((o) => !o.outsidePool).length;
+  return place === 1 ? 'closest' : `${ordinal(place)} closest`;
+}
+
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * One orbit's card and strip lines for a member: "73% similar to Haaland",
+ * then "16th closest of 157 strikers". Without a score, the strip's place
+ * alone ("16th closest to Haaland"). A member from outside the pool gets
+ * where he would sit among it.
+ */
+export function orbitCardLines(data: OrbitData, index: number, anchorShort: string): string[] {
+  const m = data.members[index];
+  if (!m) return [];
+  if (m.similarity === undefined) return [rankPhrase(data, index, anchorShort)];
+  const first = `${m.similarity}% similar to ${anchorShort}`;
+  if (m.outsidePool) return [first, rankPhrase(data, index, anchorShort)];
+  return [
+    first,
+    `${capitalise(placeWords(data, index))} of ${poolSize(data)} ${data.plural || 'players'}`,
+  ];
+}
+
+/**
+ * A pair's card and strip lines for a player: one per orbit he is a member
+ * of, the orbit drawn now first: "78% like Mbappé, 6th closest", "73% like
+ * Haaland, 19th closest". Without a score, the strip's place.
+ */
+export function pairCardLines(
+  orbits: readonly OrbitData[],
+  shortNames: readonly string[],
+  id: string,
+  first = 0
+): string[] {
+  const order = [first, ...orbits.map((_, k) => k).filter((k) => k !== first)];
+  return order.flatMap((k) => {
+    const o = orbits[k];
+    const i = o ? memberIndex(o, id) : -1;
+    if (!o || i < 0) return [];
+    const m = o.members[i]!;
+    const short = shortNames[k] ?? o.anchor.name;
+    return [
+      m.similarity === undefined
+        ? rankPhrase(o, i, short)
+        : `${m.similarity}% like ${short}, ${placeWords(o, i)}`,
+    ];
+  });
+}
+
+/* ── the roles spotlight ────────────────────────────────────────────────── */
+
+/**
+ * A spotlight on roles: the members who play any of `roles` light up, and
+ * `label` names them in the caption ("Box Threat", "Dribbler, Duel Winner
+ * or Creative Forward").
+ */
+export interface OrbitSpotlight {
+  roles: readonly string[];
+  label: string;
+}
+
+/** The members a spotlight lights: those who play any of its roles. */
+export function spotlightIds(
+  data: OrbitData,
+  spot: OrbitSpotlight | null | undefined
+): Set<string> {
+  const out = new Set<string>();
+  if (!spot || spot.roles.length === 0) return out;
+  for (const m of data.members) {
+    if (m.roles?.some((r) => spot.roles.includes(r))) out.add(m.id);
+  }
+  return out;
+}
+
+/** The spotlight's caption: "Box Threat: 18 of the 157 other strikers". */
+export function spotlightLine(data: OrbitData, spot: OrbitSpotlight): string {
+  const ids = spotlightIds(data, spot);
+  const n = data.members.filter((m) => !m.outsidePool && ids.has(m.id)).length;
+  return `${spot.label}: ${n} of the ${poolSize(data)} other ${data.plural || 'players'}`;
+}
+
+/**
+ * Where the hover card goes, in px from the orbit's top left: beside a face
+ * (the side with room), else below or above the dot, away from the centre;
+ * kept inside `minX`..`maxX` (the viewport's edges, as the orbit sees them)
+ * and off the top of the viewport (`minY`).
+ */
+export interface CardSpot {
+  left: number;
+  top: number;
+  side: 'above' | 'below' | 'left' | 'right';
+}
+
+export function placeCard(o: {
+  /** The point the card points at: the face's or the dot's centre. */
+  x: number;
+  y: number;
+  /** What the card must clear round the point: the face's or the dot's radius. */
+  clear: number;
+  /** The card is beside a face, else above or below a dot. */
+  face: boolean;
+  /** The orbit's centre, to place away from it. */
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  gap?: number;
+}): CardSpot {
+  const gap = o.gap ?? 10;
+  const clampX = (l: number) => Math.max(o.minX, Math.min(o.maxX - o.width, l));
+  const fitsX = (l: number) => l >= o.minX && l + o.width <= o.maxX;
+  const vertical = (): CardSpot => {
+    const belowFirst = o.y >= o.cy;
+    const above = o.y - o.clear - gap - o.height;
+    const below = o.y + o.clear + gap;
+    const side = belowFirst || above < o.minY ? 'below' : 'above';
+    return { left: clampX(o.x - o.width / 2), top: side === 'below' ? below : above, side };
+  };
+  if (o.face) {
+    const right = o.x + o.clear + gap;
+    const left = o.x - o.clear - gap - o.width;
+    const order: ('right' | 'left')[] = o.x <= o.cx ? ['right', 'left'] : ['left', 'right'];
+    for (const side of order) {
+      const l = side === 'right' ? right : left;
+      if (fitsX(l)) return { left: l, top: Math.max(o.minY, o.y - o.height / 2), side };
+    }
+  }
+  return vertical();
+}
+
 /* ── geometry ───────────────────────────────────────────────────────────── */
 
 export interface OrbitScale {
@@ -216,6 +369,11 @@ export const ORBIT_SINGLE: OrbitScale = { size: 340, face: 68, head: 29, dot: 2.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 /** Gap kept between faces, and between a face and the centre. */
 const FACE_GAP = 3;
+/**
+ * The shortest stem from a dot to its face, at the 380-unit scale (others
+ * scale with it): long enough to read as a line (owner, 2026-11-17).
+ */
+export const STEM_MIN = 12;
 
 export interface DotPlace {
   x: number;
@@ -287,7 +445,7 @@ export function placeFaces(
     const clear = (x: number, y: number) =>
       Math.hypot(x - c, y - c) >= scale.face / 2 + size / 2 + FACE_GAP &&
       placed.every((f) => Math.hypot(x - f.x, y - f.y) >= f.size / 2 + size / 2 + FACE_GAP);
-    let L = scale.dot + 4 + size / 2;
+    let L = scale.dot + STEM_MIN * (scale.size / ORBIT_REGULAR.size) + size / 2;
     let x = d.x + L * ux;
     let y = d.y + L * uy;
     for (let step = 0; step < 400 && !clear(x, y); step++) {
