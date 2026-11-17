@@ -150,7 +150,7 @@ export function PlayerPercentileWheelBlock({
   let aside: ReactNode = null;
   if (view === 'wheel_rows') {
     aside = <BlockRows columns={[]} rows={metrics.filter((m) => m !== top).map(rowOf)} />;
-  } else if (view === 'wheel' && look === 'editorial') {
+  } else if (view === 'wheel') {
     aside = <BlockRows columns={[]} rows={ranked.slice(0, 3).map(rowOf)} />;
   }
 

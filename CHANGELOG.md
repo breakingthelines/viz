@@ -5,6 +5,45 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0]
+
+### Changed: the game block style (frame, tokens, shared rows)
+
+One style for every game block (block-style spec, approved 16 Nov 2026).
+
+- **Title art.** Every block with `media` draws its subject picture left of
+  the title, 12px from it: a round headshot (40px, 32px narrow) or a crest
+  (36px, 28px), two for a pair (a comparison, a match), the BTL mark when a
+  picture does not load. `titleArt={false}` leaves it out; league blocks have
+  no title art and keep their crests in the rows. `titleFace` is deprecated.
+- **No line under the title.** `context` is optional and never drawn (it
+  stays in the data and the alt text). The title is the entity name alone, Le
+  Monde Journal bold 30px (24px narrow) in editorial, Inter bold in annotated,
+  Inter bold at 1.25x on the poster's art.
+- **The hero** is the figure with its unit word after it, 96px (72px narrow),
+  the unit in italic ink 3. Baseline items are no longer drawn under it.
+- **Layout.** Title, hero, then the body 22px under (18px narrow), stacked at
+  every width; `split` puts title and hero on the left (280px) of a wide
+  block. The colophon sits 24px under the body.
+- **Poster crests.** A club's crest, or a match's two, are halftoned in the
+  browser (`halftone()` with `tone: 'flat'`, the dot count following the
+  drawn size) and sit straight on the colour fields: home under the title,
+  away or a lone club on the right. No paper disc.
+- **Annotated** draws one crayon loop on the block's target, else the hero.
+- **Tokens.** `cardYellow`, `cardRed`, `sideHome`, `sideAway`, and the size
+  scale `BLOCK_SCALE` (title, hero, word, label, number, row height 38/34,
+  label column 104/78, gaps) with `useBlockScale()`.
+- **Shared rows** (`skin/rows.tsx`): `FactRows` (a genuine label and value
+  pair, the Orbit pattern), `SectionHeading`, `Section`, `Sections`, `Row`,
+  `Rows`, `NameCell`, `StatCell`, `LabelCell`, `NumCell`, `Num`, `CrestCell`,
+  `Bar` and `QuietLines` (at most two). `BlockRows` takes the shared row
+  height with numbers right-aligned in Inter.
+- **Names** (`skin/names.ts`): `clubName` drops the club form ("Liverpool
+  F.C." is "Liverpool"; "Paris FC" keeps it), `clubShort` ("Man City"),
+  `clubFit` (the short form on a narrow row) and `surname`. Team and match
+  titles use them; `teamCrestSrc` reads a club's crest from the media CDN by
+  id.
+
 ## [0.35.1]
 
 ### Added

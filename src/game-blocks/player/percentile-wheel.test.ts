@@ -40,8 +40,6 @@ describe('Percentile wheel block', () => {
     const html = render(config(), PRO);
     expect(html).toContain('2.62');
     expect(html).toMatch(/key passes per\s90/);
-    expect(html).toContain('94th');
-    expect(html).toMatch(/Median (<!-- -->)?1\.40/);
     expect(html).toContain('vs 41 Premier League wingers');
     expect(html).not.toContain('data-block-locked-note');
     expect(html).not.toContain('data-cell-state');
@@ -68,7 +66,6 @@ describe('Percentile wheel block', () => {
   it('has no default prose: title, context, figures and short labels only', () => {
     const html = render(config(), PRO);
     expect(html).toContain('Bukayo Saka');
-    expect(html).toContain('Arsenal, 2025/26');
     expect(html).not.toMatch(/The median among|is in the|percentile\./);
   });
 

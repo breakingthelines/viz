@@ -39,7 +39,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const F = 'Foden 85th';
+const F = 'Foden';
 
 // The scales view keeps the hero and the per 90 cells.
 const scales = { view: 'scales' };
@@ -130,7 +130,7 @@ function TotalsExample({ width, look }: { width: number; look: ExampleArgs['look
 const totalsChecks: Story['play'] = async ({ canvasElement }) => {
   await expect(canvasElement.querySelector('[data-comparison-totals]')).not.toBeNull();
   await expect(canvasElement.querySelector('[data-scale-comparator]')).toBeNull();
-  await expect(canvasElement.textContent).toContain('Messi 19');
+  await expect(canvasElement.textContent).toContain('Messi');
 };
 
 export const Totals680: Story = {

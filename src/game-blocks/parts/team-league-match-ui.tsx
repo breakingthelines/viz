@@ -6,32 +6,53 @@ import {
   useBlockLayout,
   useBlockSkin,
   useBodyFont,
+  clubName,
+  teamCrestSrc,
   type BlockFrameProps,
   type BlockMedia,
 } from '../skin/index';
 import { refName, type GameBlockRefJson } from './team-league-match-common';
 
 /**
+ * A block's title: the author's own words as they are, else the entity name
+ * with the club form dropped ("Liverpool v Arsenal", "Manchester City").
+ */
+export function blockTitle(
+  config: GameBlockComponentProps<unknown>['config'],
+  fallback = ''
+): string {
+  const raw = config.title || fallback || config.subject.name;
+  if (config.titleOrigin === 'author' || config.titleOrigin === 'regista') return raw;
+  const kind = config.subject.kind;
+  if (kind !== 'team' && kind !== 'game') return raw;
+  return raw
+    .split(' v ')
+    .map((side) => clubName(side))
+    .join(' v ');
+}
+
+/**
  * The frame props every team, league and match block shares: the author's
  * look, the title (subject name by default), the optional subheading, the
- * locked note and the save image name.
+ * locked note and the save image name. A club's crest is its title art; a
+ * competition has none (league blocks keep their crests in the rows).
  */
 export function frameBase(
   { config, titleSlot, density }: GameBlockComponentProps<unknown>,
-  { context, noun, media }: { context: string; noun: string; media?: BlockMedia }
+  { context, noun, media }: { context?: string; noun: string; media?: BlockMedia }
 ): Omit<BlockFrameProps, 'children'> {
   const subject = config.subject;
+  const crest =
+    subject.kind === 'team'
+      ? teamCrestSrc({ id: subject.id, imageUrl: subject.crestUrl || subject.imageUrl })
+      : undefined;
   return {
     look: config.look ?? 'editorial',
-    title: config.title || subject.name,
+    title: blockTitle(config),
     titleSlot,
     context,
     subheading: config.subheading,
-    media:
-      media ??
-      (subject.crestUrl || subject.imageUrl
-        ? { kind: 'crest', src: subject.crestUrl || subject.imageUrl }
-        : undefined),
+    media: media ?? (crest ? { kind: 'crest', src: crest } : undefined),
     lockedNote: config.lockedNote,
     density,
     exportName: `btl-${subject.name || config.title}-${noun}`,

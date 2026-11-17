@@ -153,16 +153,16 @@ type Ctx = { canvasElement: HTMLElement; args: BlockStoryArgs };
 
 /**
  * Every look: the BTL colophon, no API-Football mark, the chosen look drawn.
- * A poster with no image draws as editorial and names the poster it fell
- * back from.
+ * A poster with no art draws as editorial and names the poster it fell back
+ * from.
  */
 export async function commonChecks({ canvasElement, args }: Ctx) {
   const root = canvasElement.querySelector('[data-game-block-look]');
   const fallback = root?.getAttribute('data-game-block-look-fallback');
   if (fallback) {
     await expect(fallback).toBe(args.look);
+    // No usable art (no media, or a competition, which has none): editorial.
     await expect(root?.getAttribute('data-game-block-look')).toBe('editorial');
-    await expect(args.media).toBe('none');
   } else {
     await expect(root?.getAttribute('data-game-block-look')).toBe(args.look);
   }

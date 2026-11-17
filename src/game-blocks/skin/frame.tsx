@@ -14,7 +14,7 @@ import { BtlMark } from '#/football/lib/btl-logo';
 import { BtlWordmark, ProviderMark } from '#/football/lib/panel-footer';
 import type { GameBlockDensity, GameBlockLook } from '../types';
 import { useBlockLocked, usePlansHref } from '../values';
-import { Crayon, GrainDefs, arc, head, ring, seedOf, type Pt } from './crayon';
+import { Crayon, GrainDefs, ring, seedOf } from './crayon';
 import { playerHalftoneUrl, playerHeadshotUrl, resolveMediaSrc, useMediaBase } from './assets';
 import {
   pairArtStatus,
@@ -24,12 +24,13 @@ import {
   useImageLoads,
   type PosterArt,
 } from './halftone';
-import { BlockFigure, BlockBaseline, TABULAR, useBodyFont } from './primitives';
+import { BlockFigure, TABULAR, useBodyFont } from './primitives';
 import {
   BlockActionsContext,
   DrawnLookContext,
   LayoutContext,
   useBlockLayout,
+  useBlockScale,
   useBlockSkin,
   type BlockLayout,
 } from './provider';
@@ -74,8 +75,11 @@ export interface BlockFrameProps {
    * crest draws as editorial.
    */
   look?: GameBlockLook;
-  /** One plain line: "Arsenal, 2025/26". */
-  context: string;
+  /**
+   * One plain line: "Arsenal, 2025/26". Kept in the data and the alt text;
+   * never drawn (style.md: no scope line under a title).
+   */
+  context?: string;
   /** The subject's name by default; the author's own words when edited. */
   title: string;
   /** Editor only: replaces the title with an editable field. */
@@ -100,11 +104,15 @@ export interface BlockFrameProps {
   /** Supporting rows beside the hero (left column on wide layouts). */
   aside?: ReactNode;
   /**
-   * Editorial and annotated looks: a small headshot (or crest) beside the
-   * title, from `media`; the BTL mark when there is no picture. The poster
-   * has its cut-out instead.
+   * Editorial and annotated looks draw the subject picture from `media` left
+   * of the title (`TitleArt`). False leaves it out; league blocks keep their
+   * crests in the rows instead.
    */
+  titleArt?: boolean;
+  /** @deprecated Every block with `media` draws its title art now. */
   titleFace?: boolean;
+  /** Wide editorial and annotated: title and hero on the left (280px), the body on the right. */
+  split?: boolean;
   /** The block's visual: a wheel, a chart, a table. */
   children?: ReactNode;
 }
@@ -274,8 +282,8 @@ function Colophon({ provider }: { provider?: 'statsbomb' }) {
   return (
     <footer
       style={{
-        marginTop: 12,
-        paddingTop: 10,
+        marginTop: 24,
+        paddingTop: 12,
         borderTop: '1px solid var(--btl-block-line)',
         display: 'flex',
         alignItems: 'center',
@@ -358,145 +366,195 @@ function Subheading({ text, font, size }: { text?: string; font: string; size: n
   );
 }
 
-function Columns({
-  narrow,
-  left,
-  right,
-  template,
-  rightStyle,
-  gap = 24,
-  align = 'start',
-}: {
-  narrow: boolean;
-  left: ReactNode;
-  right: ReactNode;
-  template: string;
-  rightStyle?: CSSProperties;
-  gap?: number;
-  align?: CSSProperties['alignItems'];
-}) {
-  if (!right) return <>{left}</>;
-  if (narrow) {
-    return (
-      <>
-        {left}
-        <div style={{ marginTop: 10 }}>{right}</div>
-      </>
-    );
-  }
-  return (
-    <div
-      style={{ display: 'grid', gridTemplateColumns: template, columnGap: gap, alignItems: align }}
-    >
-      <div style={{ minWidth: 0 }}>{left}</div>
-      <div style={{ minWidth: 0, ...rightStyle }}>{right}</div>
-    </div>
-  );
+interface TitlePicture {
+  kind: 'headshot' | 'crest';
+  src: string | undefined;
 }
 
-/**
- * The small picture beside a title: the person's headshot (the block's
- * image, else the mirrored one by id) or the crest, round; the BTL mark
- * when none loads.
- */
-function TitleFace({ media, size }: { media: BlockMedia | undefined; size: number }) {
-  const mediaBase = useMediaBase();
-  const src =
-    media?.kind === 'person'
-      ? (resolveMediaSrc(media.src, mediaBase) ??
-        (media.personId ? playerHeadshotUrl(mediaBase, media.personId) : undefined))
-      : media?.kind === 'crest'
-        ? resolveMediaSrc(media.src, mediaBase)
-        : undefined;
-  const loads = useImageLoads(src);
-  const box: CSSProperties = {
-    display: 'inline-block',
-    width: size,
-    height: size,
-    marginRight: Math.round(size * 0.3),
-    verticalAlign: 'middle',
-    position: 'relative',
-    top: -Math.round(size * 0.08),
-    flexShrink: 0,
-  };
-  if (src && loads === 'ok') {
+/** The pictures a block's media puts beside its title: one, or two for a pair. */
+function titlePictures(media: BlockMedia | undefined, mediaBase: string): TitlePicture[] {
+  if (!media) return [];
+  const headshot = (src: string | undefined, id: string | undefined): TitlePicture => ({
+    kind: 'headshot',
+    src: resolveMediaSrc(src, mediaBase) ?? (id ? playerHeadshotUrl(mediaBase, id) : undefined),
+  });
+  if (media.kind === 'person') return [headshot(media.src, media.personId)];
+  if (media.kind === 'crest')
+    return [{ kind: 'crest', src: resolveMediaSrc(media.src, mediaBase) }];
+  if (media.personId || media.pairPersonId) {
+    return [headshot(media.src, media.personId), headshot(media.pairSrc, media.pairPersonId)];
+  }
+  return [media.src, media.pairSrc]
+    .filter((s): s is string => !!s)
+    .map((s) => ({ kind: 'crest' as const, src: resolveMediaSrc(s, mediaBase) }));
+}
+
+/** One picture beside the title, or the BTL mark when it does not load. */
+function TitlePic({ pic }: { pic: TitlePicture }) {
+  const scale = useBlockScale();
+  const loads = useImageLoads(pic.src);
+  const size = pic.kind === 'headshot' ? scale.headshot : scale.crest;
+  if (pic.src && loads === 'ok') {
     return (
       <img
-        src={src}
+        src={pic.src}
         alt=""
-        data-title-face={media?.kind === 'crest' ? 'crest' : 'headshot'}
-        crossOrigin={src.startsWith('data:') ? undefined : 'anonymous'}
+        data-title-face={pic.kind}
+        crossOrigin={pic.src.startsWith('data:') ? undefined : 'anonymous'}
         style={{
-          ...box,
-          borderRadius: media?.kind === 'crest' ? 0 : '50%',
-          objectFit: media?.kind === 'crest' ? 'contain' : 'cover',
-          background: media?.kind === 'crest' ? 'transparent' : 'var(--btl-block-track)',
+          display: 'block',
+          width: size,
+          height: size,
+          flexShrink: 0,
+          borderRadius: pic.kind === 'crest' ? 0 : '50%',
+          objectFit: pic.kind === 'crest' ? 'contain' : 'cover',
+          objectPosition: 'top',
+          background: pic.kind === 'crest' ? 'transparent' : 'var(--btl-block-track)',
         }}
       />
     );
   }
+  return <TitleMark />;
+}
+
+function TitleMark() {
+  const scale = useBlockScale();
+  const box = scale.crest;
   return (
     <span
       data-title-face="mark"
-      style={{ ...box, padding: Math.round(size * 0.12), boxSizing: 'border-box' }}
+      style={{
+        display: 'grid',
+        placeItems: 'center',
+        width: box,
+        height: box,
+        flexShrink: 0,
+      }}
     >
-      <BtlMark style={{ width: '100%', height: '100%', display: 'block' }} />
+      <BtlMark style={{ width: Math.round(box * 0.62), height: Math.round(box * 0.62) }} />
     </span>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Editorial: a newspaper stat panel. No rule or box above, a bold run-in name
-// with the context after it, the figure on the words' baseline, the visual
-// beside the text.
-// ---------------------------------------------------------------------------
+/**
+ * The subject picture left of the title (style.md, Subject picture): a round
+ * headshot for a player, the crest for a club, both for a pair, 12px from
+ * the title. The BTL mark stands in for a picture that does not load. Blocks
+ * with no subject picture (league tables, fixtures, rankings) pass no media.
+ */
+export function TitleArt({ media }: { media: BlockMedia | undefined }) {
+  const mediaBase = useMediaBase();
+  const pics = titlePictures(media, mediaBase);
+  if (!media) return null;
+  return (
+    <span data-title-art="" style={{ display: 'flex', flex: 'none', gap: 6, alignItems: 'center' }}>
+      {pics.length === 0 ? <TitleMark /> : pics.map((pic, i) => <TitlePic key={i} pic={pic} />)}
+    </span>
+  );
+}
 
-function EditorialBody(p: BlockFrameProps) {
-  const narrow = useBlockLayout().narrow;
+/** The title line: the picture, then the entity name alone. */
+function TitleLine({ p, sans }: { p: BlockFrameProps; sans: boolean }) {
   const skin = useBlockSkin();
-  const small = p.density !== 'article';
-  const size = small ? 22 : narrow ? 24 : 26;
-  const text = (
-    <div>
-      <p style={{ margin: 0, fontFamily: skin.fontSerif, fontSize: size, lineHeight: 1.05 }}>
-        {p.titleFace ? <TitleFace media={p.media} size={Math.round(size * 1.15)} /> : null}
-        <strong style={{ fontWeight: 700 }}>{p.titleSlot ?? p.title}</strong>{' '}
-        <span
-          style={{
-            fontSize: size * 0.64,
-            color: 'var(--btl-block-ink-3)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {p.context}
-        </span>
-      </p>
-      <Subheading text={p.subheading} font={skin.fontSerif} size={17} />
-      {p.hero ? (
-        <div style={{ marginTop: narrow ? 4 : 6 }}>
-          <BlockFigure figure={p.hero.figure} label={p.hero.label} baseline={p.hero.baseline} />
-        </div>
-      ) : null}
-      {p.aside ? <div style={{ marginTop: 12 }}>{p.aside}</div> : null}
-    </div>
+  const scale = useBlockScale();
+  const showArt = p.titleArt !== false && !!p.media;
+  const heading = (
+    <h3
+      data-block-title=""
+      style={{
+        margin: 0,
+        minWidth: 0,
+        fontFamily: sans ? skin.fontSans : skin.fontSerif,
+        fontWeight: 700,
+        fontSize: scale.title,
+        lineHeight: 1.08,
+        letterSpacing: sans ? '-0.01em' : '-0.005em',
+        color: 'var(--btl-block-ink-1)',
+      }}
+    >
+      {p.titleSlot ?? p.title}
+    </h3>
   );
   return (
-    <div style={{ paddingTop: 2 }}>
-      <Columns
-        narrow={narrow}
-        left={text}
-        right={p.children}
-        template="300px minmax(0, 1fr)"
-        gap={4}
-        rightStyle={{ marginTop: -14, marginRight: -12 }}
+    <header>
+      {showArt ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <TitleArt media={p.media} />
+          {heading}
+        </div>
+      ) : (
+        heading
+      )}
+      <Subheading
+        text={p.subheading}
+        font={sans ? skin.fontSans : skin.fontSerif}
+        size={sans ? 15 : 17}
       />
+    </header>
+  );
+}
+
+/**
+ * Title, hero and body for the editorial and annotated looks: the title line,
+ * the hero figure with its unit word, then the body 22px under (18px narrow).
+ * `split` puts the title and hero on the left (280px) of a wide block.
+ */
+function StackBody({ p, sans }: { p: BlockFrameProps; sans: boolean }) {
+  const { narrow } = useBlockLayout();
+  const scale = useBlockScale();
+  const head = (
+    <>
+      <TitleLine p={p} sans={sans} />
+      {p.hero ? (
+        <div style={{ marginTop: 14 }}>
+          <BlockFigure figure={p.hero.figure} label={p.hero.label} />
+        </div>
+      ) : null}
+    </>
+  );
+  const body = (
+    <>
+      {p.aside ? <div data-block-aside="">{p.aside}</div> : null}
+      {p.children ? (
+        <div style={{ marginTop: p.aside ? scale.sectionGap : 0 }}>{p.children}</div>
+      ) : null}
+    </>
+  );
+  const hasBody = !!(p.aside || p.children);
+  if (p.split && !narrow) {
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '280px minmax(0, 1fr)',
+          columnGap: 40,
+          alignItems: 'start',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>{head}</div>
+        <div style={{ minWidth: 0, paddingTop: 8 }}>{body}</div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      {head}
+      {hasBody ? <div style={{ marginTop: scale.titleGap }}>{body}</div> : null}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Annotated: plain data in Inter, and one crayon layer over it, at most two
-// marks, anchored to the highlighted stat.
+// Editorial: the serif title and names, Inter labels and numbers, no art.
+// ---------------------------------------------------------------------------
+
+function EditorialBody(p: BlockFrameProps) {
+  return <StackBody p={p} sans={false} />;
+}
+
+// ---------------------------------------------------------------------------
+// Annotated: Inter throughout, and one crayon loop on the single most telling
+// figure: the block's `annotate.target`, else the hero.
 // ---------------------------------------------------------------------------
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -505,8 +563,7 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
   const narrow = useBlockLayout().narrow;
   const skin = useBlockSkin();
   const bodyRef = useRef<HTMLDivElement>(null);
-  const visualRef = useRef<HTMLDivElement>(null);
-  const [boxes, setBoxes] = useState<{ label?: Box; hero?: Box; target?: Box } | null>(null);
+  const [box, setBox] = useState<Box | null>(null);
   const target = p.annotate?.target;
 
   useEffect(() => {
@@ -516,17 +573,13 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
       const root = bodyRef.current;
       if (!root || cancelled) return;
       const o = root.getBoundingClientRect();
-      const rel = (el: Element | null | undefined): Box | undefined => {
-        if (!el) return undefined;
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) return undefined;
-        return { x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height };
-      };
-      setBoxes({
-        label: rel(root.querySelector('[data-block-anchor="hero-label"]')),
-        hero: rel(root.querySelector('[data-block-anchor="hero"]')),
-        target: target ? rel(visualRef.current?.querySelector(target)) : undefined,
-      });
+      const el =
+        (target ? root.querySelector(target) : null) ??
+        root.querySelector('[data-block-anchor="hero"]');
+      if (!el) return setBox(null);
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return setBox(null);
+      setBox({ x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height });
     };
     const fonts = typeof document !== 'undefined' ? document.fonts?.ready : undefined;
     void (fonts ?? Promise.resolve()).then(() => {
@@ -540,115 +593,17 @@ function AnnotatedBody(p: BlockFrameProps & { crayonId: string; width: number })
 
   const seed = seedOf(`${p.title}|${target ?? ''}`);
   let marks: ReactNode = null;
-  if (boxes) {
-    const color = skin.doodle;
-    const c = (b: Box): Pt => [b.x + b.w / 2, b.y + b.h / 2];
-    if (boxes.target) {
-      const t = boxes.target;
-      const [cx, cy] = c(t);
-      const r = Math.max(t.w, t.h) * 0.6 + 6;
-      const loop = ring(cx, cy, r, r * 0.92, 2.6, Math.PI * 2.15, 30, 0.2);
-      let arrow: Pt[] | null = null;
-      if (boxes.label) {
-        const L = boxes.label;
-        const from: Pt = narrow ? [L.x + 14, L.y + L.h + 10] : [L.x + L.w + 12, L.y + L.h * 0.75];
-        const dx = from[0] - cx;
-        const dy = from[1] - cy;
-        const dl = Math.hypot(dx, dy) || 1;
-        const to: Pt = [cx + (dx / dl) * (r + 4), cy + (dy / dl) * (r + 4)];
-        if (Math.hypot(to[0] - from[0], to[1] - from[1]) > 24)
-          arrow = arc(from, to, narrow ? 0.18 : -0.22);
-      }
-      marks = (
-        <>
-          <Crayon pts={loop} color={color} seed={seed % 97} w={4.4} filter={p.crayonId} />
-          {arrow ? (
-            <>
-              <Crayon
-                pts={arrow}
-                color={color}
-                seed={(seed % 89) + 1}
-                w={3.6}
-                filter={p.crayonId}
-              />
-              {head(arrow).map((h, i) => (
-                <Crayon
-                  key={i}
-                  pts={h}
-                  color={color}
-                  seed={(seed % 83) + 11 + i}
-                  w={3.6}
-                  filter={p.crayonId}
-                />
-              ))}
-            </>
-          ) : null}
-        </>
-      );
-    } else if (boxes.hero) {
-      const f = boxes.hero;
-      const [cx, cy] = c(f);
-      const loop = ring(
-        cx + 2,
-        cy + 2,
-        f.w * 0.6 + 6,
-        f.h * 0.56 + 2,
-        3.6,
-        Math.PI * 2.1,
-        28,
-        -0.06
-      );
-      marks = <Crayon pts={loop} color={color} seed={seed % 97} w={4.4} filter={p.crayonId} />;
-    }
+  if (box) {
+    const pad = 10;
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    const loop = ring(cx, cy, box.w / 2 + pad, box.h / 2 + pad, 2.6, Math.PI * 2.12, 30, -0.06);
+    marks = <Crayon pts={loop} color={skin.doodle} seed={seed % 97} w={4} filter={p.crayonId} />;
   }
 
-  const small = p.density !== 'article';
-  const text = (
-    <div>
-      {p.hero ? (
-        <BlockFigure figure={p.hero.figure} label={p.hero.label} baseline={p.hero.baseline} />
-      ) : null}
-      {p.aside ? <div style={{ marginTop: 14 }}>{p.aside}</div> : null}
-    </div>
-  );
   return (
     <div ref={bodyRef} style={{ position: 'relative' }}>
-      <header>
-        <h3
-          style={{
-            margin: 0,
-            fontFamily: skin.fontSans,
-            fontWeight: 650,
-            fontSize: small ? 20 : narrow ? 22 : 24,
-            lineHeight: 1.2,
-            letterSpacing: '-0.015em',
-            color: 'var(--btl-block-ink-1)',
-          }}
-        >
-          {p.titleFace ? <TitleFace media={p.media} size={small ? 24 : narrow ? 26 : 28} /> : null}
-          {p.titleSlot ?? p.title}
-        </h3>
-        <p
-          style={{
-            margin: '4px 0 0',
-            fontFamily: skin.fontSans,
-            fontSize: 13.5,
-            color: 'var(--btl-block-ink-3)',
-          }}
-        >
-          {p.context}
-        </p>
-        <Subheading text={p.subheading} font={skin.fontSans} size={15} />
-      </header>
-      <div style={{ marginTop: narrow ? 18 : 6 }}>
-        <Columns
-          narrow={narrow}
-          left={text}
-          right={p.children ? <div ref={visualRef}>{p.children}</div> : null}
-          template="minmax(0, 1fr) 330px"
-          align="center"
-        />
-      </div>
+      <StackBody p={p} sans />
       {marks ? (
         <svg
           aria-hidden
@@ -685,7 +640,7 @@ function cutOutHeight(density: GameBlockDensity | undefined, narrow: boolean): n
   return posterHeight(density, narrow) * (narrow ? 1.02 : 1.08);
 }
 
-function devicePixelRatio(): number {
+function pixelRatio(): number {
   return typeof window === 'undefined' ? 2 : Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 }
 
@@ -723,7 +678,7 @@ function usePersonCut(
     pitch: narrow ? 4.6 : 5.2,
     ink: skin.halftoneInk,
     paper: skin.halftonePaper,
-    targetPx: Math.round(cutOutHeight(density, narrow) * devicePixelRatio()),
+    targetPx: Math.round(cutOutHeight(density, narrow) * pixelRatio()),
   });
   const cutState: ReturnType<typeof useHalftone> =
     pre && preLoads === 'working' ? { status: 'working', url: null } : cut;
@@ -759,6 +714,10 @@ function usePosterArt(
     ? undefined
     : resolveMediaSrc(person ? person.crestSrc : media?.src, mediaBase);
   const crestLoads = useImageLoads(crest);
+  // A match: the away crest beside the home one.
+  const away =
+    media?.kind === 'pair' && !players ? resolveMediaSrc(media.pairSrc, mediaBase) : undefined;
+  const awayLoads = useImageLoads(away);
   if (!media) return { status: 'none' };
   if (players) {
     return pickPairArt(
@@ -768,7 +727,12 @@ function usePosterArt(
   }
   const cut = person ? first.cut : { status: 'none' as const, url: null };
   const pre = person ? first.pre : NO_CREST;
-  return pickPosterArt(pre, cut, { src: crest, status: crestLoads });
+  const art = pickPosterArt(pre, cut, { src: crest, status: crestLoads });
+  if (art.status === 'ready' && art.kind === 'crest' && away) {
+    if (awayLoads === 'working') return { status: 'working' };
+    if (awayLoads === 'ok') return { ...art, pairSrc: away };
+  }
+  return art;
 }
 
 /**
@@ -914,18 +878,6 @@ function PairPosterBody(
           >
             {p.titleSlot ?? p.title}
           </h3>
-          <p
-            style={{
-              margin: '6px 0 0',
-              fontFamily: skin.fontSans,
-              fontSize: 13,
-              lineHeight: 1.35,
-              color: 'var(--btl-block-ink-1)',
-              opacity: 0.88,
-            }}
-          >
-            {p.context}
-          </p>
           {p.subheading ? (
             <p
               style={{
@@ -955,16 +907,54 @@ function wedges(s: BlockSkinTokens, W: number, H: number): [string, string][] {
   ];
 }
 
+/**
+ * A crest on the poster: the same halftone as a player cut-out, computed here
+ * (style.md, Poster crests), straight on the colour fields with no disc. The
+ * tone weighs the darkest channel, so flat colours print as dots; the dot
+ * count follows the drawn size, about one dot per 2px. The flat crest stands
+ * in while the halftone computes or when it cannot be made.
+ */
+function PosterCrest({ src, size, style }: { src: string; size: number; style: CSSProperties }) {
+  const skin = useBlockSkin();
+  const ht = useHalftone(src, {
+    tone: 'flat',
+    dots: Math.round(size / (size < 100 ? 2 : 2.3)),
+    targetPx: Math.round(size * pixelRatio()),
+    ink: skin.halftoneInk,
+    paper: skin.halftonePaper,
+  });
+  const url = ht.status === 'ready' && ht.url ? ht.url : src;
+  return (
+    <img
+      src={url}
+      alt=""
+      data-poster-media={ht.status === 'ready' ? 'crest-halftone' : 'crest'}
+      crossOrigin={url.startsWith('data:') ? undefined : 'anonymous'}
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        opacity: ht.status === 'working' ? 0 : 1,
+        ...style,
+      }}
+    />
+  );
+}
+
 function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
   const narrow = useBlockLayout().narrow;
   const skin = useBlockSkin();
+  const scale = useBlockScale();
   const small = p.density !== 'article';
-  const height = posterHeight(p.density, narrow);
+  const hasFigure = !!p.hero;
+  // The season card's poster keeps its approved height; other posters are
+  // the block style's 300 (216 narrow).
+  const height = hasFigure ? posterHeight(p.density, narrow) : small || narrow ? 216 : 300;
   const numberSize = small ? 96 : narrow ? 128 : 190;
   const art = p.art;
   const W = 680;
   const cutH = height * (narrow ? 1.02 : 1.08);
-  const hasFigure = !!p.hero;
 
   let image: ReactNode = null;
   if (art.status === 'ready' && art.kind === 'halftone') {
@@ -985,25 +975,33 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
       />
     );
   } else if (art.status === 'ready' && art.kind === 'crest') {
-    // The crest leads: large, flat, where the cut-out stands, clear of the
-    // title and the diagonal.
-    const size = height * (narrow ? 0.46 : 0.66);
-    image = (
-      <img
-        src={art.src}
-        alt=""
-        data-poster-media="crest"
-        crossOrigin="anonymous"
-        style={{
-          position: 'absolute',
-          top: height * (narrow ? 0.34 : 0.1),
-          right: narrow ? 14 : 44,
-          height: size,
-          width: size,
-          objectFit: 'contain',
-        }}
-      />
-    );
+    if (art.pairSrc) {
+      // A match: home under the title on the maroon field, away on the right.
+      const size = narrow ? 92 : 118;
+      image = (
+        <>
+          <PosterCrest
+            src={art.src}
+            size={size}
+            style={{ left: narrow ? 18 : 28, top: height * (narrow ? 0.43 : 0.36) }}
+          />
+          <PosterCrest
+            src={art.pairSrc}
+            size={size}
+            style={{ right: narrow ? 22 : 64, top: (height - size) / 2 }}
+          />
+        </>
+      );
+    } else {
+      const size = narrow ? 112 : 168;
+      image = (
+        <PosterCrest
+          src={art.src}
+          size={size}
+          style={{ right: narrow ? 24 : 56, top: (height - size) / 2 - 6 }}
+        />
+      );
+    }
   }
 
   const panelH = hasFigure ? height + numberSize * 0.28 : height;
@@ -1017,7 +1015,7 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
             height,
             overflow: 'hidden',
             borderRadius: 'var(--btl-block-radius)',
-            clipPath: `polygon(0 0, 100% 0, 100% ${narrow ? 84 : 80}%, 0 100%)`,
+            clipPath: `polygon(0 0, 100% 0, 100% ${narrow ? 84 : 86}%, 0 100%)`,
           }}
         >
           <svg
@@ -1062,36 +1060,25 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
           <div
             style={{
               position: 'absolute',
-              left: narrow ? 16 : 28,
+              left: narrow ? 18 : 28,
               top: narrow ? 18 : 26,
-              maxWidth: narrow ? 210 : 320,
+              right: narrow ? '36%' : '40%',
             }}
           >
             <h3
+              data-block-title=""
               style={{
                 margin: 0,
                 fontFamily: skin.fontSans,
                 fontWeight: 700,
-                fontSize: small ? 20 : narrow ? 23 : 28,
-                lineHeight: 1.08,
-                letterSpacing: '-0.02em',
+                fontSize: Math.round(scale.title * 1.25),
+                lineHeight: 1.02,
+                letterSpacing: '-0.01em',
                 color: 'var(--btl-block-ink-1)',
               }}
             >
               {p.titleSlot ?? p.title}
             </h3>
-            <p
-              style={{
-                margin: '8px 0 0',
-                fontFamily: skin.fontSans,
-                fontSize: 13,
-                lineHeight: 1.35,
-                color: 'var(--btl-block-ink-1)',
-                opacity: 0.88,
-              }}
-            >
-              {p.context}
-            </p>
             {p.subheading ? (
               <p
                 style={{
@@ -1128,38 +1115,65 @@ function PosterBody(p: BlockFrameProps & { art: PosterArt; paperId: string }) {
           </div>
         ) : null}
       </div>
-      <div style={{ marginTop: narrow ? 22 : 14 }}>
-        <Columns
-          narrow={narrow}
-          left={
-            <div style={{ paddingLeft: narrow ? 0 : 28 }}>
-              {p.hero ? (
-                <>
-                  <p
-                    data-block-anchor="hero-label"
-                    style={{
-                      margin: 0,
-                      fontFamily: skin.fontSans,
-                      fontWeight: 600,
-                      fontSize: 16,
-                      lineHeight: 1.4,
-                      color: 'var(--btl-block-ink-1)',
-                    }}
-                  >
-                    {p.hero.label.charAt(0).toUpperCase() + p.hero.label.slice(1)}
-                  </p>
-                  {p.hero.baseline?.length ? <BlockBaseline items={p.hero.baseline} /> : null}
-                </>
-              ) : null}
-              {p.aside ? <div style={{ marginTop: 14 }}>{p.aside}</div> : null}
-            </div>
-          }
-          right={p.children}
-          template="minmax(0, 1fr) 330px"
-          gap={28}
-          align="center"
-        />
-      </div>
+      {p.hero && p.aside && p.children && !narrow ? (
+        // The season card: the hero's words on the left, its bars on the right.
+        <div
+          style={{
+            marginTop: 14,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 330px',
+            columnGap: 28,
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ minWidth: 0, paddingLeft: 28 }}>
+            <PosterHeroLabel label={p.hero.label} />
+            <div style={{ marginTop: 14 }}>{p.aside}</div>
+          </div>
+          <div style={{ minWidth: 0 }}>{p.children}</div>
+        </div>
+      ) : (
+        <PosterStack p={p} />
+      )}
     </div>
+  );
+}
+
+function PosterHeroLabel({ label, marginTop = 0 }: { label: string; marginTop?: number }) {
+  const skin = useBlockSkin();
+  const scale = useBlockScale();
+  return (
+    <p
+      data-block-anchor="hero-label"
+      style={{
+        margin: `${marginTop}px 0 0`,
+        fontFamily: skin.fontSans,
+        fontWeight: 600,
+        fontSize: scale.wordSans,
+        lineHeight: 1.4,
+        color: 'var(--btl-block-ink-1)',
+      }}
+    >
+      {label.charAt(0).toUpperCase() + label.slice(1)}
+    </p>
+  );
+}
+
+/** The body under the art: the editorial body, set in Inter. */
+function PosterStack({ p }: { p: BlockFrameProps }) {
+  const narrow = useBlockLayout().narrow;
+  const scale = useBlockScale();
+  return (
+    <>
+      {p.hero ? <PosterHeroLabel label={p.hero.label} marginTop={narrow ? 22 : 14} /> : null}
+      {p.aside || p.children ? (
+        <div style={{ marginTop: scale.titleGap }}>
+          {p.aside ? <div data-block-aside="">{p.aside}</div> : null}
+          {p.children ? (
+            <div style={{ marginTop: p.aside ? scale.sectionGap : 0 }}>{p.children}</div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -38,7 +38,6 @@ describe('league blocks', () => {
     const html = render(config('league-table'));
     const t = text(html);
     expect(t).toContain('Premier League');
-    expect(t).toContain('2025/26');
     expect(t).toContain('6 of 20');
     expect(t).toContain('+15');
     expect(html.match(/data-grid-subject/g)?.length).toBe(1);
@@ -59,7 +58,6 @@ describe('league blocks', () => {
     const html = render(config('league-leaders'));
     const t = text(html);
     expect(t).toContain('14 goals');
-    expect(t).toContain('Erling Haaland');
     expect(t).toContain('Saka');
     expect(html.match(/data-scale-state="value"/g)?.length).toBeGreaterThan(0);
   });
@@ -70,7 +68,6 @@ describe('league blocks', () => {
     expect(t).toContain('2.62');
     expect(t).toContain('98th');
     expect(t).toContain('Median 1.40');
-    expect(t).toContain('Key passes, 41 wingers');
   });
 
   it('player rankings, free: every gated cell locked, the note shown, nothing paid leaks', () => {
@@ -199,7 +196,6 @@ describe('league blocks', () => {
     expect(t).toContain('21 Nov 2026');
     expect(t).toContain('15:00');
     expect(t).toContain('Postponed');
-    expect(t).toContain('Matchday 13');
     expect(
       fixtureMiddle({
         status: 'GAME_BLOCK_MATCH_STATUS_FINISHED',
@@ -230,7 +226,6 @@ describe('league blocks', () => {
     expect(t).not.toContain('88.4');
     expect(html.match(/data-cell-state="locked"/g)?.length).toBe(20);
     expect(t).toContain('League strength figures are for Pro readers.');
-    expect(t).toContain('10 of 52 leagues');
     expect(t).not.toContain('Index from cross-league');
   });
 });

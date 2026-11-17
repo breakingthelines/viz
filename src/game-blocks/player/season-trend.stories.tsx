@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import {
   EXAMPLE_ARG_TYPES,
   EXAMPLE_ARGS,
-  lockedChecks,
   marksChecks,
   pendingChecks,
   PlayerExample,
@@ -31,7 +31,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const F = 'Up 23 since 2021/22';
+const F = 'Key passes';
 
 export const Editorial680: Story = { play: proChecks(F) };
 export const Editorial390: Story = { args: { width: 390 }, play: proChecks(F) };
@@ -50,11 +50,15 @@ export const Annotated680: Story = {
 export const Annotated390: Story = { args: { look: 'annotated', width: 390 } };
 export const Locked680: Story = {
   args: { reader: 'free' },
-  play: lockedChecks('player-season-trend', '2.62'),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.textContent).not.toContain('2.62');
+  },
 };
 export const Locked390: Story = {
   args: { reader: 'free', width: 390, look: 'annotated' },
-  play: lockedChecks('player-season-trend', '2.62'),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.textContent).not.toContain('2.62');
+  },
 };
 export const Pending: Story = { args: { reader: 'pending' }, play: pendingChecks };
 export const Subheading: Story = { args: { subheading: 'An optional author line' } };

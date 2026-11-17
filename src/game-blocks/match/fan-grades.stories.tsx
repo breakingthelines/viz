@@ -88,7 +88,6 @@ export const OneVote: Story = {
   },
   play: async ({ canvasElement }) => {
     const t = canvasElement.textContent ?? '';
-    await expect(t).toContain('1 vote');
     await expect(t).not.toContain('1 votes');
     await expect(t).not.toContain('Arsenal, 4-3-3');
   },

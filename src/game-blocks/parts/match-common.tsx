@@ -1,5 +1,5 @@
 import type { GameBlockComponentProps } from '../block-props';
-import type { BlockFrameProps, BlockHero } from '../skin/index';
+import { teamCrestSrc, type BlockFrameProps, type BlockHero } from '../skin/index';
 import {
   kickoffParts,
   matchLine,
@@ -9,7 +9,7 @@ import {
   statusLabel,
   type GameBlockMatchJson,
 } from './team-league-match-common';
-import { frameBase } from './team-league-match-ui';
+import { blockTitle, frameBase } from './team-league-match-ui';
 
 /**
  * The score as the hero once a match is under way ("2-1", "full time"), else
@@ -32,18 +32,21 @@ export function matchHero(match: GameBlockMatchJson | undefined): BlockHero | un
   return ko ? { figure: ko.time, label: 'kick-off' } : undefined;
 }
 
-/** Frame props for a match block: both crests, the match line as context. */
+/** Frame props for a match block: both crests as the title art, "Home v Away" as the title. */
 export function matchFrame(
   props: GameBlockComponentProps<unknown>,
   match: GameBlockMatchJson | undefined,
   noun: string
 ): Omit<BlockFrameProps, 'children'> {
-  const home = match?.home?.team?.imageUrl;
-  const away = match?.away?.team?.imageUrl;
+  const home = teamCrestSrc(match?.home?.team);
+  const away = teamCrestSrc(match?.away?.team);
   const base = frameBase(props, {
     context: matchLine(props.config, match),
     noun,
-    media: home || away ? { kind: 'pair', src: home || away, pairSrc: away } : undefined,
+    media:
+      home || away
+        ? { kind: 'pair', src: home || away, pairSrc: home ? away : undefined }
+        : undefined,
   });
-  return { ...base, title: props.config.title || matchTitle(match) || base.title };
+  return { ...base, title: blockTitle(props.config, matchTitle(match)) };
 }

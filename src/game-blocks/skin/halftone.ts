@@ -30,13 +30,24 @@ export interface HalftoneOptions {
   ink: string;
   paper: string;
   gamma?: number;
+  /**
+   * `photo` weighs tone by luminance. `flat` is for crests, which are flat
+   * colour: the darkest channel weighs in, so City blue and Villa claret
+   * print as dots rather than paper.
+   */
+  tone?: 'photo' | 'flat';
+  /**
+   * Dots across the image. Set, it replaces `pitch`, so a crest keeps the
+   * same dot count at any canvas size (about one dot per 2px drawn).
+   */
+  dots?: number;
 }
 
 /** Share of the image that must key out as background for a usable cut-out. */
 const MIN_BACKGROUND = 0.08;
 
 export function halftone(src: string, opts: HalftoneOptions): Promise<string | null> {
-  const { scale = 4, pitch = 5, ink, paper, gamma = 0.75, targetPx = 0 } = opts;
+  const { scale = 4, pitch = 5, ink, paper, gamma = 0.75, targetPx = 0, tone = 'photo' } = opts;
   return new Promise((resolve) => {
     if (typeof document === 'undefined') return resolve(null);
     const img = new Image();
@@ -44,7 +55,8 @@ export function halftone(src: string, opts: HalftoneOptions): Promise<string | n
     img.onload = () => {
       try {
         const s = canvasScale(img.naturalWidth, scale, targetPx);
-        resolve(draw(img, { scale: s, pitch: (pitch * s) / 4, ink, paper, gamma, targetPx }));
+        const p = opts.dots ? (img.naturalWidth * s) / opts.dots : (pitch * s) / 4;
+        resolve(draw(img, { scale: s, pitch: p, ink, paper, gamma, targetPx, tone, dots: 0 }));
       } catch {
         resolve(null);
       }
@@ -103,12 +115,17 @@ function draw(img: HTMLImageElement, o: Required<HalftoneOptions>): string | nul
     if (py > 0) stack.push(i - w);
     if (py < h - 1) stack.push(i + w);
   }
-  if (keyed / (w * h) < MIN_BACKGROUND) return null;
+  // A crest is all subject: no background share is asked of it.
+  if (o.tone === 'photo' && keyed / (w * h) < MIN_BACKGROUND) return null;
 
   const L = new Float32Array(w * h);
   const hist: number[] = [];
   for (let i = 0; i < w * h; i++) {
-    const l = 0.3 * d[i * 4] + 0.59 * d[i * 4 + 1] + 0.11 * d[i * 4 + 2];
+    const luma = 0.3 * d[i * 4] + 0.59 * d[i * 4 + 1] + 0.11 * d[i * 4 + 2];
+    const l =
+      o.tone === 'flat'
+        ? 0.45 * luma + 0.55 * Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2])
+        : luma;
     L[i] = l;
     if (!bg[i]) hist.push(l);
   }
@@ -178,17 +195,17 @@ export function useHalftone(
     url: string | null;
     done: boolean;
   }>({ for: undefined, url: null, done: false });
-  const { scale, pitch, ink, paper, gamma, targetPx } = opts;
+  const { scale, pitch, ink, paper, gamma, targetPx, tone, dots } = opts;
   useEffect(() => {
     if (!src) return;
     let live = true;
-    void halftone(src, { scale, pitch, ink, paper, gamma, targetPx }).then((u) => {
+    void halftone(src, { scale, pitch, ink, paper, gamma, targetPx, tone, dots }).then((u) => {
       if (live) setState({ for: src, url: u, done: true });
     });
     return () => {
       live = false;
     };
-  }, [src, scale, pitch, ink, paper, gamma, targetPx]);
+  }, [src, scale, pitch, ink, paper, gamma, targetPx, tone, dots]);
   if (!src) return { status: 'none', url: null };
   if (state.for !== src || !state.done) return { status: 'working', url: null };
   return state.url ? { status: 'ready', url: state.url } : { status: 'none', url: null };
@@ -227,7 +244,9 @@ export function useImageLoads(src: string | undefined): 'working' | 'ok' | 'none
 /** What the poster's cut-out position holds. */
 export type PosterArt =
   | { status: 'working' }
-  | { status: 'ready'; kind: 'halftone' | 'crest'; src: string }
+  | { status: 'ready'; kind: 'halftone'; src: string }
+  /** A club's crest, or a match's two (home `src`, away `pairSrc`). */
+  | { status: 'ready'; kind: 'crest'; src: string; pairSrc?: string }
   | { status: 'ready'; kind: 'pair'; src: string; pairSrc: string }
   | { status: 'none' };
 
