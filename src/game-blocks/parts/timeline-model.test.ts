@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameBlockMatchEventJson, MatchTimelineDataJson } from '../match/types';
-import { howLine, parseMinute, shortName, timelineModel } from './timeline-model';
+import { SHOOTOUT_DETAIL, howLine, parseMinute, shortName, timelineModel } from './timeline-model';
 
 const H = 'GAME_BLOCK_SIDE_HOME' as const;
 const A = 'GAME_BLOCK_SIDE_AWAY' as const;
@@ -197,6 +197,49 @@ describe('penalty shootout', () => {
     );
     expect(m.shootout.map((k) => k.player?.name)).toEqual(['A', 'B']);
     expect(m.rows.map((r) => r.score?.join('-'))).toEqual(['0-1']);
+  });
+
+  it('reads the final as game-service now marks it, kicks by the mark', () => {
+    const marked: MatchTimelineDataJson = {
+      ...WORLD_CUP_FINAL,
+      events: WORLD_CUP_FINAL.events!.map((e) =>
+        e.minute?.startsWith('120+') ? { ...e, detail: SHOOTOUT_DETAIL } : e
+      ),
+    };
+    const m = timelineModel(marked);
+    expect(m.shootout.map((k) => [k.player?.name, k.score.join('-')])).toEqual(
+      timelineModel(WORLD_CUP_FINAL).shootout.map((k) => [k.player?.name, k.score.join('-')])
+    );
+    expect(m.rows.map((r) => r.score?.join('-'))).toEqual([
+      '1-0',
+      '2-0',
+      '2-1',
+      '2-2',
+      '3-2',
+      '3-3',
+    ]);
+  });
+
+  it('keeps an unmarked penalty a goal once kicks carry the mark', () => {
+    const m = timelineModel({
+      match: {
+        home: { team: { id: 'h', name: 'Home' }, score: 1, penalties: 1 },
+        away: { team: { id: 'a', name: 'Away' }, score: 0, penalties: 0 },
+      },
+      events: [
+        ev('120+1', 'KIND_PENALTY_GOAL', H, 'In play'),
+        ev('120+3', 'KIND_PENALTY_GOAL', H, 'Kick', undefined, SHOOTOUT_DETAIL),
+      ],
+    });
+    expect(m.rows.map((r) => r.player?.name)).toEqual(['In play']);
+    expect(m.shootout.map((k) => k.player?.name)).toEqual(['Kick']);
+  });
+
+  it('never takes a marked card or goal kind as a kick', () => {
+    const m = timelineModel(
+      data([ev('120+2', 'KIND_YELLOW_CARD', H, 'Booked', undefined, SHOOTOUT_DETAIL)], 0, 0)
+    );
+    expect(m.shootout).toEqual([]);
   });
 
   it('has no shootout without a shootout score', () => {
