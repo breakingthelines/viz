@@ -115,26 +115,27 @@ export function layoutWheel(metrics: StatMetric[], groupOrder: string[]): WheelS
 /* ── curved labels ─────────────────────────────────────────────────────── */
 
 /**
- * What each wheel metric is called on the wheel, by registry key. The
- * family name sits on the arc outside, so a rate reads as a plain noun
- * under it: "Accuracy" under Passing, "Win rate" under Defending. A key
- * not listed here uses its `shortLabel`.
+ * What each wheel metric is called on the wheel, by registry key. Counts
+ * read as plain nouns ("Shots", "Duels won") and every rate ends in % ("Pass
+ * %", "Duel %"), so a label reads on its own without the family arc outside
+ * it. "Duel %" rather than "Duels won %": the longer word crowds "Duels won"
+ * beside it. A key not listed here uses its `shortLabel`.
  */
 export const WHEEL_LABELS: Readonly<Record<string, string>> = {
-  npg: 'Goals',
+  npg: 'NP goals',
   shots: 'Shots',
-  sotp: 'On target',
+  sotp: 'On target %',
   ast: 'Assists',
   key: 'Key passes',
   passes: 'Passes',
-  acc: 'Accuracy',
+  acc: 'Pass %',
   drs: 'Dribbles',
-  drp: 'Success',
-  fd: 'Fouled',
+  drp: 'Dribble %',
+  fd: 'Fouls won',
   tkl: 'Tackles',
   int: 'Interceptions',
-  dw: 'Duels',
-  dwp: 'Win rate',
+  dw: 'Duels won',
+  dwp: 'Duel %',
 };
 
 /** Label sizes for one width, in view box units. */

@@ -8,6 +8,8 @@ import {
   GROUP_ORDER,
   SUBJECT_METRICS,
   withEventMetrics,
+  LIVE_GROUP_ORDER,
+  LIVE_METRICS,
 } from './percentile-wheel.fixture';
 import {
   INNER_RADIUS,
@@ -53,7 +55,7 @@ interface Golden {
 const golden = goldenJson as unknown as { subject: Golden; event: Golden };
 
 /** The families the live player-outfield template puts on the wheel (no Discipline). */
-const FAMILIES = ['Shooting', 'Creating', 'Passing', 'Carrying', 'Defending'];
+const FAMILIES = LIVE_GROUP_ORDER;
 
 function checkAgainstMock(g: Golden, metrics: typeof SUBJECT_METRICS) {
   const slices = layoutWheel(metrics, GROUP_ORDER);
@@ -141,23 +143,23 @@ function overflow(metrics: StatMetric[], groups: string[], style: WheelLabelStyl
 describe('curved labels', () => {
   it('names the wheel metrics in plain words, the families carrying the noun', () => {
     for (const [, style] of STYLES) {
-      const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, FAMILIES), style);
+      const ring = layoutLabels(layoutWheel(LIVE_METRICS, FAMILIES), style);
       expect(ring.size).toBe(style.size);
       expect(ring.labels.map((L) => L.text)).toEqual([
-        'Goals',
+        'NP goals',
         'Shots',
-        'On target',
+        'On target %',
         'Assists',
         'Key passes',
         'Passes',
-        'Accuracy',
+        'Pass %',
         'Dribbles',
-        'Success',
-        'Fouled',
+        'Dribble %',
+        'Fouls won',
         'Tackles',
         'Interceptions',
-        'Duels',
-        'Win rate',
+        'Duels won',
+        'Duel %',
       ]);
       expect(ring.labels.map((L) => L.text)).toEqual(
         SUBJECT_METRICS.map((m) => WHEEL_LABELS[m.key])
@@ -176,26 +178,31 @@ describe('curved labels', () => {
   // fits inside its wedge, or inside what its neighbours leave free, with
   // at least MIN_LABEL_GAP_EM of clear space to the label either side.
   it('fits every label inside its wedge with a clear gap to its neighbours', () => {
-    for (const groups of [FAMILIES, GROUP_ORDER]) {
+    for (const [metrics, groups] of [
+      [LIVE_METRICS, FAMILIES],
+      [SUBJECT_METRICS, GROUP_ORDER],
+    ] as const) {
       for (const [name, style] of STYLES) {
-        const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, groups), style);
+        const ring = layoutLabels(layoutWheel(metrics, groups), style);
         const gaps = labelGaps(ring.labels, ring.inner);
         expect(gaps).toHaveLength(14);
         for (const [i, g] of gaps.entries()) {
           const pair = `${name}: ${ring.labels[i].text} / ${ring.labels[(i + 1) % 14].text}`;
           expect(g, pair).toBeGreaterThanOrEqual(MIN_LABEL_GAP_EM * style.size);
         }
-        // Only "Interceptions" on a phone is wider than its own wedge: it
-        // takes some of the room "Tackles" and "Duels" leave free.
-        expect(overflow(SUBJECT_METRICS, groups, style), name).toEqual(
-          name === 'phone' ? ['int'] : []
+        // On a phone "On target %" (and on the live wheel "Interceptions")
+        // is wider than its own wedge: it takes some of the room its
+        // neighbours leave free, still clear of them. The mock's grouping
+        // has no room for "Interceptions" and swaps it to "Int".
+        expect(overflow(metrics, groups, style), name).toEqual(
+          name === 'phone' ? (groups === FAMILIES ? ['sotp', 'int'] : ['sotp']) : []
         );
       }
     }
   });
 
   it('leaves at least 5 px between neighbours on a 390 px phone and 15 px on desktop', () => {
-    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    const slices = layoutWheel(LIVE_METRICS, FAMILIES);
     const wide = layoutLabels(slices, WIDE_LABELS);
     const narrow = layoutLabels(slices, NARROW_LABELS);
     const [, , vbWidth] = viewBoxFor([wide, narrow]);
@@ -236,18 +243,18 @@ describe('curved labels', () => {
   });
 
   it('turns the bottom half over so it reads left to right', () => {
-    const ring = layoutLabels(layoutWheel(SUBJECT_METRICS, FAMILIES), NARROW_LABELS);
+    const ring = layoutLabels(layoutWheel(LIVE_METRICS, FAMILIES), NARROW_LABELS);
     for (const L of ring.labels) {
       expect(L.flip, L.key).toBe(Math.sin((L.am * Math.PI) / 180) > 1e-9);
       // Top: the text runs clockwise (sweep 1); bottom: counter-clockwise (sweep 0).
       expect(L.path, L.key).toMatch(L.flip ? / 0 0 0 / : / 0 0 1 /);
     }
     const flipped = ring.labels.filter((L) => L.flip).map((L) => L.key);
-    expect(flipped).toEqual(['ast', 'key', 'passes', 'acc', 'drs', 'drp', 'fd']);
+    expect(flipped).toEqual(['key', 'passes', 'acc', 'drs', 'drp', 'fd']);
   });
 
   it('draws one arc per family, named, in wheel order', () => {
-    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    const slices = layoutWheel(LIVE_METRICS, FAMILIES);
     for (const [, style] of STYLES) {
       const ring = layoutLabels(slices, style);
       expect(ring.families.map((f) => f.name)).toEqual(FAMILIES);
@@ -272,7 +279,7 @@ describe('curved labels', () => {
   });
 
   it('fits a square view box to the rings, so a phone draws the wheel larger', () => {
-    const slices = layoutWheel(SUBJECT_METRICS, FAMILIES);
+    const slices = layoutWheel(LIVE_METRICS, FAMILIES);
     const rings = [layoutLabels(slices, WIDE_LABELS), layoutLabels(slices, NARROW_LABELS)];
     const [x, y, w, h] = viewBoxFor(rings);
     expect(w).toBe(h);
@@ -287,7 +294,7 @@ describe('curved labels', () => {
 /** Percentiles low enough that the numbers bunch up next to the hub. */
 function lowDefence(): StatMetric[] {
   const low: Record<string, number> = { tkl: 18, int: 27, dw: 24, dwp: 30 };
-  return SUBJECT_METRICS.map((m) => (m.key in low ? { ...m, percentile: low[m.key] } : m));
+  return LIVE_METRICS.map((m) => (m.key in low ? { ...m, percentile: low[m.key] } : m));
 }
 
 describe('in-wedge numbers', () => {
@@ -315,7 +322,7 @@ describe('in-wedge numbers', () => {
           tips.find((t) => t.key === k)!.x - WHEEL_CX,
           tips.find((t) => t.key === k)!.y - WHEEL_CY
         );
-      // At the phone size "24" (Duels) runs into "30" (Win rate): both go out
+      // At the phone size "24" (Duels won) runs into "30" (Duels won %): both go out
       // to the radius "30" already had, never in toward the hub.
       if (size === 22) {
         expect(r('dw')).toBeCloseTo(r('dwp'), 6);
