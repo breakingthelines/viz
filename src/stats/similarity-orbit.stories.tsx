@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 
 import { SimilarityOrbit, SimilarityOrbitPair } from './similarity-orbit';
-import type { OrbitData, OrbitMember } from './similarity-orbit-model';
+import { ORBIT_CARD, type OrbitData, type OrbitMember } from './similarity-orbit-model';
 
 /**
  * Similarity orbits with made-up strikers: 40 in each pool, the first
@@ -199,5 +199,55 @@ export const VerifyOnePoolNoCaption: Story = {
     await expect(
       canvasElement.querySelectorAll('[data-slot="similarity-orbits-pool"]')
     ).toHaveLength(0);
+  },
+};
+
+/**
+ * A share card's orbit (owner, 2026-11-18): still, at the card scale, the
+ * nearest three named beside their faces with how similar each is, inside
+ * the card's 32 px padding. The orbit is 448 px in a 540 px card, so a
+ * label may reach 14 px past it each side.
+ */
+export const ShareCard: StoryObj<typeof SimilarityOrbit> = {
+  render: () => (
+    <div
+      data-testid="card"
+      style={{ width: 540, padding: '32px 0', background: '#0d0d0d', fontFamily: 'Inter' }}
+    >
+      <div style={{ width: 448, margin: '0 auto' }}>
+        <SimilarityOrbit
+          slot="card"
+          orbit={{
+            ...FIRST,
+            members: FIRST.members.map((m, i) => ({ ...m, similarity: 85 - i })),
+          }}
+          interactive={false}
+          scales={[{ scale: ORBIT_CARD }]}
+          // Long names, so a label beside a face near the edge has to move.
+          faceLabels={(m) => [`${m.name} Fernández-Oyarzabal`, `${m.similarity}% similar`]}
+          faceLabelReach={14}
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelectorAll('button')).toHaveLength(0);
+    const labels = [
+      ...canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-orbit-face-label"]'),
+    ];
+    await expect(labels.map((l) => l.firstElementChild?.textContent)).toEqual([
+      'Carl Closest Fernández-Oyarzabal',
+      'Striker A2 Fernández-Oyarzabal',
+      'Striker A3 Fernández-Oyarzabal',
+    ]);
+    await expect(labels[0]!.textContent).toContain('85% similar');
+    const card = canvasElement.querySelector('[data-testid="card"]')!.getBoundingClientRect();
+    await waitFor(() => {
+      for (const l of labels) {
+        const r = l.getBoundingClientRect();
+        expect(r.left).toBeGreaterThanOrEqual(card.left + 32 - 0.5);
+        expect(r.right).toBeLessThanOrEqual(card.right - 32 + 0.5);
+      }
+    });
   },
 };
