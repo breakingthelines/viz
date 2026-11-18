@@ -1588,6 +1588,8 @@ export interface OrbitDetailStripProps {
    * the region's name.
    */
   name?: string;
+  /** His page: the name links there when set. */
+  href?: string;
   club?: string;
   lines?: readonly string[];
   actions?: ReactNode;
@@ -1615,6 +1617,7 @@ export function OrbitDetailStrip({
   title,
   line,
   name,
+  href,
   club,
   lines,
   actions,
@@ -1684,7 +1687,19 @@ export function OrbitDetailStrip({
                     color: '#ffffff',
                   }}
                 >
-                  {name ?? title}
+                  {href ? (
+                    <a
+                      href={href}
+                      data-slot={`${slot}-name`}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      {name ?? title}
+                    </a>
+                  ) : (
+                    (name ?? title)
+                  )}
                 </span>
                 {name !== undefined ? (
                   club ? (
@@ -1983,6 +1998,7 @@ export function SimilarityOrbit({
           title={member ? [member.name, member.club].filter(Boolean).join(', ') : ''}
           line={member ? cardLines(member.id).join(', ') : ''}
           name={member?.name ?? ''}
+          href={member?.url}
           club={member?.club}
           lines={member ? cardLines(member.id) : []}
           onClose={() => s.close(true)}
@@ -2190,6 +2206,7 @@ export function SimilarityOrbitPair({
           title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
           line={pick ? pairCardLines(orbits, shortNames, pick.id, pick.orbit).join(' · ') : ''}
           name={picked?.name ?? ''}
+          href={picked?.url}
           club={picked?.club}
           lines={pick ? pairCardLines(orbits, shortNames, pick.id, pick.orbit) : []}
           onClose={() => s.close(true)}
@@ -2394,6 +2411,7 @@ export function SimilarityOrbitCombined({
           title={picked ? [picked.name, picked.club].filter(Boolean).join(', ') : ''}
           line={selected ? pairCardLines(orbits, shortNames, selected, shown).join(' · ') : ''}
           name={picked?.name ?? ''}
+          href={picked?.url}
           club={picked?.club}
           lines={selected ? pairCardLines(orbits, shortNames, selected, shown) : []}
           quietPlaces

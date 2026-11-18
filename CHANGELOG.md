@@ -5,6 +5,12 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.1]
+
+### Fixed
+
+- Orbit detail strip: the selected player's name links to the player page when the member carries a `url` (owner, 2026-11-18).
+
 ## [0.43.0]
 
 ### Added

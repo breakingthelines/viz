@@ -170,8 +170,11 @@ export const VerifyTapOpensStrip: Story = {
       ...strip.querySelectorAll('[data-slot="orbit-block-combined-detail-places"] span'),
     ].map((e) => e.textContent);
     await expect(places).toEqual(['Closest to Mbappé', '8th closest to Haaland']);
-    const page = strip.querySelector('a');
-    await expect(page?.textContent).toBe('Player page');
+    // The name links to his page (0.43.1), as does the Player page action.
+    const name = strip.querySelector('[data-slot="orbit-block-combined-detail-name"]');
+    await expect(name?.textContent).toBe('Donyell Malen');
+    await expect(name).toHaveAttribute('href', '/game/football/player/pex101/donyell-malen');
+    const page = [...strip.querySelectorAll('a')].find((a) => a.textContent === 'Player page');
     await expect(page).toHaveAttribute('href', '/game/football/player/pex101/donyell-malen');
     const select = strip.querySelector('select') as HTMLSelectElement;
     await expect(select).toHaveAccessibleName('Compare with');
@@ -256,8 +259,12 @@ export const VerifySingleStrip: Story = {
       if (!el) throw new Error('no strip');
       return el;
     });
+    // The name link (0.43.1) comes first, then the actions.
     const links = [...strip.querySelectorAll('a')].map((a) => a.textContent);
-    await expect(links).toEqual(['Player page', 'Compare with Mbappé']);
+    await expect(links.slice(1)).toEqual(['Player page', 'Compare with Mbappé']);
+    await expect(
+      strip.querySelector('[data-slot="orbit-block-single-detail-name"]')
+    ).not.toBeNull();
     await expect(strip.querySelector('select')).toBeNull();
   },
 };
