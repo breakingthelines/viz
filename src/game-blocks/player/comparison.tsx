@@ -484,9 +484,23 @@ function StripComparison(props: ComparisonProps) {
   );
 }
 
-/** Three figures for the duel: the widest gaps, or the leading per 90 rows of a totals pair. */
-function duelMetrics(metrics: GameBlockComparisonMetricJson[]): GameBlockComparisonMetricJson[] {
+/**
+ * Three figures for the duel: the rows game-service chose (`options.extra.rows`,
+ * metric keys in order, picked for the players' position and the question's
+ * facet), else the widest gaps, or the leading per 90 rows of a totals pair.
+ */
+export function duelMetrics(
+  metrics: GameBlockComparisonMetricJson[],
+  rows?: string
+): GameBlockComparisonMetricJson[] {
   if (isTotalsComparison(metrics)) return metrics.filter((m) => m.family === PER_90).slice(0, 3);
+  const chosen = (rows ?? '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .map((k) => metrics.find((m) => m.key === k))
+    .filter((m): m is GameBlockComparisonMetricJson => m !== undefined);
+  if (chosen.length > 0) return chosen.slice(0, 3);
   return widestGaps(metrics, 3);
 }
 
@@ -553,7 +567,7 @@ function isTotalsLabel(m: GameBlockComparisonMetricJson): boolean {
 
 function DuelComparison(props: ComparisonProps) {
   const { config, media } = props;
-  const rows = duelMetrics(config.data?.metrics ?? []);
+  const rows = duelMetrics(config.data?.metrics ?? [], config.options.extra?.rows);
   return (
     <BlockFrame
       {...baseFrame(props, 'comparison', media)}
