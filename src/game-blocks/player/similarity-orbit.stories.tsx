@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { syntheticHeadshot } from '../fixtures/media';
 import { PLAYER_EXAMPLES, PLAYER_ORBIT_PAIR_EXAMPLE } from '../fixtures/player';
@@ -258,5 +259,57 @@ export const VerifySingleStrip: Story = {
     const links = [...strip.querySelectorAll('a')].map((a) => a.textContent);
     await expect(links).toEqual(['Player page', 'Compare with Mbappé']);
     await expect(strip.querySelector('select')).toBeNull();
+  },
+};
+
+/**
+ * The orbit, mounted from a timer after a click, as a Regista answer mounts
+ * it from a stream event. A click is a discrete update, after which React
+ * runs even passive effects before paint, so mounting in the click itself
+ * would hide the bug this guards.
+ */
+function OrbitMountedLater(args: OrbitArgs) {
+  const [on, setOn] = useState(false);
+  return (
+    <div>
+      <button type="button" onClick={() => setTimeout(() => setOn(true), 0)}>
+        Mount orbit
+      </button>
+      {on ? <OrbitExample {...args} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The orbit never paints finished before its arrival (owner, prod, 18 Nov
+ * 2026: a Regista orbit showed every face in place for one frame, then went
+ * empty and animated in). A MutationObserver callback runs as a microtask
+ * after React commits the orbit, before any passive effect and before the
+ * browser paints: the faces must already be at the arrival's start (hidden,
+ * their animation attached). Deciding motion in a passive effect fails this
+ * every time: at that point the faces are finished and no animation exists.
+ */
+export const VerifyNoFinishedFrameOnMount: Story = {
+  args: { density: 'chat', width: 420 },
+  render: (args) => <OrbitMountedLater {...args} />,
+  play: async ({ canvasElement }) => {
+    let seen: { faces: number; hidden: number; animated: number } | null = null;
+    const mo = new MutationObserver(() => {
+      if (seen) return;
+      const faces = [...canvasElement.querySelectorAll<HTMLElement>('[data-orbit-glide-face]')];
+      if (!faces.length) return;
+      seen = {
+        faces: faces.length,
+        hidden: faces.filter((f) => parseFloat(getComputedStyle(f).opacity) < 0.05).length,
+        animated: faces.filter((f) => f.getAnimations().length > 0).length,
+      };
+    });
+    mo.observe(canvasElement, { childList: true, subtree: true });
+    await userEvent.click(canvasElement.querySelector('button')!);
+    await waitFor(() => expect(seen).not.toBeNull());
+    mo.disconnect();
+    const s = seen!;
+    await expect(s.animated).toBe(s.faces);
+    await expect(s.hidden).toBe(s.faces);
   },
 };

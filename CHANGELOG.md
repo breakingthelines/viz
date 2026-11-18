@@ -5,6 +5,19 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.42.1]
+
+### Fixed
+
+- **The orbit never paints finished before its arrival** (owner, prod,
+  2026-11-18). A client-mounted orbit (a Regista answer) showed every face in
+  place for one frame, then went empty and animated in. `useOrbitMotion`
+  decided motion in a passive effect, which runs after the first paint; it
+  now decides in a layout effect, before it, so the first frame is the
+  arrival's start. A story test mounts the orbit from a timer, as a stream
+  event does, and fails if the faces are not hidden with their arrival
+  attached when React commits.
+
 ## [0.42.0]
 
 ### Fixed

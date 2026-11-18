@@ -127,11 +127,17 @@ type GlideStore = RefObject<Map<
  * Whether the dots may drift: never in the server render or the first
  * browser render (so hydration matches), never under reduced motion, and
  * only while the element is on screen.
+ *
+ * It is decided in a layout effect, before the browser paints. As a passive
+ * effect it ran after the first paint, so a client-mounted orbit (a Regista
+ * answer) painted finished for one frame, then jumped to the arrival's empty
+ * start and animated in (owner, prod, 18 Nov 2026). A layout effect still
+ * runs after hydration, so the server render and the first render match.
  */
 export function useOrbitMotion(ref: RefObject<HTMLElement | null>, enabled = true): boolean {
   const [allowed, setAllowed] = useState(false);
   const [visible, setVisible] = useState(true);
-  useEffect(() => {
+  useClientLayoutEffect(() => {
     if (!enabled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       setAllowed(false);
       return;
