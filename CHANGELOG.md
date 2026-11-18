@@ -5,6 +5,23 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0]
+
+### Added
+
+- **Face names on a still orbit** (owner, 2026-11-18), for the share cards.
+  `SimilarityOrbit`, `SimilarityOrbitCombined` and `SimilarityOrbitPair`
+  take `faceLabels` (`OrbitFaceLabels`: a member and his orbit to the lines
+  beside his face, his name then a quieter line such as "85% similar") and
+  `faceLabelReach` (px a label may reach past the orbit's sides, to the
+  card's padding). Labels are drawn only with `interactive={false}`: 13 px
+  and 12 px, with a halo, on the side away from the centre, moved to
+  another side when that one runs out of room.
+- `placeFaceLabel` (`FaceLabelSide`, `FaceLabelSpot`): where a label goes,
+  as a pure function.
+- `ORBIT_CARD`: one orbit on a share card, the single orbit's field with
+  38-unit faces.
+
 ## [0.42.1]
 
 ### Fixed

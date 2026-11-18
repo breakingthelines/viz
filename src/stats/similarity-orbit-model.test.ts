@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ORBIT_CARD,
   ORBIT_COMPACT,
   ORBIT_REGULAR,
   ORBIT_SINGLE,
@@ -8,6 +9,7 @@ import {
   orbitCardLines,
   pairCardLines,
   placeCard,
+  placeFaceLabel,
   placeWords,
   spotlightIds,
   spotlightLine,
@@ -340,5 +342,72 @@ describe('placeCard', () => {
     expect(edge.side).toBe('below');
     const far = placeCard({ ...base, x: 410, y: 300, clear: 4, face: false, maxX: 400 });
     expect(far.left + base.width).toBeLessThanOrEqual(400);
+  });
+});
+
+describe('placeFaceLabel', () => {
+  // A 448 px field centred at 224, labels 120 x 30, 14 px of reach each side.
+  const base = {
+    cx: 224,
+    cy: 224,
+    width: 120,
+    height: 30,
+    clear: 30,
+    minX: -14,
+    maxX: 462,
+    minY: 0,
+    maxY: 448,
+  };
+
+  it('names a face on the side away from the centre', () => {
+    const right = placeFaceLabel({ ...base, x: 300, y: 260 });
+    expect(right).toEqual({ side: 'right', left: 330, top: 245 });
+    const left = placeFaceLabel({ ...base, x: 150, y: 200 });
+    expect(left).toEqual({ side: 'left', left: 150 - 30 - 120, top: 185 });
+    const above = placeFaceLabel({ ...base, x: 224, y: 120 });
+    expect(above).toEqual({ side: 'above', left: 164, top: 60 });
+    const below = placeFaceLabel({ ...base, x: 230, y: 330 });
+    expect(below.side).toBe('below');
+    expect(below.top).toBe(360);
+  });
+
+  it('goes above or below when the side away from the centre runs out of room', () => {
+    // Left of a face near the left edge would leave the card's padding.
+    const low = placeFaceLabel({ ...base, x: 60, y: 260 });
+    expect(low.side).toBe('below');
+    expect(low.left).toBe(0);
+    const high = placeFaceLabel({ ...base, x: 400, y: 180 });
+    expect(high.side).toBe('above');
+  });
+
+  it('takes a side for a face at the top edge, then below when no side fits', () => {
+    const top = placeFaceLabel({ ...base, x: 224, y: 20 });
+    expect(top.side).toBe('right');
+    const narrow = placeFaceLabel({ ...base, x: 120, y: 20, minX: -6, maxX: 246 });
+    expect(narrow.side).toBe('below');
+    expect(narrow.top).toBe(50);
+  });
+
+  it('never towards the centre while another side fits, and stays inside when none does', () => {
+    const towards = placeFaceLabel({ ...base, x: 60, y: 20, maxY: 60 });
+    expect(towards.side).toBe('right');
+    const cramped = placeFaceLabel({ ...base, x: 60, y: 224, minX: 0, maxX: 100, maxY: 240 });
+    expect(cramped.side).toBe('left');
+    expect(cramped.left).toBe(0);
+    expect(cramped.top + base.height).toBeLessThanOrEqual(240);
+  });
+
+  it('never covers another face while a side is free', () => {
+    // Below the face would cover the centre; the next side is taken.
+    const near = placeFaceLabel({ ...base, x: 224, y: 300, avoid: [{ x: 224, y: 224, r: 40 }] });
+    expect(near.side).toBe('below');
+    const blocked = placeFaceLabel({ ...base, x: 224, y: 120, avoid: [{ x: 224, y: 70, r: 20 }] });
+    expect(blocked.side).toBe('right');
+  });
+
+  it('has a card scale with faces bigger than the single orbit', () => {
+    expect(ORBIT_CARD.size).toBe(ORBIT_SINGLE.size);
+    expect(ORBIT_CARD.head).toBeGreaterThan(ORBIT_SINGLE.head);
+    expect(ORBIT_CARD).toEqual({ size: 340, face: 68, head: 38, dot: 2.9 });
   });
 });

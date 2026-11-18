@@ -28,12 +28,15 @@ import {
   pairCardLines,
   pairOrbitLabel,
   placeCard,
+  placeFaceLabel,
   singleOrbitLabel,
   spotlightIds,
   spotlightLine,
   type CardSpot,
+  type FaceLabelSpot,
   type OrbitData,
   type OrbitLayout,
+  type OrbitMember,
   type OrbitPlayer,
   type OrbitScale,
   type OrbitSpotlight,
@@ -63,7 +66,8 @@ import {
  * dot again, the strip's close control or a tap outside closes it. A
  * `spotlight` lights the members who play a role and fades the rest, with a
  * caption. `interactive={false}` draws the static picture only, for an
- * article or a share card.
+ * article or a share card; there `faceLabels` names faces beside them (a
+ * share card; owner, 2026-11-18).
  *
  * The static picture is the server HTML. Once hydrated, the first time the
  * orbit is on screen its dots settle out from the centre in rank order and
@@ -100,6 +104,23 @@ export interface OrbitScaleChoice {
 
 /** Headshot addresses for a player, tried in order. */
 export type OrbitFaceSources = (player: OrbitPlayer) => readonly string[];
+
+/**
+ * The lines beside a member's face on a still orbit: his name, then any
+ * line under it ("85% similar"). Null or empty leaves the face unnamed.
+ * `orbit` is 0 on one player's orbit, else the orbit of the pair.
+ */
+export type OrbitFaceLabels = (
+  member: OrbitMember,
+  orbit: number
+) => readonly string[] | null | undefined;
+
+/**
+ * CSS px a face label may reach past the orbit's box, to the card's padding:
+ * a number for the left and right edges, or `x` (left and right) and `y`
+ * (top and bottom). Default 0.
+ */
+export type OrbitFaceLabelReach = number | { x?: number; y?: number };
 
 const defaultSources: OrbitFaceSources = (p) => (p.imageUrl ? [p.imageUrl] : []);
 
@@ -417,6 +438,10 @@ interface FieldProps {
   stemWeight?: number;
   /** The hover card's lines for a member; his place alone without it. */
   cardLines?: (id: string) => string[];
+  /** Names beside faces, on a still orbit only: this orbit's lines per member. */
+  faceLabels?: (member: OrbitMember) => readonly string[] | null | undefined;
+  /** CSS px a face label may reach past the field's edges. */
+  faceLabelReach?: OrbitFaceLabelReach;
   /** Members lit by a roles spotlight (the rest fade), with its caption. */
   spotlight?: { ids: ReadonlySet<string>; line: string } | null;
   /** Positions kept across a re-centre, for the glide. */
@@ -878,6 +903,27 @@ function ScaleView({
             slot={p.slot}
           />
         ) : null}
+        {!interactive && p.faceLabels ? (
+          <FaceLabels
+            slot={p.slot}
+            size={size}
+            cx={cx}
+            cy={cy}
+            reach={p.faceLabelReach ?? 0}
+            overflow={layout.overflow}
+            avoid={[
+              { x: cx, y: cy, r: scale.face / 2 + 3 },
+              ...faces.map((f) => ({ x: f.x, y: f.y, r: f.size / 2 + 3 })),
+            ]}
+            labels={faces.flatMap((f) => {
+              const m = data.members[f.index]!;
+              const lines = (p.faceLabels!(m) ?? []).filter(Boolean);
+              if (lines.length === 0) return [];
+              const looped = !!p.loops?.some((l) => l.id === m.id);
+              return [{ id: m.id, x: f.x, y: f.y, r: f.size / 2, looped, lines }];
+            })}
+          />
+        ) : null}
         {interactive ? (
           <OrbitOverlay
             slot={p.slot}
@@ -915,6 +961,193 @@ function ScaleView({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/* ── face labels (a still orbit on a share card) ────────────────────────── */
+
+/** The halo round a face label: the card's own black, so dots never cross the words. */
+const LABEL_HALO = '#0d0d0d';
+const HALO_STYLE: CSSProperties = {
+  display: 'block',
+  paintOrder: 'stroke fill',
+  WebkitTextStroke: `3px ${LABEL_HALO}`,
+};
+
+interface FaceLabelItem {
+  id: string;
+  /** The face's centre and radius, in orbit units. */
+  x: number;
+  y: number;
+  r: number;
+  /** A crayon loop is round the face: the label clears it too. */
+  looped: boolean;
+  lines: readonly string[];
+}
+
+/**
+ * A still orbit's face names (owner, 2026-11-18): the name, and a quieter
+ * line under it, beside each face on the side away from the centre, with a
+ * halo, inside the field's box widened by `reach` px each side. The first
+ * render puts each label on its first-choice side by percentages (the
+ * server HTML); once measured, `placeFaceLabel` moves any that would run
+ * out of the box.
+ */
+function FaceLabels({
+  labels,
+  size,
+  cx,
+  cy,
+  reach,
+  overflow,
+  avoid,
+  slot,
+}: {
+  labels: readonly FaceLabelItem[];
+  size: number;
+  cx: number;
+  cy: number;
+  reach: OrbitFaceLabelReach;
+  /** Faces and the centre, in orbit units: a label covers none but its own. */
+  avoid: readonly { x: number; y: number; r: number }[];
+  overflow: OrbitLayout['overflow'];
+  slot: string;
+}) {
+  // The layer is the field's box. Its own ref, not the field's: a parent's
+  // ref is not attached yet when this layout effect first runs.
+  const layer = useRef<HTMLSpanElement>(null);
+  const refs = useRef<(HTMLSpanElement | null)[]>([]);
+  const [spots, setSpots] = useState<(FaceLabelSpot | null)[]>([]);
+  const key = labels
+    .map((l) => `${l.id}:${l.x.toFixed(2)}:${l.y.toFixed(2)}:${l.lines.join('|')}`)
+    .join(';');
+  const reachX = typeof reach === 'number' ? reach : (reach.x ?? 0);
+  const reachY = typeof reach === 'number' ? 0 : (reach.y ?? 0);
+  const avoidKey = avoid.map((c) => `${c.x.toFixed(2)},${c.y.toFixed(2)},${c.r}`).join(';');
+  useClientLayoutEffect(() => {
+    const field = layer.current;
+    if (!field) return;
+    const place = () => {
+      const w = field.offsetWidth;
+      if (w === 0) return;
+      const k = w / size;
+      const next = labels.map((l, i) => {
+        const el = refs.current[i];
+        if (!el) return null;
+        return placeFaceLabel({
+          x: l.x * k,
+          y: l.y * k,
+          clear: l.r * k + (l.looped ? 10 : 5),
+          cx: cx * k,
+          cy: cy * k,
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+          minX: -reachX,
+          maxX: w + reachX,
+          minY: -overflow.top * k - reachY,
+          maxY: w + overflow.bottom * k + reachY,
+          // Every face but his own (the one his label sits beside).
+          avoid: avoid
+            .filter((c) => Math.hypot(c.x - l.x, c.y - l.y) > 0.01)
+            .map((c) => ({ x: c.x * k, y: c.y * k, r: c.r * k })),
+        });
+      });
+      setSpots((prev) =>
+        prev.length === next.length &&
+        prev.every(
+          (s, i) =>
+            s?.side === next[i]?.side &&
+            Math.abs((s?.left ?? 0) - (next[i]?.left ?? 0)) < 0.5 &&
+            Math.abs((s?.top ?? 0) - (next[i]?.top ?? 0)) < 0.5
+        )
+          ? prev
+          : next
+      );
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(place);
+    watch.observe(field);
+    return () => watch.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, avoidKey, size, cx, cy, reachX, reachY, overflow.top, overflow.bottom]);
+
+  const pct = (v: number) => `${((v / size) * 100).toFixed(3)}%`;
+  return (
+    <span
+      ref={layer}
+      data-slot={`${slot}-face-labels`}
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'block',
+        zIndex: OVERLAY_Z,
+        pointerEvents: 'none',
+      }}
+    >
+      {labels.map((l, i) => {
+        const spot = spots[i];
+        // Before measuring: the first-choice side, anchored by a transform.
+        const first = placeFaceLabel({
+          x: l.x,
+          y: l.y,
+          clear: l.r + (l.looped ? 6 : 3),
+          cx,
+          cy,
+          width: 0,
+          height: 0,
+          minX: -Infinity,
+          maxX: Infinity,
+          minY: -Infinity,
+          maxY: Infinity,
+        });
+        const side = spot?.side ?? first.side;
+        const at: CSSProperties = spot
+          ? { left: spot.left, top: spot.top }
+          : {
+              left: pct(first.left),
+              top: pct(first.top),
+              transform:
+                side === 'right'
+                  ? 'translate(0, -50%)'
+                  : side === 'left'
+                    ? 'translate(-100%, -50%)'
+                    : side === 'above'
+                      ? 'translate(-50%, -100%)'
+                      : 'translate(-50%, 0)',
+            };
+        return (
+          <span
+            key={l.id}
+            ref={(node) => {
+              refs.current[i] = node;
+            }}
+            data-slot={`${slot}-face-label`}
+            data-player={l.id}
+            data-side={side}
+            style={{
+              position: 'absolute',
+              display: 'block',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2,
+              pointerEvents: 'none',
+              textAlign: side === 'left' ? 'right' : side === 'right' ? 'left' : 'center',
+              ...at,
+            }}
+          >
+            <span style={{ ...HALO_STYLE, fontSize: 13, fontWeight: 600, color: ORBIT_WHITE }}>
+              {l.lines[0]}
+            </span>
+            {l.lines.slice(1).map((line) => (
+              <span key={line} style={{ ...HALO_STYLE, fontSize: 12, color: LABEL }}>
+                {line}
+              </span>
+            ))}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
@@ -1661,6 +1894,10 @@ export interface SimilarityOrbitProps {
   label?: string;
   /** Lights the members who play a role, with a caption; null for none. */
   spotlight?: OrbitSpotlight | null;
+  /** Names beside the faces, drawn only when `interactive` is false (a share card). */
+  faceLabels?: OrbitFaceLabels;
+  /** CSS px a face label may reach past the orbit's box (`OrbitFaceLabelReach`). Default 0. */
+  faceLabelReach?: OrbitFaceLabelReach;
   slot?: string;
 }
 
@@ -1677,6 +1914,8 @@ export function SimilarityOrbit({
   renderActions,
   label,
   spotlight = null,
+  faceLabels,
+  faceLabelReach,
   slot = 'similarity-orbit',
 }: SimilarityOrbitProps) {
   const start =
@@ -1730,6 +1969,8 @@ export function SimilarityOrbit({
         cardLines={cardLines}
         spotlight={lit}
         glide={glide}
+        faceLabels={faceLabels ? (m) => faceLabels(m, 0) : undefined}
+        faceLabelReach={faceLabelReach}
       />
       {interactive ? (
         <OrbitDetailStrip
@@ -1818,6 +2059,10 @@ export interface SimilarityOrbitPairProps {
   rowClassName?: string;
   /** Lights the members who play a role in both orbits; null for none. */
   spotlight?: OrbitSpotlight | null;
+  /** Names beside the faces, drawn only when `interactive` is false (a share card). */
+  faceLabels?: OrbitFaceLabels;
+  /** CSS px a face label may reach past each orbit's box (`OrbitFaceLabelReach`). Default 0. */
+  faceLabelReach?: OrbitFaceLabelReach;
   slot?: string;
 }
 
@@ -1834,6 +2079,8 @@ export function SimilarityOrbitPair({
   cellClassName,
   rowClassName,
   spotlight = null,
+  faceLabels,
+  faceLabelReach,
   slot = 'similarity-orbits',
 }: SimilarityOrbitPairProps) {
   const s = useOrbitSelection(null);
@@ -1911,6 +2158,8 @@ export function SimilarityOrbitPair({
                     : null
                 }
                 glide={glides[o]}
+                faceLabels={faceLabels ? (m) => faceLabels(m, o) : undefined}
+                faceLabelReach={faceLabelReach}
               />
               {captioned ? (
                 <span
@@ -1986,6 +2235,10 @@ export interface SimilarityOrbitCombinedProps {
   renderActions?: (player: OrbitPlayer, main: boolean, centre: OrbitPlayer) => ReactNode;
   /** Lights the members who play a role, whichever player is centred; null for none. */
   spotlight?: OrbitSpotlight | null;
+  /** Names beside the faces, drawn only when `interactive` is false (a share card). */
+  faceLabels?: OrbitFaceLabels;
+  /** CSS px a face label may reach past the orbit's box (`OrbitFaceLabelReach`). Default 0. */
+  faceLabelReach?: OrbitFaceLabelReach;
   slot?: string;
 }
 
@@ -2006,6 +2259,8 @@ export function SimilarityOrbitCombined({
   faceSources = defaultSources,
   renderActions,
   spotlight = null,
+  faceLabels,
+  faceLabelReach,
   slot = 'similarity-orbit-combined',
 }: SimilarityOrbitCombinedProps) {
   const [centre, setCentre] = useState<0 | 1>(0);
@@ -2083,6 +2338,8 @@ export function SimilarityOrbitCombined({
           cardLines={(id) => pairCardLines(orbits, shortNames, id, shown)}
           spotlight={lit}
           glide={glide}
+          faceLabels={faceLabels ? (m) => faceLabels(m, shown) : undefined}
+          faceLabelReach={faceLabelReach}
         />
       </div>
       {interactive ? (

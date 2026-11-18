@@ -343,6 +343,96 @@ export function placeCard(o: {
   return vertical();
 }
 
+/* ── face labels (a share card) ─────────────────────────────────────────── */
+
+export type FaceLabelSide = 'above' | 'below' | 'left' | 'right';
+
+export interface FaceLabelSpot {
+  /** The label box's top left, in px from the orbit field's top left. */
+  left: number;
+  top: number;
+  side: FaceLabelSide;
+}
+
+/**
+ * Where a face's name goes on a still orbit (a share card; owner,
+ * 2026-11-18): beside the face on the side away from the centre, kept
+ * inside `minX`..`maxX` and `minY`..`maxY` (the card's padding, as the
+ * field sees it). A face mostly above or below the centre takes its label
+ * above or below; the rest take it left or right. When that side runs out
+ * of room the label tries the other vertical sides, then the side towards
+ * the centre. A side that covers another face (`avoid`) does not fit; with
+ * no side that fits, the first is kept and moved inside.
+ */
+export function placeFaceLabel(o: {
+  /** The face's centre. */
+  x: number;
+  y: number;
+  /** What the label clears round the face: its radius and a gap. */
+  clear: number;
+  /** The orbit's centre. */
+  cx: number;
+  cy: number;
+  /** The label's size. */
+  width: number;
+  height: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  /** Other faces and the centre, as circles the label must not cover. */
+  avoid?: readonly { x: number; y: number; r: number }[];
+}): FaceLabelSpot {
+  const dx = o.x - o.cx;
+  const dy = o.y - o.cy;
+  const d = Math.hypot(dx, dy) || 1;
+  const across: FaceLabelSide = dx >= 0 ? 'right' : 'left';
+  const along: FaceLabelSide = dy < 0 ? 'above' : 'below';
+  const flip: Record<FaceLabelSide, FaceLabelSide> = {
+    above: 'below',
+    below: 'above',
+    left: 'right',
+    right: 'left',
+  };
+  const order: FaceLabelSide[] =
+    Math.abs(dx) / d < 0.4
+      ? [along, across, flip[along], flip[across]]
+      : [across, along, flip[along], flip[across]];
+  const box = (side: FaceLabelSide): FaceLabelSpot => {
+    switch (side) {
+      case 'right':
+        return { side, left: o.x + o.clear, top: o.y - o.height / 2 };
+      case 'left':
+        return { side, left: o.x - o.clear - o.width, top: o.y - o.height / 2 };
+      case 'above':
+        return { side, left: o.x - o.width / 2, top: o.y - o.clear - o.height };
+      default:
+        return { side, left: o.x - o.width / 2, top: o.y + o.clear };
+    }
+  };
+  const covers = (b: FaceLabelSpot, c: { x: number; y: number; r: number }) => {
+    const nx = Math.max(b.left, Math.min(c.x, b.left + o.width));
+    const ny = Math.max(b.top, Math.min(c.y, b.top + o.height));
+    return Math.hypot(c.x - nx, c.y - ny) < c.r;
+  };
+  const fits = (b: FaceLabelSpot) =>
+    b.left >= o.minX &&
+    b.left + o.width <= o.maxX &&
+    b.top >= o.minY &&
+    b.top + o.height <= o.maxY &&
+    !(o.avoid ?? []).some((c) => covers(b, c));
+  for (const side of order) {
+    const b = box(side);
+    if (fits(b)) return b;
+  }
+  const first = box(order[0]!);
+  return {
+    side: first.side,
+    left: Math.max(o.minX, Math.min(o.maxX - o.width, first.left)),
+    top: Math.max(o.minY, Math.min(o.maxY - o.height, first.top)),
+  };
+}
+
 /* ── geometry ───────────────────────────────────────────────────────────── */
 
 export interface OrbitScale {
@@ -365,6 +455,11 @@ export const ORBIT_REGULAR: OrbitScale = { size: 380, face: 76, head: 30, dot: 3
 export const ORBIT_COMPACT: OrbitScale = { size: 170, face: 40, head: 18.5, dot: 1.8 };
 /** One orbit alone: one column, faces as mock build5.py. */
 export const ORBIT_SINGLE: OrbitScale = { size: 340, face: 68, head: 29, dot: 2.9 };
+/**
+ * One orbit on a share card (owner, 2026-11-18): the single orbit's field
+ * with bigger faces, so the named players read at 1080 px.
+ */
+export const ORBIT_CARD: OrbitScale = { size: 340, face: 68, head: 38, dot: 2.9 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 /** Gap kept between faces, and between a face and the centre. */

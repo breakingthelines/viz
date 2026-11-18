@@ -44,6 +44,8 @@ export {
 } from './similarity-orbit';
 export type {
   OrbitDetailStripProps,
+  OrbitFaceLabelReach,
+  OrbitFaceLabels,
   OrbitFaceRole,
   OrbitFaceSources,
   OrbitScaleChoice,
@@ -52,6 +54,7 @@ export type {
   SimilarityOrbitProps,
 } from './similarity-orbit';
 export {
+  ORBIT_CARD,
   ORBIT_COMPACT,
   ORBIT_REGULAR,
   ORBIT_SINGLE,
@@ -67,6 +70,7 @@ export {
   orbitCardLines,
   pairCardLines,
   placeCard,
+  placeFaceLabel,
   placeFaces,
   placeLines,
   placesLine,
@@ -80,6 +84,8 @@ export {
 export type {
   CardSpot,
   DotPlace,
+  FaceLabelSide,
+  FaceLabelSpot,
   FacePlace,
   OrbitData,
   OrbitLayout,
