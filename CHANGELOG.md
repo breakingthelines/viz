@@ -5,6 +5,18 @@ All notable changes to `@breakingthelines/viz` are documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.42.0]
+
+### Fixed
+
+- **Duel rows follow game-service's choice** (owner, 2026-11-18). The duel
+  poster drew its three rows from the widest percentile gaps across every
+  metric, so two attacking midfielders led on duels and tackles, and a
+  question "in attack" left the rows unchanged while the answer cited shots
+  and goals. `duelMetrics` now draws the rows in `options.extra.rows`
+  (metric keys in order, chosen by game-service for the position group and
+  the question's facet) and falls back to the widest gaps only without it.
+
 ## [0.41.0]
 
 ### Added

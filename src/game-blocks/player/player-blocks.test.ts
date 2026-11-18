@@ -11,6 +11,7 @@ import { absenceDates } from './absences';
 import { careerYears } from './career';
 import {
   comparisonView,
+  duelMetrics,
   isTotalsComparison,
   pickComparisonHighlight,
   widestGaps,
@@ -291,6 +292,25 @@ describe('Comparison', () => {
     expect(html).toContain('data-comparison-view="wheel"');
     expect(html).toContain('data-overlay="Phil Foden"');
     expect(html).not.toContain('Arsenal and Manchester City');
+  });
+
+  it('draws the duel from the rows game-service chose, in order, else the widest gaps', () => {
+    const m = (config('player-comparison').data as { metrics: Parameters<typeof widestGaps>[0] })
+      .metrics;
+    expect(duelMetrics(m, 'npg,ast,shots').map((x) => x.key)).toEqual(['npg', 'ast', 'shots']);
+    // A key the block does not hold is skipped; at most three rows.
+    expect(duelMetrics(m, 'nope, ast ,npg,shots,fd').map((x) => x.key)).toEqual([
+      'ast',
+      'npg',
+      'shots',
+    ]);
+    expect(duelMetrics(m, '').map((x) => x.key)).toEqual(widestGaps(m, 3).map((x) => x.key));
+    expect(duelMetrics(m, undefined).map((x) => x.key)).toEqual(widestGaps(m, 3).map((x) => x.key));
+    const html = render('player-comparison', 'pro', {
+      options: { view: 'duel', extra: { rows: 'npg,ast,shots' } },
+    });
+    const order = [...html.matchAll(/data-k="([a-z_]+)"/g)].map((x) => x[1]);
+    expect(order).toEqual(['npg', 'ast', 'shots']);
   });
 
   it('picks the widest gap per family, and shows both players when it can', () => {
